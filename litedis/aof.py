@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Dict
 
-from mytypes import AOFFsyncStrategy
+from litedis.mytypes import AOFFsyncStrategy
 
 
 class AOF:

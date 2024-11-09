@@ -3,8 +3,8 @@ import time
 
 import pytest
 
-from litedis.persistence import AOF
 from litedis.mytypes import AOFFsyncStrategy
+from litedis.aof import AOF
 
 
 @pytest.fixture

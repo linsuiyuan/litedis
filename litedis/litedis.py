@@ -8,12 +8,12 @@ from typing import (Any,
                     Set)
 from pathlib import Path
 
-from mytypes import (PersistenceType,
-                     AOFFsyncStrategy,
-                     DataType)
-from aof import AOF
-from rdb import RDB
-from expiry import Expiry
+from litedis.mytypes import (PersistenceType,
+                             AOFFsyncStrategy,
+                             DataType)
+from litedis.aof import AOF
+from litedis.rdb import RDB
+from litedis.expiry import Expiry
 
 
 class Litedis:
@@ -166,7 +166,7 @@ class Litedis:
 
     # 字符串操作
     @append_to_aof
-    def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+    def set(self, key: str, value: str, ex: Optional[float] = None) -> bool:
         """设置字符串值"""
         with self.db_lock:
             self.data[key] = value
@@ -193,9 +193,11 @@ class Litedis:
                 self.data_types[key] = DataType.LIST
 
             if self.data_types[key] != DataType.LIST:
-                raise TypeError(f"Key {key} is not a list")
+                raise TypeError(f"键 {key} 不是 列表")
 
-            self.data[key] = list(values) + self.data[key]
+            rev_values = list(values)
+            rev_values.reverse()
+            self.data[key] = rev_values + self.data[key]
             return len(self.data[key])
 
     @append_to_aof
@@ -232,7 +234,15 @@ class Litedis:
             return []
 
         if self.data_types[key] == DataType.LIST:
-            return self.data[key][start:stop]
+            values = self.data[key]
+            # 兼容 redis 的取法
+            if stop == -1:
+                values = values[start:]
+            elif stop < -1:
+                values = values[start:stop + 1]
+            else:
+                values = values[start:stop]
+            return values
         return []
 
     # Hash 操作
