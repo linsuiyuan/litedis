@@ -4,7 +4,7 @@ import time
 import pytest
 
 from litedis.persistence import AOF
-from litedis.types import AOFFsyncStrategy
+from litedis.mytypes import AOFFsyncStrategy
 
 
 @pytest.fixture
