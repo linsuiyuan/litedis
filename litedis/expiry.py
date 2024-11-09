@@ -16,7 +16,11 @@ class Expiry:
         return tll <= 0
 
     def run_handle_expired_keys_task(self, callback):
-        """后台运行过期键任务"""
+        """
+        后台运行过期键任务
+        :param callback: 处理过期键时调用
+        :return:
+        """
         cleanup_thread = threading.Thread(target=self.handle_expired_keys_task,
                                           args=[callback],
                                           daemon=True)
@@ -33,7 +37,12 @@ class Expiry:
             time.sleep(1)
 
     def check_expired(self, key: str, callback) -> bool:
-        """检查键是否过期"""
+        """
+        检查键是否过期
+        :param key:
+        :param callback: 处理过期键时调用
+        :return:
+        """
         if self.is_expired(key):
             callback(key)
             return True
