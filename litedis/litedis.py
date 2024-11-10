@@ -8,15 +8,13 @@ from typing import (Any,
                     Set)
 from pathlib import Path
 
-from litedis.mytypes import (PersistenceType,
-                             AOFFsyncStrategy,
-                             DataType)
+from litedis import BaseLitedis, DataType, PersistenceType, AOFFsyncStrategy
 from litedis.aof import AOF
 from litedis.rdb import RDB
 from litedis.expiry import Expiry
 
 
-class Litedis:
+class Litedis(BaseLitedis):
     """模仿 Redis 接口的类"""
 
     def __init__(self,
@@ -50,10 +48,7 @@ class Litedis:
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # RDB 相关
-        self.rdb = RDB(db_name=self.db_name,
-                       data_dir=self.data_dir,
-                       db_data=self.db_data,
-                       db_lock=self.db_lock,
+        self.rdb = RDB(db=self,
                        rdb_save_frequency=rdb_save_frequency,
                        compression=compression)
 

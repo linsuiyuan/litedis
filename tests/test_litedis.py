@@ -2,7 +2,7 @@ import pytest
 import time
 from pathlib import Path
 from litedis.litedis import Litedis
-from litedis.mytypes import PersistenceType
+from litedis import PersistenceType
 
 
 @pytest.fixture

@@ -3,7 +3,8 @@ import time
 
 import pytest
 
-from litedis.persistence import RDB
+from litedis import BaseLitedis, DataType
+from litedis.rdb import RDB
 
 
 @pytest.fixture
@@ -13,30 +14,34 @@ def temp_dir(tmp_path):
 
 
 @pytest.fixture
-def db_data():
+def db(temp_dir):
     """测试用的数据库数据"""
-    return {
+    db = BaseLitedis()
+    db.db_lock = threading.Lock()
+    db.db_name = "test_db"
+    db.data_dir = temp_dir
+    db.data = {
         "key1": "value1",
-        "key2": 123,
-        "key3": ["list", "items"]
+        "key2": ["list", "items"]
     }
+    db.data_types = {
+        "key1": DataType.STRING,
+        "key2": DataType.LIST
+    }
+    return db
 
 
 @pytest.fixture
-def rdb_instance(temp_dir, db_data):
+def rdb_instance(db):
     """创建RDB实例的fixture"""
-    db_lock = threading.Lock()
     return RDB(
-        db_name="test_db",
-        data_dir=temp_dir,
-        db_data=db_data,
-        db_lock=db_lock,
+        db=db,
         rdb_save_frequency=1,
         compression=True
     )
 
 
-def test_save_and_read_rdb(rdb_instance, db_data):
+def test_save_and_read_rdb(rdb_instance, db):
     """测试RDB的保存和读取功能"""
     # 保存数据
     assert rdb_instance.save_rdb() is True
@@ -46,26 +51,22 @@ def test_save_and_read_rdb(rdb_instance, db_data):
 
     # 读取数据并验证
     loaded_data = rdb_instance.read_rdb()
-    assert loaded_data == db_data
+    assert loaded_data == db.data
 
 
-def test_save_rdb_without_compression(temp_dir, db_data):
+def test_save_rdb_without_compression(temp_dir, db):
     """测试不使用压缩的RDB保存"""
-    db_lock = threading.Lock()
     rdb = RDB(
-        db_name="test_db",
-        data_dir=temp_dir,
-        db_data=db_data,
-        db_lock=db_lock,
+        db=db,
         compression=False
     )
 
     assert rdb.save_rdb() is True
     loaded_data = rdb.read_rdb()
-    assert loaded_data == db_data
+    assert loaded_data == db.data
 
 
-def test_background_save(rdb_instance, db_data):
+def test_background_save(rdb_instance, db):
     """测试后台保存功能"""
     rdb_instance.save_task_in_background()
     # 等待后台任务执行
@@ -76,7 +77,7 @@ def test_background_save(rdb_instance, db_data):
 
     # 验证数据是否正确
     loaded_data = rdb_instance.read_rdb()
-    assert loaded_data == db_data
+    assert loaded_data == db.data
 
 
 def test_read_nonexistent_rdb(rdb_instance):
@@ -89,18 +90,12 @@ def test_read_nonexistent_rdb(rdb_instance):
     assert rdb_instance.read_rdb() is None
 
 
-def test_save_rdb_with_invalid_data(temp_dir):
+def test_save_rdb_with_invalid_data(temp_dir, db):
     """测试保存无效数据时的错误处理"""
-    db_lock = threading.Lock()
     # 创建一个包含无法序列化对象的数据
-    invalid_data = {"key": lambda x: x}  # lambda函数无法被pickle序列化
+    db.data = {"key": lambda x: x}  # lambda函数无法被pickle序列化
 
-    rdb = RDB(
-        db_name="test_db",
-        data_dir=temp_dir,
-        db_data=invalid_data,
-        db_lock=db_lock
-    )
+    rdb = RDB(db=db)
 
     with pytest.raises(Exception) as exc_info:
         rdb.save_rdb()
