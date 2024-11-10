@@ -4,19 +4,24 @@ import time
 from pathlib import Path
 from typing import Dict
 
-from litedis import AOFFsyncStrategy
+from litedis import (AOFFsyncStrategy,
+                     BaseLitedis)
 
 
-class AOF:
+class AOF(BaseLitedis):
     """AOF 持久化类"""
 
-    def __init__(self, db_name, data_dir, aof_fsync):
+    def __init__(self,
+                 db: BaseLitedis,
+                 aof_fsync: AOFFsyncStrategy):
+        self.db = db
+        self.data_dir = self.db.data_dir
+        self.aof_path = self.data_dir / f"{self.db.db_name}.aof"
+
         self.aof_fsync = aof_fsync
-        self.data_dir = data_dir if isinstance(data_dir, Path) else Path(data_dir)
-        self.aof_path = self.data_dir / f"{db_name}.aof"
 
         self._buffer = []
-        self.buffer_lock = threading.Lock()
+        self._buffer_lock = threading.Lock()
 
     def fsync_task(self):
         """AOF同步任务"""
@@ -26,7 +31,7 @@ class AOF:
 
     def flush_buffer(self):
         """刷新AOF缓冲区到磁盘"""
-        with self.buffer_lock:
+        with self._buffer_lock:
             if not self._buffer:
                 return
 
@@ -41,7 +46,7 @@ class AOF:
     def append(self, command: Dict):
         """追加命令到AOF"""
 
-        with self.buffer_lock:
+        with self._buffer_lock:
             self._buffer.append(command)
 
         if self.aof_fsync == AOFFsyncStrategy.ALWAYS:
@@ -52,7 +57,7 @@ class AOF:
         if not self.aof_path.exists():
             return
 
-        with self.buffer_lock:
+        with self._buffer_lock:
             try:
                 with open(self.aof_path, 'r', encoding='utf-8') as f:
                     for line in f:

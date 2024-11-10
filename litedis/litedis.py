@@ -21,7 +21,7 @@ class Litedis(BaseLitedis):
                  db_name: str = "litedb",
                  data_dir: str = "./data",
                  persistence: str = PersistenceType.AOF,
-                 aof_fsync: str = AOFFsyncStrategy.ALWAYS,
+                 aof_fsync=AOFFsyncStrategy.ALWAYS,
                  rdb_save_frequency: int = 900,
                  compression: bool = True):
         """初始化数据库
@@ -53,8 +53,7 @@ class Litedis(BaseLitedis):
                        compression=compression)
 
         # AOF 相关
-        self.aof = AOF(db_name=self.db_name,
-                       data_dir=self.data_dir,
+        self.aof = AOF(db=self,
                        aof_fsync=aof_fsync)
 
         self.expiry = Expiry(expires=self.expires)

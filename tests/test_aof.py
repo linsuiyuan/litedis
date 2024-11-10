@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from litedis import AOFFsyncStrategy
+from litedis import AOFFsyncStrategy, BaseLitedis, DataType
 from litedis.aof import AOF
 
 
@@ -14,21 +14,36 @@ def temp_dir(tmp_path):
 
 
 @pytest.fixture
-def aof_always(temp_dir):
+def db(temp_dir):
+    """创建db实例用于测试"""
+    db = BaseLitedis()
+    db.db_name = "test_db"
+    db.data_dir = temp_dir
+    db.data = {
+        "key": "value"
+    }
+    db.data_types = {
+        "key": DataType.STRING
+    }
+    return db
+
+
+@pytest.fixture
+def aof_always(db):
     """创建一个 fsync=AOFFsyncStrategy.ALWAYS 的 AOF 实例"""
-    return AOF("test_db", temp_dir, AOFFsyncStrategy.ALWAYS)
+    return AOF(db, AOFFsyncStrategy.ALWAYS)
 
 
 @pytest.fixture
-def aof_everysec(temp_dir):
+def aof_everysec(db):
     """创建一个 fsync=AOFFsyncStrategy.EVERYSEC 的 AOF 实例"""
-    return AOF("test_db", temp_dir, AOFFsyncStrategy.EVERYSEC)
+    return AOF(db, AOFFsyncStrategy.EVERYSEC)
 
 
 @pytest.fixture
-def aof_no(temp_dir):
+def aof_no(db):
     """创建一个 fsync=AOFFsyncStrategy.NO 的 AOF 实例"""
-    return AOF("test_db", temp_dir, AOFFsyncStrategy.NO)
+    return AOF(db, AOFFsyncStrategy.NO)
 
 
 class TestAOF:
@@ -96,15 +111,14 @@ class TestAOF:
             saved_command = json.loads(f.readline().strip())
             assert saved_command == test_command
 
-    def test_invalid_file_handling(self, temp_dir):
+    def test_invalid_file_handling(self, aof_always):
         """测试文件操作异常处理"""
-        aof = AOF("test_db", temp_dir, AOFFsyncStrategy.ALWAYS)
 
         # 创建一个无效的 AOF 文件
-        with open(aof.aof_path, 'w', encoding='utf-8') as f:
+        with open(aof_always.aof_path, 'w', encoding='utf-8') as f:
             f.write("invalid json\n")
 
         # 验证读取无效文件时会抛出异常
         with pytest.raises(Exception) as exc_info:
-            list(aof.read_aof())
+            list(aof_always.read_aof())
         assert "读取 AOF 文件 出现错误" in str(exc_info.value)
