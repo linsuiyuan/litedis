@@ -33,7 +33,7 @@ class Expiry:
                 key for key in self.expires.keys()
                 if self.is_expired(key)
             ]
-            if callback:
+            if expired_keys and callback:
                 callback(*expired_keys)
             time.sleep(1)
 

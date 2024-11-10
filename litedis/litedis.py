@@ -18,9 +18,9 @@ class Litedis(BaseLitedis):
     """模仿 Redis 接口的类"""
 
     def __init__(self,
-                 db_name: str = "litedb",
+                 db_name: str = "litedis",
                  data_dir: str = "./data",
-                 persistence: str = PersistenceType.AOF,
+                 persistence: str = PersistenceType.MIXED,
                  aof_fsync=AOFFsyncStrategy.ALWAYS,
                  rdb_save_frequency: int = 900,
                  compression: bool = True):
@@ -64,20 +64,6 @@ class Litedis(BaseLitedis):
         # 启动后台任务
         self._start_background_tasks()
 
-    @property
-    def db_data(self):
-        return {
-            'data': self.data,
-            'types': self.data_types,
-            'expires': self.expires
-        }
-
-    @db_data.setter
-    def db_data(self, value):
-        self.data = value['data']
-        self.data_types = value['types']
-        self.expires = value['expires']
-
     def _start_background_tasks(self):
         """启动后台任务"""
         # 过期键清理线程
@@ -89,17 +75,19 @@ class Litedis(BaseLitedis):
 
         # RDB保存线程
         if self.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
-            self.rdb.save_task_in_background()
+            self.rdb.save_task_in_background(callback=self.aof.clear_aof)
 
     def _load_data(self):
         """加载数据"""
         # 尝试从RDB加载
-        data = self.rdb.read_rdb()
-        if data:
-            self.db_data = data
+        self.rdb.read_rdb()
 
-        # 应用AOF,
+        # 应用AOF
         self._apply_aof_command()
+
+        # 如果有读取 AOF , 保存数据库, 再清理 AOF
+        if self.aof.aof_path.exists():
+            self.rdb.save_rdb(callback=self.aof.clear_aof)
 
     def _apply_aof_command(self):
         """应用命令"""

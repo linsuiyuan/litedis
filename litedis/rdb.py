@@ -22,6 +22,20 @@ class RDB:
         self.rdb_path = self.db.data_dir / f"{self.db.db_name}.rdb"
         self.tmp_rdb_path = self.db.data_dir / f"{self.db.db_name}.rdb.tmp"
 
+    @property
+    def db_data(self):
+        return {
+            'data': self.db.data,
+            'types': self.db.data_types,
+            'expires': self.db.expires
+        }
+
+    @db_data.setter
+    def db_data(self, value):
+        self.db.data = value['data']
+        self.db.data_types = value['types']
+        self.db.expires = value['expires']
+
     def read_rdb(self):
         if not self.rdb_path.exists():
             return
@@ -34,7 +48,8 @@ class RDB:
                 with open(self.rdb_path, 'rb') as f:
                     data = pickle.load(f)
 
-            return data
+            self.db_data = data
+            return True
         except (pickle.PicklingError, TypeError) as e:
             raise Exception("读取 RBD 文件出错") from e
 
@@ -56,10 +71,10 @@ class RDB:
                 # 先写入临时文件
                 if self.compression:
                     with gzip.open(self.tmp_rdb_path, 'wb') as f:
-                        pickle.dump(self.db.data, f)
+                        pickle.dump(self.db_data, f)
                 else:
                     with open(self.tmp_rdb_path, 'wb') as f:
-                        pickle.dump(self.db.data, f)
+                        pickle.dump(self.db_data, f)
 
                 # 原子性地替换旧文件
                 shutil.move(str(self.tmp_rdb_path), str(self.rdb_path))

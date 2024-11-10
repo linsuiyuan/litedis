@@ -67,7 +67,8 @@ class AOF(BaseLitedis):
 
     def clear_aof(self):
         """清理 AOF 文件"""
-        self.aof_path.unlink(missing_ok=True)
+        with self._buffer_lock:
+            self.aof_path.unlink(missing_ok=True)
 
     def run_fsync_task_in_background(self):
         if self.aof_fsync == AOFFsyncStrategy.EVERYSEC:
