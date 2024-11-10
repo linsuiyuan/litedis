@@ -3,8 +3,6 @@ import pickle
 import shutil
 import threading
 import time
-from pathlib import Path
-from typing import Union
 
 from litedis import BaseLitedis
 
@@ -40,22 +38,21 @@ class RDB:
         except (pickle.PicklingError, TypeError) as e:
             raise Exception("读取 RBD 文件出错") from e
 
-    def save_task_in_background(self):
-        rdb_thread = threading.Thread(target=self.save_task, daemon=True)
+    def save_task_in_background(self, callback=None):
+        rdb_thread = threading.Thread(target=self.save_task, args=[callback], daemon=True)
         rdb_thread.start()
 
-    def save_task(self):
+    def save_task(self, callback=None):
         """RDB保存任务"""
         while True:
             time.sleep(self.rdb_save_frequency)
-            self.save_rdb()
+            self.save_rdb(callback)
 
-    def save_rdb(self) -> bool:
+    def save_rdb(self, callback=None) -> bool:
         """保存RDB文件"""
 
         with self.db.db_lock:
             try:
-
                 # 先写入临时文件
                 if self.compression:
                     with gzip.open(self.tmp_rdb_path, 'wb') as f:
@@ -66,8 +63,10 @@ class RDB:
 
                 # 原子性地替换旧文件
                 shutil.move(str(self.tmp_rdb_path), str(self.rdb_path))
-                return True
             except (pickle.UnpicklingError, EOFError, AttributeError, TypeError, MemoryError) as e:
                 if self.tmp_rdb_path.exists():
                     self.tmp_rdb_path.unlink()
                 raise Exception("保存文件出错") from e
+        if callback:
+            callback()
+        return True

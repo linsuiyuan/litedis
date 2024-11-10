@@ -33,10 +33,11 @@ class Expiry:
                 key for key in self.expires.keys()
                 if self.is_expired(key)
             ]
-            callback(*expired_keys)
+            if callback:
+                callback(*expired_keys)
             time.sleep(1)
 
-    def check_expired(self, key: str, callback) -> bool:
+    def check_expired(self, key: str, callback=None) -> bool:
         """
         检查键是否过期
         :param key:
@@ -44,6 +45,7 @@ class Expiry:
         :return:
         """
         if self.is_expired(key):
-            callback(key)
+            if callback:
+                callback(key)
             return True
         return False
