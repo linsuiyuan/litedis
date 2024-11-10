@@ -175,7 +175,7 @@ class Litedis(BaseLitedis):
                 self.data_types[key] = DataType.LIST
 
             if self.data_types[key] != DataType.LIST:
-                raise TypeError(f"键 {key} 不是 列表")
+                raise TypeError(f"{key}-{self.data_types[key]} 不是 列表")
 
             rev_values = list(values)
             rev_values.reverse()
@@ -191,7 +191,7 @@ class Litedis(BaseLitedis):
                 self.data_types[key] = DataType.LIST
 
             if self.data_types[key] != DataType.LIST:
-                raise TypeError(f"Key {key} is not a list")
+                raise TypeError(f"{key}-{self.data_types[key]} 不是列表类型")
 
             self.data[key].extend(values)
             return len(self.data[key])
@@ -217,14 +217,12 @@ class Litedis(BaseLitedis):
 
         if self.data_types[key] == DataType.LIST:
             values = self.data[key]
-            # 兼容 redis 的取法
-            if stop == -1:
-                values = values[start:]
-            elif stop < -1:
-                values = values[start:stop + 1]
+            # 处理索引, Redis 是包含右边界的
+            if stop < 0:
+                stop = len(values) + stop + 1
             else:
-                values = values[start:stop]
-            return values
+                stop += 1
+            return values[start:stop]
         return []
 
     # Hash 操作
@@ -237,7 +235,7 @@ class Litedis(BaseLitedis):
                 self.data_types[key] = DataType.HASH
 
             if self.data_types[key] != DataType.HASH:
-                raise TypeError(f"Key {key} is not a hash")
+                raise TypeError(f"{key}-{self.data_types[key]} 不是哈希类型")
 
             is_new = field not in self.data[key]
             self.data[key][field] = value
@@ -271,7 +269,7 @@ class Litedis(BaseLitedis):
                 self.data_types[key] = DataType.SET
 
             if self.data_types[key] != DataType.SET:
-                raise TypeError(f"Key {key} is not a set")
+                raise TypeError(f"{key}-{self.data_types[key]} 不是集合类型")
 
             original_size = len(self.data[key])
             self.data[key].update(members)
@@ -294,3 +292,59 @@ class Litedis(BaseLitedis):
         if self.data_types[key] == DataType.SET:
             return member in self.data[key]
         return False
+
+    @append_to_aof
+    def zadd(self, key: str, mapping: Dict[str, float]) -> int:
+        """添加有序集合成员
+
+        用法: zadd(key, {"member1": score1, "member2": score2, ...})
+        """
+        with self.db_lock:
+            if key not in self.data:
+                self.data[key] = {}
+                self.data_types[key] = DataType.ZSET
+
+            if self.data_types[key] != DataType.ZSET:
+                raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+            count = 0
+            for member, score in mapping.items():
+                score = float(score)
+                if member not in self.data[key] or self.data[key][member] != score:
+                    self.data[key][member] = score
+                    count += 1
+
+            return count
+
+    def zscore(self, key: str, member: str) -> Optional[float]:
+        """获取有序集合成员的分数"""
+        if not self.exists(key):
+            return None
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        return self.data[key].get(member)
+
+    def zrange(self, key: str, start: int, stop: int, withscores: bool = False) -> List[Any]:
+        """获取有序集合的范围"""
+        if not self.exists(key):
+            return []
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        # 按分数排序
+        sorted_members = sorted(self.data[key].items(), key=lambda x: (x[1], x[0]))
+
+        # 处理索引, Redis 是包含右边界的
+        if stop < 0:
+            stop = len(sorted_members) + stop + 1
+        else:
+            stop += 1
+
+        result = sorted_members[start:stop]
+
+        if withscores:
+            return [(member, score) for member, score in result]
+        return [member for member, _ in result]

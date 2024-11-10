@@ -129,3 +129,72 @@ class TestLitedis:
         # 集合操作用于其他类型
         with pytest.raises(TypeError):
             db.sadd("str1", "member")
+
+    def test_zadd(self, db):
+        """测试zadd命令"""
+        # 测试添加新成员
+        assert db.zadd("scores", {"Alice": 89.5, "Bob": 92.0}) == 2
+
+        # 测试更新已存在成员的分数
+        assert db.zadd("scores", {"Bob": 95.0}) == 1
+        assert db.zscore("scores", "Bob") == 95.0
+
+        # 测试类型错误
+        db.set("wrong_type", "string")
+        with pytest.raises(TypeError, match="string 不是有序集合"):
+            db.zadd("wrong_type", {"Alice": 89.5})
+
+    def test_zscore(self, db):
+        """测试zscore命令"""
+        # 添加测试数据
+        db.zadd("scores", {"Alice": 89.5, "Bob": 92.0})
+
+        # 测试获取存在的成员分数
+        assert db.zscore("scores", "Alice") == 89.5
+        assert db.zscore("scores", "Bob") == 92.0
+
+        # 测试获取不存在的成员
+        assert db.zscore("scores", "Charlie") is None
+
+        # 测试获取不存在的键
+        assert db.zscore("not_exists", "Alice") is None
+
+        # 测试类型错误
+        db.set("wrong_type", "string")
+        with pytest.raises(TypeError, match="string 不是有序集合"):
+            db.zscore("wrong_type", "Alice")
+
+    def test_zrange(self, db):
+        """测试zrange命令"""
+        # 添加测试数据
+        db.zadd("scores", {
+            "Alice": 89.5,
+            "Bob": 92.0,
+            "Charlie": 78.5,
+            "David": 95.0
+        })
+
+        # 测试正常范围查询
+        assert db.zrange("scores", 0, 2) == ["Charlie", "Alice", "Bob"]
+
+        # 测试带分数的查询
+        result = db.zrange("scores", 0, 2, withscores=True)
+        expected = [
+            ("Charlie", 78.5),
+            ("Alice", 89.5),
+            ("Bob", 92.0)
+        ]
+        assert result == expected
+
+        # 测试负数索引
+        assert db.zrange("scores", 0, -1) == [
+            "Charlie", "Alice", "Bob", "David"
+        ]
+
+        # 测试空结果
+        assert db.zrange("not_exists", 0, -1) == []
+
+        # 测试类型错误
+        db.set("wrong_type", "string")
+        with pytest.raises(TypeError, match="string 不是有序集合"):
+            db.zrange("wrong_type", 0, -1)
