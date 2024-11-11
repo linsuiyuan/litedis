@@ -56,7 +56,7 @@ class Litedis(BaseLitedis):
         self.aof = AOF(db=self,
                        aof_fsync=aof_fsync)
 
-        self.expiry = Expiry(expires=self.expires)
+        self.expiry = Expiry(db=self)
 
         # 加载数据
         self._load_data()
@@ -148,13 +148,17 @@ class Litedis(BaseLitedis):
 
     # 字符串 操作
     @append_to_aof
-    def set(self, key: str, value: str, ex: Optional[float] = None) -> bool:
+    def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
         """设置字符串值"""
+
+        if not isinstance(value, str):
+            raise TypeError(f"值必须为字符串")
+
         with self.db_lock:
             self.data[key] = value
             self.data_types[key] = DataType.STRING
             if ex is not None:
-                self.expires[key] = ex
+                self.expires[key] = time.time() + ex
 
         return True
 

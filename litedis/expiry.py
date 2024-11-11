@@ -1,18 +1,20 @@
 import threading
 import time
 
+from litedis import BaseLitedis
+
 
 class Expiry:
 
-    def __init__(self, expires):
-        self.expires = expires
+    def __init__(self, db: BaseLitedis):
+        self.db = db
 
     def is_expired(self, key: str) -> bool:
         """检查键是否已过期"""
-        if key not in self.expires:
+        if key not in self.db.expires:
             # 未设置, 返回 False
             return False
-        tll = self.expires[key] - time.time()
+        tll = self.db.expires[key] - time.time()
         return tll <= 0
 
     def run_handle_expired_keys_task(self, callback):
@@ -30,7 +32,7 @@ class Expiry:
         """过期键处理任务"""
         while True:
             expired_keys = [
-                key for key in self.expires.keys()
+                key for key in self.db.expires.keys()
                 if self.is_expired(key)
             ]
             if expired_keys and callback:
