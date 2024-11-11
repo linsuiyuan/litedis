@@ -14,10 +14,12 @@ class RDB:
     def __init__(self,
                  db: weakref.ReferenceType[BaseLitedis],
                  rdb_save_frequency: int = 600,
-                 compression: bool = True):
+                 compression: bool = True,
+                 callback_after_save_rdb=None):
         self._db = db
         self.rdb_save_frequency = rdb_save_frequency
         self.compression = compression
+        self.callback_after_save_rdb = callback_after_save_rdb
 
         # 文件路径
         self.rdb_path = self.db.data_dir / f"{self.db.db_name}.rdb"
@@ -58,13 +60,12 @@ class RDB:
         except (pickle.PicklingError, TypeError) as e:
             raise Exception("读取 RBD 文件出错") from e
 
-    def save_task_in_background(self, callback=None):
+    def save_task_in_background(self):
         rdb_thread = threading.Thread(target=self.save_task,
-                                      args=[callback],
                                       daemon=True)
         rdb_thread.start()
 
-    def save_task(self, callback=None):
+    def save_task(self):
         """RDB保存任务"""
         while True:
             time.sleep(self.rdb_save_frequency)
@@ -73,9 +74,9 @@ class RDB:
             if not self.db:
                 break
 
-            self.save_rdb(callback)
+            self.save_rdb()
 
-    def save_rdb(self, callback=None) -> bool:
+    def save_rdb(self) -> bool:
         """保存RDB文件"""
 
         if not self.db:
@@ -97,6 +98,6 @@ class RDB:
                 if self.tmp_rdb_path.exists():
                     self.tmp_rdb_path.unlink()
                 raise Exception("保存文件出错") from e
-        if callback:
-            callback()
+        if self.callback_after_save_rdb:
+            self.callback_after_save_rdb()
         return True

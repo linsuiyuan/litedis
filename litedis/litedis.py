@@ -53,17 +53,18 @@ class Litedis(BaseLitedis):
         # 持久化 相关
         self.persistence = persistence
         weak_self = weakref.ref(self)
-        # RDB 相关
-        self.rdb = RDB(db=weak_self,
-                       rdb_save_frequency=rdb_save_frequency,
-                       compression=compression)
         # AOF 相关
         self.aof = AOF(db=weak_self,
                        aof_fsync=aof_fsync)
+        # RDB 相关
+        self.rdb = RDB(db=weak_self,
+                       rdb_save_frequency=rdb_save_frequency,
+                       compression=compression,
+                       callback_after_save_rdb=self.aof.clear_aof)
         # 过期 相关
         self.expiry = Expiry(db=weak_self)
 
-        # 是否关闭
+        # 是否关闭状态
         self.closed = False
 
         # 加载数据
@@ -83,11 +84,11 @@ class Litedis(BaseLitedis):
 
         # RDB保存线程
         if self.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
-            self.rdb.save_task_in_background(callback=self.aof.clear_aof)
+            self.rdb.save_task_in_background()
 
     def _load_data(self):
         """加载数据"""
-        # 尝试从RDB加载
+        # 尝试从 RDB 加载
         self.rdb.read_rdb()
 
         # 应用AOF
@@ -95,7 +96,7 @@ class Litedis(BaseLitedis):
 
         # 如果有读取 AOF , 保存数据库, 再清理 AOF
         if self.aof.aof_path.exists():
-            self.rdb.save_rdb(callback=self.aof.clear_aof)
+            self.rdb.save_rdb()
 
     def _apply_aof_command(self):
         """应用命令"""
@@ -113,9 +114,9 @@ class Litedis(BaseLitedis):
         """
         关闭数据库
         """
+        # 确保 aof 有持久化就可以了，这里的内容在重新初始化数据库的时候，会同步到 rdb 里
+        # 虽然这里也可以直接保存 rdb，但rdb 可能比较费时，退出的时候，可能来不及保存好（通过 __del__触发的时候）
         self.aof.flush_buffer()
-        if self.aof.aof_path.exists():
-            self.rdb.save_rdb(callback=self.aof.clear_aof)
         self.closed = True
 
         del self
