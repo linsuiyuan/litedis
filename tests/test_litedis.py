@@ -19,7 +19,7 @@ class TestLitedis:
         )
         yield
         # 清理测试数据
-        del self.db
+        self.db.close()
         if test_dir.exists():
             for file in test_dir.glob("*"):
                 file.unlink()
@@ -37,8 +37,6 @@ class TestLitedis:
 
         # 关闭数据库
         self.db.close()
-        del self.db
-        time.sleep(.3)
 
         # 重新打开数据库，确保数据持久化
         self.db = Litedis(

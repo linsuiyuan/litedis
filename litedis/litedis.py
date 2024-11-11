@@ -63,6 +63,9 @@ class Litedis(BaseLitedis):
         # 过期 相关
         self.expiry = Expiry(db=weak_self)
 
+        # 是否关闭
+        self.closed = False
+
         # 加载数据
         self._load_data()
 
@@ -109,15 +112,17 @@ class Litedis(BaseLitedis):
     def close(self):
         """
         关闭数据库
-
-        注意这里并没有真的关闭，只是做了一些保存操作
         """
         self.aof.flush_buffer()
         if self.aof.aof_path.exists():
             self.rdb.save_rdb(callback=self.aof.clear_aof)
+        self.closed = True
+
+        del self
 
     def __del__(self):
-        self.close()
+        if not self.closed:
+            self.close()
 
     # with 相关接口
     def __enter__(self):
