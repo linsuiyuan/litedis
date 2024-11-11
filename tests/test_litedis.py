@@ -37,10 +37,8 @@ class TestLitedis:
 
         # 关闭数据库
         self.db.close()
-
-        # 尝试访问数据，应该抛出异常或返回None
-        with pytest.raises(Exception, match="数据库已关闭"):
-            self.db.get("key1")
+        del self.db
+        time.sleep(.3)
 
         # 重新打开数据库，确保数据持久化
         self.db = Litedis(

@@ -1,5 +1,6 @@
 import json
 import time
+import weakref
 
 import pytest
 
@@ -29,21 +30,27 @@ def db(temp_dir):
 
 
 @pytest.fixture
-def aof_always(db):
+def weakref_db(db):
+    """创建db弱引用实例用于测试"""
+    return weakref.ref(db)
+
+
+@pytest.fixture
+def aof_always(weakref_db):
     """创建一个 fsync=AOFFsyncStrategy.ALWAYS 的 AOF 实例"""
-    return AOF(db, AOFFsyncStrategy.ALWAYS)
+    return AOF(weakref_db, AOFFsyncStrategy.ALWAYS)
 
 
 @pytest.fixture
-def aof_everysec(db):
+def aof_everysec(weakref_db):
     """创建一个 fsync=AOFFsyncStrategy.EVERYSEC 的 AOF 实例"""
-    return AOF(db, AOFFsyncStrategy.EVERYSEC)
+    return AOF(weakref_db, AOFFsyncStrategy.EVERYSEC)
 
 
 @pytest.fixture
-def aof_no(db):
+def aof_no(weakref_db):
     """创建一个 fsync=AOFFsyncStrategy.NO 的 AOF 实例"""
-    return AOF(db, AOFFsyncStrategy.NO)
+    return AOF(weakref_db, AOFFsyncStrategy.NO)
 
 
 class TestAOF:

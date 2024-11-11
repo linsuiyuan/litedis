@@ -1,6 +1,7 @@
 import json
 import threading
 import time
+import weakref
 from typing import Dict
 
 from litedis import (AOFFsyncStrategy,
@@ -11,9 +12,9 @@ class AOF(BaseLitedis):
     """AOF 持久化类"""
 
     def __init__(self,
-                 db: BaseLitedis,
+                 db: weakref.ReferenceType[BaseLitedis],
                  aof_fsync: AOFFsyncStrategy):
-        self.db = db
+        self._db = db
         self.data_dir = self.db.data_dir
         self.aof_path = self.data_dir / f"{self.db.db_name}.aof"
 
@@ -22,10 +23,19 @@ class AOF(BaseLitedis):
         self._buffer = []
         self._buffer_lock = threading.Lock()
 
+    @property
+    def db(self) -> BaseLitedis:
+        return self._db()
+
     def fsync_task(self):
         """AOF同步任务"""
         while True:
             time.sleep(1)
+
+            # 如果数据库关闭，退出任务
+            if not self.db:
+                break
+
             self.flush_buffer()
 
     def flush_buffer(self):

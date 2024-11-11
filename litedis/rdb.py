@@ -3,6 +3,7 @@ import pickle
 import shutil
 import threading
 import time
+import weakref
 
 from litedis import BaseLitedis
 
@@ -11,16 +12,20 @@ class RDB:
     """RDB 持久化类"""
 
     def __init__(self,
-                 db: BaseLitedis,
+                 db: weakref.ReferenceType[BaseLitedis],
                  rdb_save_frequency: int = 600,
                  compression: bool = True):
-        self.db = db
+        self._db = db
         self.rdb_save_frequency = rdb_save_frequency
         self.compression = compression
 
         # 文件路径
         self.rdb_path = self.db.data_dir / f"{self.db.db_name}.rdb"
         self.tmp_rdb_path = self.db.data_dir / f"{self.db.db_name}.rdb.tmp"
+
+    @property
+    def db(self) -> BaseLitedis:
+        return self._db()
 
     @property
     def db_data(self):
@@ -54,17 +59,27 @@ class RDB:
             raise Exception("读取 RBD 文件出错") from e
 
     def save_task_in_background(self, callback=None):
-        rdb_thread = threading.Thread(target=self.save_task, args=[callback], daemon=True)
+        rdb_thread = threading.Thread(target=self.save_task,
+                                      args=[callback],
+                                      daemon=True)
         rdb_thread.start()
 
     def save_task(self, callback=None):
         """RDB保存任务"""
         while True:
             time.sleep(self.rdb_save_frequency)
+
+            # 数据库关闭的话，退出任务
+            if not self.db:
+                break
+
             self.save_rdb(callback)
 
     def save_rdb(self, callback=None) -> bool:
         """保存RDB文件"""
+
+        if not self.db:
+            return False
 
         with self.db.db_lock:
             try:

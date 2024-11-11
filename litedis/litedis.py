@@ -1,6 +1,7 @@
 import functools
 import time
 import threading
+import weakref
 from typing import (Any,
                     Dict,
                     List,
@@ -51,15 +52,16 @@ class Litedis(BaseLitedis):
 
         # 持久化 相关
         self.persistence = persistence
+        weak_self = weakref.ref(self)
         # RDB 相关
-        self.rdb = RDB(db=self,
+        self.rdb = RDB(db=weak_self,
                        rdb_save_frequency=rdb_save_frequency,
                        compression=compression)
         # AOF 相关
-        self.aof = AOF(db=self,
+        self.aof = AOF(db=weak_self,
                        aof_fsync=aof_fsync)
         # 过期 相关
-        self.expiry = Expiry(db=self)
+        self.expiry = Expiry(db=weak_self)
 
         # 加载数据
         self._load_data()
@@ -70,7 +72,7 @@ class Litedis(BaseLitedis):
     def _start_background_tasks(self):
         """启动后台任务"""
         # 过期键清理线程
-        self.expiry.run_handle_expired_keys_task(callback=self.delete)
+        self.expiry.run_handle_expired_keys_task()
 
         # AOF同步线程
         if self.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
@@ -114,6 +116,9 @@ class Litedis(BaseLitedis):
         if self.aof.aof_path.exists():
             self.rdb.save_rdb(callback=self.aof.clear_aof)
 
+    def __del__(self):
+        self.close()
+
     # with 相关接口
     def __enter__(self):
         return self
@@ -155,7 +160,7 @@ class Litedis(BaseLitedis):
 
     def exists(self, key: str) -> bool:
         """检查键是否存在"""
-        if self.expiry.check_expired(key, callback=self.delete):
+        if self.expiry.check_expired(key):
             return False
         return key in self.data
 

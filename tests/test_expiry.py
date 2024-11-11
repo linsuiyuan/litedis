@@ -1,4 +1,6 @@
 import time
+import weakref
+
 import pytest
 
 from litedis import BaseLitedis, DataType
@@ -24,12 +26,18 @@ def db(temp_dir):
         "key": DataType.STRING
     }
     db.expires = {}
+
+    def callback(*keys):
+        for key in keys:
+            db.expires.pop(key)
+    db.delete = callback
     return db
 
 
 @pytest.fixture
 def expiry(db):
-    return Expiry(db=db)
+    weak_db = weakref.ref(db)
+    return Expiry(db=weak_db)
 
 
 def test_is_expired(expiry):
@@ -49,27 +57,20 @@ def test_is_expired(expiry):
 def test_check_expired(expiry):
     """测试check_expired方法"""
     
-    def callback(key):
-        expiry.db.expires.pop(key)
-    
     # 测试未过期的键
     expiry.db.expires = {'future_key': time.time() + 1}
-    assert not expiry.check_expired('future_key', callback)
+    assert not expiry.check_expired('future_key')
     assert len(expiry.db.expires) == 1
     
     # 测试已过期的键
     expiry.db.expires = {'past_key': time.time() - 1}
-    assert expiry.check_expired('past_key', callback)
+    assert expiry.check_expired('past_key')
     assert len(expiry.db.expires) == 0
     # assert expired_keys[0] == 'past_key'
 
 
 def test_handle_expired_keys_task(expiry):
     """测试过期键后台处理任务"""
-    
-    def callback(*keys):
-        for key in keys:
-            expiry.db.expires.pop(key)
     
     # 添加一些测试键
     current_time = time.time()
@@ -78,7 +79,7 @@ def test_handle_expired_keys_task(expiry):
     expiry.db.expires['valid'] = current_time + 10
     
     # 启动后台任务
-    expiry.run_handle_expired_keys_task(callback)
+    expiry.run_handle_expired_keys_task()
     
     # 等待一小段时间让后台任务执行
     time.sleep(1.2)
