@@ -25,6 +25,32 @@ class TestLitedis:
                 file.unlink()
             test_dir.rmdir()
 
+    def test_close(self):
+        """测试关闭数据库及释放资源"""
+        # 设置一些数据
+        self.db.set("key1", "value1")
+        self.db.set("key2", "value2")
+
+        # 确保数据存在
+        assert self.db.exists("key1") is True
+        assert self.db.exists("key2") is True
+
+        # 关闭数据库
+        self.db.close()
+
+        # 尝试访问数据，应该抛出异常或返回None
+        with pytest.raises(Exception, match="数据库已关闭"):
+            self.db.get("key1")
+
+        # 重新打开数据库，确保数据持久化
+        self.db = Litedis(
+            db_name="test_db",
+            data_dir="./test_data",
+            persistence=PersistenceType.MIXED
+        )
+        assert self.db.get("key1") == "value1"
+        assert self.db.get("key2") == "value2"
+
     def test_delete(self):
         """测试 delete 命令"""
         # 测试删除存在的键

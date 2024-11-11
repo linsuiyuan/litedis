@@ -18,15 +18,17 @@ class Litedis(BaseLitedis):
     """模仿 Redis 接口的类"""
 
     def __init__(self,
+                 connection_string: Optional[str] = None,
                  db_name: str = "litedis",
                  data_dir: str = "./data",
                  persistence: str = PersistenceType.MIXED,
                  aof_fsync=AOFFsyncStrategy.ALWAYS,
-                 rdb_save_frequency: int = 900,
+                 rdb_save_frequency: int = 600,
                  compression: bool = True):
         """初始化数据库
 
         Args:
+            connection_string: 数据库连接字符串，形式如: 'litedis:///path/db_name'
             db_name: 数据库名称
             data_dir: 数据目录
             persistence: 持久化类型
@@ -39,23 +41,24 @@ class Litedis(BaseLitedis):
         self.expires: Dict[str, float] = {}
         self.db_lock = threading.Lock()
 
-        # 持久化相关配置
-        self.data_dir = Path(data_dir)
-        self.db_name = db_name
-        self.persistence = persistence
-
-        # 创建数据目录
+        # 数据目录 相关
+        if connection_string:
+            raise Exception("待实现")
+        else:
+            self.data_dir = Path(data_dir)
+            self.db_name = db_name
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+        # 持久化 相关
+        self.persistence = persistence
         # RDB 相关
         self.rdb = RDB(db=self,
                        rdb_save_frequency=rdb_save_frequency,
                        compression=compression)
-
         # AOF 相关
         self.aof = AOF(db=self,
                        aof_fsync=aof_fsync)
-
+        # 过期 相关
         self.expiry = Expiry(db=self)
 
         # 加载数据
@@ -100,6 +103,26 @@ class Litedis(BaseLitedis):
             getattr(self, method)(*args, **kwargs)
 
         self.persistence = persistence
+
+    def close(self):
+        """
+        关闭数据库
+
+        注意这里并没有真的关闭，只是做了一些保存操作
+        """
+        self.aof.flush_buffer()
+        if self.aof.aof_path.exists():
+            self.rdb.save_rdb(callback=self.aof.clear_aof)
+
+    # with 相关接口
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            print(f"发生异常: {exc_type}, 值: {exc_val}")
+        self.close()
+        return True
 
     @staticmethod
     def append_to_aof(func):
