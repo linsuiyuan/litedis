@@ -115,7 +115,7 @@ class Litedis(BaseLitedis):
 
         return wrapper
 
-    # 通用操作
+    # 其他 操作
     @append_to_aof
     def delete(self, *keys: str) -> int:
         """删除键"""
@@ -146,7 +146,7 @@ class Litedis(BaseLitedis):
             self.expires[key] = time.time() + seconds
             return True
 
-    # 字符串操作
+    # 字符串 操作
     @append_to_aof
     def set(self, key: str, value: str, ex: Optional[float] = None) -> bool:
         """设置字符串值"""
@@ -163,9 +163,12 @@ class Litedis(BaseLitedis):
         if not self.exists(key):
             return None
 
+        if self.data_types[key] != DataType.STRING:
+            raise TypeError(f"{key}-{self.data_types[key]} 不是字符串")
+
         return self.data[key]
 
-    # List 操作
+    # 列表 操作
     @append_to_aof
     def lpush(self, key: str, *values: str) -> int:
         """向列表左端推入元素"""
@@ -175,7 +178,7 @@ class Litedis(BaseLitedis):
                 self.data_types[key] = DataType.LIST
 
             if self.data_types[key] != DataType.LIST:
-                raise TypeError(f"{key}-{self.data_types[key]} 不是 列表")
+                raise TypeError(f"{key}-{self.data_types[key]} 不是列表")
 
             rev_values = list(values)
             rev_values.reverse()
@@ -203,29 +206,57 @@ class Litedis(BaseLitedis):
             return None
 
         with self.db_lock:
-            if self.data_types[key] == DataType.LIST:
-                if not self.data[key]:
-                    return None
+            if not self.data[key]:
+                return None
 
-                return self.data[key].pop(0)
-        return None
+            if self.data_types[key] != DataType.LIST:
+                raise TypeError(f"{key}-{self.data_types[key]} 不是列表类型")
+
+            return self.data[key].pop(0)
+
+    @append_to_aof
+    def rpop(self, key: str) -> Optional[str]:
+        """从列表右端弹出元素"""
+        if not self.exists(key):
+            return None
+
+        with self.db_lock:
+            if not self.data[key]:
+                return None
+
+            if self.data_types[key] != DataType.LIST:
+                raise TypeError(f"{key}-{self.data_types[key]} 不是列表类型")
+
+            return self.data[key].pop()
+
+    def llen(self, key: str) -> int:
+        """获取列表长度"""
+        if not self.exists(key):
+            return 0
+        if self.data_types[key] != DataType.LIST:
+            raise TypeError(f"{key}-{self.data_types[key]} 不是列表")
+        return len(self.data[key])
 
     def lrange(self, key: str, start: int, stop: int) -> List[str]:
         """获取列表片段"""
         if not self.exists(key):
             return []
 
-        if self.data_types[key] == DataType.LIST:
-            values = self.data[key]
-            # 处理索引, Redis 是包含右边界的
-            if stop < 0:
-                stop = len(values) + stop + 1
-            else:
-                stop += 1
-            return values[start:stop]
-        return []
+        if not self.data[key]:
+            return []
 
-    # Hash 操作
+        if self.data_types[key] != DataType.LIST:
+            raise TypeError(f"{key}-{self.data_types[key]} 不是列表类型")
+
+        values = self.data[key]
+        # 处理索引, Redis 是包含右边界的
+        if stop < 0:
+            stop = len(values) + stop + 1
+        else:
+            stop += 1
+        return values[start:stop]
+
+    # 哈希 操作
     @append_to_aof
     def hset(self, key: str, field: str, value: str) -> int:
         """设置哈希表字段"""
@@ -255,11 +286,12 @@ class Litedis(BaseLitedis):
         if not self.exists(key):
             return {}
 
-        if self.data_types[key] == DataType.HASH:
-            return dict(self.data[key])
-        return {}
+        if self.data_types[key] != DataType.HASH:
+            raise TypeError(f"{key}-{self.data_types[key]} 不是哈希类型")
 
-    # Set 操作
+        return dict(self.data[key])
+
+    # 集合 操作
     @append_to_aof
     def sadd(self, key: str, *members: str) -> int:
         """添加集合成员"""
@@ -280,19 +312,22 @@ class Litedis(BaseLitedis):
         if not self.exists(key):
             return set()
 
-        if self.data_types[key] == DataType.SET:
-            return set(self.data[key])
-        return set()
+        if self.data_types[key] != DataType.SET:
+            raise TypeError(f"{key}-{self.data_types[key]} 不是集合类型")
+
+        return set(self.data[key])
 
     def sismember(self, key: str, member: str) -> bool:
         """判断成员是否在集合中"""
         if not self.exists(key):
             return False
 
-        if self.data_types[key] == DataType.SET:
-            return member in self.data[key]
-        return False
+        if self.data_types[key] != DataType.SET:
+            raise TypeError(f"{key}-{self.data_types[key]} 不是集合类型")
 
+        return member in self.data[key]
+
+    # 有序集合 操作
     @append_to_aof
     def zadd(self, key: str, mapping: Dict[str, float]) -> int:
         """添加有序集合成员
