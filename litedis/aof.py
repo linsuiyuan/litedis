@@ -5,10 +5,10 @@ import weakref
 from typing import Dict
 
 from litedis import (AOFFsyncStrategy,
-                     BaseLitedis)
+                     BaseLitedis, PersistenceType)
 
 
-class AOF(BaseLitedis):
+class AOF:
     """AOF 持久化类"""
 
     def __init__(self,
@@ -22,6 +22,10 @@ class AOF(BaseLitedis):
 
         self._buffer = []
         self._buffer_lock = threading.Lock()
+
+        # 后台持久化任务
+        if self.db.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
+            self.run_fsync_task_in_background()
 
     @property
     def db(self) -> BaseLitedis:

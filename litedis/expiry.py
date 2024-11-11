@@ -7,8 +7,12 @@ from litedis import BaseLitedis
 
 class Expiry:
 
-    def __init__(self, db: weakref.ReferenceType[BaseLitedis]):
+    def __init__(self,
+                 db: weakref.ReferenceType[BaseLitedis]):
         self._db = db
+
+        # 过期检查任务
+        self.run_handle_expired_keys_task()
 
     @property
     def db(self) -> BaseLitedis:
@@ -43,7 +47,7 @@ class Expiry:
             ]
             if expired_keys:
                 self.db.delete(*expired_keys)
-            time.sleep(1)
+            time.sleep(3)
 
     def check_expired(self, key: str) -> bool:
         """

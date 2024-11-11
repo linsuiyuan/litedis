@@ -4,7 +4,7 @@ import weakref
 
 import pytest
 
-from litedis import AOFFsyncStrategy, BaseLitedis, DataType
+from litedis import AOFFsyncStrategy, BaseLitedis, DataType, PersistenceType
 from litedis.aof import AOF
 
 
@@ -20,6 +20,7 @@ def db(temp_dir):
     db = BaseLitedis()
     db.db_name = "test_db"
     db.data_dir = temp_dir
+    db.persistence = PersistenceType.MIXED
     db.data = {
         "key": "value"
     }

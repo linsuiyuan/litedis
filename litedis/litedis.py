@@ -22,7 +22,7 @@ class Litedis(BaseLitedis):
                  connection_string: Optional[str] = None,
                  db_name: str = "litedis",
                  data_dir: str = "./data",
-                 persistence: str = PersistenceType.MIXED,
+                 persistence=PersistenceType.MIXED,
                  aof_fsync=AOFFsyncStrategy.ALWAYS,
                  rdb_save_frequency: int = 600,
                  compression: bool = True):
@@ -70,32 +70,14 @@ class Litedis(BaseLitedis):
         # 加载数据
         self._load_data()
 
-        # 启动后台任务
-        self._start_background_tasks()
-
-    def _start_background_tasks(self):
-        """启动后台任务"""
-        # 过期键清理线程
-        self.expiry.run_handle_expired_keys_task()
-
-        # AOF同步线程
-        if self.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
-            self.aof.run_fsync_task_in_background()
-
-        # RDB保存线程
-        if self.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
-            self.rdb.save_task_in_background()
-
     def _load_data(self):
         """加载数据"""
         # 尝试从 RDB 加载
         self.rdb.read_rdb()
 
-        # 应用AOF
-        self._apply_aof_command()
-
-        # 如果有读取 AOF , 保存数据库, 再清理 AOF
+        # 如果有 AOF , 加载到数据库, 再清理 AOF
         if self.aof.aof_path.exists():
+            self._apply_aof_command()
             self.rdb.save_rdb()
 
     def _apply_aof_command(self):

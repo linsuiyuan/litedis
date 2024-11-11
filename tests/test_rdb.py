@@ -4,7 +4,7 @@ import weakref
 
 import pytest
 
-from litedis import BaseLitedis, DataType
+from litedis import BaseLitedis, DataType, PersistenceType
 from litedis.rdb import RDB
 
 
@@ -21,6 +21,7 @@ def db(temp_dir):
     db.db_lock = threading.Lock()
     db.db_name = "test_db"
     db.data_dir = temp_dir
+    db.persistence = PersistenceType.MIXED
     db.data = {
         "key1": "value1",
         "key2": ["list", "items"]
