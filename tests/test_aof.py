@@ -67,7 +67,7 @@ class TestAOF:
             aof_always.append(cmd)
 
         # 读取并验证命令
-        read_commands = list(aof_always.read_aof())
+        read_commands = list(aof_always.read_aof_commands())
         assert read_commands == test_commands
 
     def test_append_with_everysec_fsync(self, aof_everysec):
@@ -87,7 +87,7 @@ class TestAOF:
         time.sleep(1.1)
 
         # 读取并验证命令
-        read_commands = list(aof_everysec.read_aof())
+        read_commands = list(aof_everysec.read_aof_commands())
         assert read_commands == [test_command]
 
     def test_clear_aof(self, aof_always):
@@ -128,5 +128,5 @@ class TestAOF:
 
         # 验证读取无效文件时会抛出异常
         with pytest.raises(Exception) as exc_info:
-            list(aof_always.read_aof())
+            list(aof_always.read_aof_commands())
         assert "读取 AOF 文件 出现错误" in str(exc_info.value)

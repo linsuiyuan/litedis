@@ -1,3 +1,4 @@
+import functools
 import json
 import threading
 import time
@@ -6,6 +7,20 @@ from typing import Dict
 
 from litedis import (AOFFsyncStrategy,
                      BaseLitedis, PersistenceType)
+
+
+def collect_command_to_aof(func):
+    """需要记录 aof 的方法加上这个装饰器就好了"""
+
+    @functools.wraps(func)
+    def wrapper(db, *args, **kwargs):
+        result = func(db, *args, **kwargs)
+        if db.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
+            command = {'method': func.__name__, 'args': args, "kwargs": kwargs}
+            db.aof.append(command)
+        return result
+
+    return wrapper
 
 
 class AOF:
@@ -57,7 +72,7 @@ class AOF:
                 print(f"刷新AOF缓冲区出现错误: {e}")
 
     def append(self, command: Dict):
-        """追加命令到AOF"""
+        """追加命令到AOF缓冲区"""
 
         with self._buffer_lock:
             self._buffer.append(command)
@@ -65,12 +80,12 @@ class AOF:
         if self.aof_fsync == AOFFsyncStrategy.ALWAYS:
             self.flush_buffer()
 
-    def read_aof(self):
-        """读取 AOF 文件"""
+    def read_aof_commands(self):
         if not self.aof_path.exists():
             return
 
         with self._buffer_lock:
+
             try:
                 with open(self.aof_path, 'r', encoding='utf-8') as f:
                     for line in f:
@@ -78,6 +93,23 @@ class AOF:
                         yield command
             except (IOError, json.JSONDecodeError) as e:
                 raise Exception("读取 AOF 文件 出现错误") from e
+
+    def read_aof(self):
+        """读取 AOF 文件"""
+
+        # 初始化时的不需要记录AOF
+        persistence = self.db.persistence
+        self.db.persistence = PersistenceType.NONE
+
+        for command in self.read_aof_commands():
+            # 应用命令
+            method, args, kwargs = command.values()
+            getattr(self.db, method)(*args, **kwargs)
+
+        # 恢复原来的持久化方式
+        self.db.persistence = persistence
+
+        return True
 
     def clear_aof(self):
         """清理 AOF 文件"""

@@ -10,7 +10,7 @@ from typing import (Any,
 from pathlib import Path
 
 from litedis import BaseLitedis, DataType, PersistenceType, AOFFsyncStrategy
-from litedis.aof import AOF
+from litedis.aof import AOF, collect_command_to_aof
 from litedis.rdb import RDB
 from litedis.expiry import Expiry
 
@@ -76,21 +76,9 @@ class Litedis(BaseLitedis):
         self.rdb.read_rdb()
 
         # 如果有 AOF , 加载到数据库, 再清理 AOF
-        if self.aof.aof_path.exists():
-            self._apply_aof_command()
+        result = self.aof.read_aof()
+        if result:
             self.rdb.save_rdb()
-
-    def _apply_aof_command(self):
-        """应用命令"""
-        # 初始化时的不需要记录AOF
-        persistence = self.persistence
-        self.persistence = PersistenceType.NONE
-
-        for command in self.aof.read_aof():
-            method, args, kwargs = command.values()
-            getattr(self, method)(*args, **kwargs)
-
-        self.persistence = persistence
 
     def close(self):
         """
@@ -117,22 +105,8 @@ class Litedis(BaseLitedis):
         self.close()
         return True
 
-    @staticmethod
-    def append_to_aof(func):
-        """需要记录 aof 的方法加上这个装饰器就好了"""
-
-        @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            result = func(self, *args, **kwargs)
-            if self.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
-                command = {'method': func.__name__, 'args': args, "kwargs": kwargs}
-                self.aof.append(command)
-            return result
-
-        return wrapper
-
     # 其他 操作
-    @append_to_aof
+    @collect_command_to_aof
     def delete(self, *keys: str) -> int:
         """删除键"""
         count = 0
@@ -152,7 +126,7 @@ class Litedis(BaseLitedis):
             return False
         return key in self.data
 
-    @append_to_aof
+    @collect_command_to_aof
     def expire(self, key: str, seconds: int) -> bool:
         """设置键的过期时间"""
         if key not in self.data:
@@ -163,7 +137,7 @@ class Litedis(BaseLitedis):
             return True
 
     # 字符串 操作
-    @append_to_aof
+    @collect_command_to_aof
     def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
         """设置字符串值"""
 
@@ -189,7 +163,7 @@ class Litedis(BaseLitedis):
         return self.data[key]
 
     # 列表 操作
-    @append_to_aof
+    @collect_command_to_aof
     def lpush(self, key: str, *values: str) -> int:
         """向列表左端推入元素"""
         with self.db_lock:
@@ -205,7 +179,7 @@ class Litedis(BaseLitedis):
             self.data[key] = rev_values + self.data[key]
             return len(self.data[key])
 
-    @append_to_aof
+    @collect_command_to_aof
     def rpush(self, key: str, *values: str) -> int:
         """向列表右端推入元素"""
         with self.db_lock:
@@ -219,7 +193,7 @@ class Litedis(BaseLitedis):
             self.data[key].extend(values)
             return len(self.data[key])
 
-    @append_to_aof
+    @collect_command_to_aof
     def lpop(self, key: str) -> Optional[str]:
         """从列表左端弹出元素"""
         if not self.exists(key):
@@ -234,7 +208,7 @@ class Litedis(BaseLitedis):
 
             return self.data[key].pop(0)
 
-    @append_to_aof
+    @collect_command_to_aof
     def rpop(self, key: str) -> Optional[str]:
         """从列表右端弹出元素"""
         if not self.exists(key):
@@ -277,7 +251,7 @@ class Litedis(BaseLitedis):
         return values[start:stop]
 
     # 哈希 操作
-    @append_to_aof
+    @collect_command_to_aof
     def hset(self, key: str, field: str, value: str) -> int:
         """设置哈希表字段"""
         with self.db_lock:
@@ -312,7 +286,7 @@ class Litedis(BaseLitedis):
         return dict(self.data[key])
 
     # 集合 操作
-    @append_to_aof
+    @collect_command_to_aof
     def sadd(self, key: str, *members: str) -> int:
         """添加集合成员"""
         with self.db_lock:
@@ -348,7 +322,7 @@ class Litedis(BaseLitedis):
         return member in self.data[key]
 
     # 有序集合 操作
-    @append_to_aof
+    @collect_command_to_aof
     def zadd(self, key: str, mapping: Dict[str, float]) -> int:
         """添加有序集合成员
 
