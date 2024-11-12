@@ -1,4 +1,4 @@
-import functools
+import inspect
 import time
 import threading
 import weakref
@@ -10,13 +10,68 @@ from typing import (Any,
 from pathlib import Path
 from urllib import parse
 
-from litedis import BaseLitedis, DataType, PersistenceType, AOFFsyncStrategy
+from litedis import (BaseLitedis,
+                     DataType,
+                     PersistenceType,
+                     AOFFsyncStrategy)
 from litedis.aof import AOF, collect_command_to_aof
 from litedis.rdb import RDB
 from litedis.expiry import Expiry
 
 
-class Litedis(BaseLitedis):
+class _SingletonMeta(type):
+    """
+    单例元类，确保一个类只有一个实例
+
+    主要给 Litedis 创建单例使用
+
+    使用 '/path/db' 作为单一实例依据，即同一个数据库只能创建一个单例
+    """
+    _instances = weakref.WeakValueDictionary()
+    _lock: threading.Lock = threading.Lock()
+
+    def __call__(cls, *args, **kwargs):
+        # 只能给Litedis使用
+        if cls is not Litedis:
+            raise TypeError(f"该元类只能给 {Litedis.__name__} 使用")
+
+        # 如果禁止，则不创建单例
+        singleton = kwargs.get('singleton', None)
+        if singleton is False:
+            return super().__call__(*args, **kwargs)
+
+        with cls._lock:
+            connection_string = None
+            # 如果 args 有值，则第一个位置参数必然是 connection_string
+            if args:
+                connection_string = args[0]
+            # args 没有，则从关键字参数里获取
+            if not connection_string:
+                connection_string = kwargs.get("connection_string", None)
+            # kwargs 也没有，代表没有使用 connection_string 参数，获取 data_dir 和 db_name
+            if not connection_string:
+                litedis_init_sign = inspect.signature(Litedis.__init__)
+                data_dir = kwargs.get("data_dir", None)
+                if not data_dir:
+                    data_dir = litedis_init_sign.parameters.get("data_dir", None)
+                db_name = kwargs.get("db_name", None)
+                if not db_name:
+                    db_name = litedis_init_sign.parameters.get("db_name", None)
+                if data_dir and db_name:
+                    connection_string = f"litedis:///{data_dir.lstrip('./|/').rstrip('/')}/{db_name}"
+
+            if not connection_string:
+                raise ValueError("未知错误，请检查 connection_string,data_dir,db_name参数")
+
+            if connection_string not in cls._instances:
+                print('creating')
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[connection_string] = instance
+
+        return cls._instances[connection_string]
+
+
+class Litedis(BaseLitedis, metaclass=_SingletonMeta):
     """模仿 Redis 接口的类"""
 
     def __init__(self,
@@ -26,7 +81,8 @@ class Litedis(BaseLitedis):
                  persistence=PersistenceType.MIXED,
                  aof_fsync=AOFFsyncStrategy.ALWAYS,
                  rdb_save_frequency: int = 600,
-                 compression: bool = True):
+                 compression: bool = True,
+                 singleton=True):
         """初始化数据库
 
         Args:
@@ -37,11 +93,13 @@ class Litedis(BaseLitedis):
             aof_fsync: AOF同步策略
             rdb_save_frequency: RDB保存频率(秒)
             compression: 是否压缩RDB文件
+            singleton: 是否创建单例，默认是，为 False 时否
         """
         self.data: Dict[str, Any] = {}
         self.data_types: Dict[str, str] = {}
         self.expires: Dict[str, float] = {}
         self.db_lock = threading.Lock()
+        self.singleton = singleton
 
         # 数据目录 相关
         if connection_string:

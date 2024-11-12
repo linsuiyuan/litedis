@@ -4,7 +4,9 @@ import weakref
 
 import pytest
 
-from litedis import BaseLitedis, DataType, PersistenceType
+from litedis import (BaseLitedis,
+                     DataType,
+                     PersistenceType)
 from litedis.rdb import RDB
 
 

@@ -3,7 +3,8 @@ import weakref
 
 import pytest
 
-from litedis import BaseLitedis, DataType
+from litedis import (BaseLitedis,
+                     DataType)
 from litedis.expiry import Expiry
 
 

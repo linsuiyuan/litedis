@@ -4,7 +4,10 @@ import weakref
 
 import pytest
 
-from litedis import AOFFsyncStrategy, BaseLitedis, DataType, PersistenceType
+from litedis import (AOFFsyncStrategy,
+                     BaseLitedis,
+                     DataType,
+                     PersistenceType)
 from litedis.aof import AOF
 
 

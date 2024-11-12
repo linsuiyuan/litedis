@@ -15,11 +15,31 @@ class TestLitedis:
         self.db = Litedis(
             db_name="test_db",
             data_dir=str(test_dir),
-            persistence=PersistenceType.MIXED
+            singleton=False
         )
         yield
         # 清理测试数据
         self.db.close()
+        if test_dir.exists():
+            for file in test_dir.glob("*"):
+                file.unlink()
+            test_dir.rmdir()
+
+    def test_singletonmeta(self):
+        """测试单例元类"""
+        test_dir = Path("./connection")
+        connection_string = "litedis:///connection/dbname"
+        db = Litedis(connection_string=connection_string)
+
+        # self.db 不是单例，不相等
+        assert db is not self.db
+
+        # db 和 db2 是单例，应相等
+        db2 = Litedis(connection_string=connection_string)
+        assert db is db2
+
+        # 清理测试数据
+        db.close()
         if test_dir.exists():
             for file in test_dir.glob("*"):
                 file.unlink()

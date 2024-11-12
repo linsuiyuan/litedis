@@ -7,7 +7,8 @@ from contextlib import contextmanager
 from typing import Dict
 
 from litedis import (AOFFsyncStrategy,
-                     BaseLitedis, PersistenceType)
+                     BaseLitedis,
+                     PersistenceType)
 
 
 def collect_command_to_aof(func):
