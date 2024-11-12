@@ -8,6 +8,7 @@ from typing import (Any,
                     Optional,
                     Set)
 from pathlib import Path
+from urllib import parse
 
 from litedis import BaseLitedis, DataType, PersistenceType, AOFFsyncStrategy
 from litedis.aof import AOF, collect_command_to_aof
@@ -29,7 +30,7 @@ class Litedis(BaseLitedis):
         """初始化数据库
 
         Args:
-            connection_string: 数据库连接字符串，形式如: 'litedis:///path/db_name'
+            connection_string: 数据库连接字符串，形式如: 'litedis:///path/db_name'(注意冒号后有三个连续'/')
             db_name: 数据库名称
             data_dir: 数据目录
             persistence: 持久化类型
@@ -44,10 +45,17 @@ class Litedis(BaseLitedis):
 
         # 数据目录 相关
         if connection_string:
-            raise Exception("待实现")
+            # litedis:///path/to/db_name --> (./path/to, db_name)
+            result = parse.urlparse(connection_string)
+            if result.netloc:
+                raise ValueError("connection_string格式不正确，应为：'litedis:///path/to/db_name'")
+            path, name = result.path.replace("/", "./", 1).rsplit("/", maxsplit=1)
+            self.data_dir = Path(path)
+            self.db_name = name
         else:
             self.data_dir = Path(data_dir)
             self.db_name = db_name
+            self.connection_string = f"litedis:///{data_dir.lstrip('./|/').rstrip('/')}/{db_name}"
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # 持久化 相关
@@ -68,13 +76,8 @@ class Litedis(BaseLitedis):
         self.closed = False
 
         # 加载数据
-        self._load_data()
-
-    def _load_data(self):
-        """加载数据"""
         # 尝试从 RDB 加载
         self.rdb.read_rdb()
-
         # 如果有 AOF , 加载到数据库, 再清理 AOF
         result = self.aof.read_aof()
         if result:

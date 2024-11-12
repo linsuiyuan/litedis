@@ -25,6 +25,23 @@ class TestLitedis:
                 file.unlink()
             test_dir.rmdir()
 
+    def test_connection_string(self):
+        """创建测试用的数据库实例"""
+        test_dir = Path("./connection")
+        connection_string = "litedis:///connection/dbname"
+        db = Litedis(connection_string=connection_string)
+
+        assert test_dir.exists()
+        db.set("connection_key1", "connection_value1")
+        assert db.get("connection_key1") == "connection_value1"
+
+        # 清理测试数据
+        db.close()
+        if test_dir.exists():
+            for file in test_dir.glob("*"):
+                file.unlink()
+            test_dir.rmdir()
+
     def test_close(self):
         """测试关闭数据库及释放资源"""
         # 设置一些数据
