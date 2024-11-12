@@ -3,6 +3,7 @@ import json
 import threading
 import time
 import weakref
+from contextlib import contextmanager
 from typing import Dict
 
 from litedis import (AOFFsyncStrategy,
@@ -10,17 +11,46 @@ from litedis import (AOFFsyncStrategy,
 
 
 def collect_command_to_aof(func):
-    """需要记录 aof 的方法加上这个装饰器就好了"""
+    """记录 aof 命令的装饰器"""
 
     @functools.wraps(func)
     def wrapper(db, *args, **kwargs):
         result = func(db, *args, **kwargs)
         if db.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
-            command = {'method': func.__name__, 'args': args, "kwargs": kwargs}
+            command = {
+                "method": func.__name__,
+                "args": args,
+                "kwargs": kwargs,
+                "exectime": time.time(),  # 运行命令时间
+            }
             db.aof.append(command)
         return result
 
     return wrapper
+
+
+@contextmanager
+def execute_command_sanbox(db: BaseLitedis,
+                           exectime: float):
+    """执行 aof 命令沙盒，以提供特定的执行环境"""
+
+    # 初始化时的不需要记录AOF
+    persistence = db.persistence
+    db.persistence = PersistenceType.NONE
+
+    # hook 原来命令的执行时间
+    builtin_time = time.time
+    time.time = lambda: exectime
+
+    try:
+        yield
+
+    finally:
+        # 恢复内置 time函数
+        time.time = builtin_time
+
+        # 恢复原来的持久化方式
+        db.persistence = persistence
 
 
 class AOF:
@@ -97,17 +127,11 @@ class AOF:
     def read_aof(self):
         """读取 AOF 文件"""
 
-        # 初始化时的不需要记录AOF
-        persistence = self.db.persistence
-        self.db.persistence = PersistenceType.NONE
-
         for command in self.read_aof_commands():
             # 应用命令
-            method, args, kwargs = command.values()
-            getattr(self.db, method)(*args, **kwargs)
-
-        # 恢复原来的持久化方式
-        self.db.persistence = persistence
+            method, args, kwargs, exectime = command.values()
+            with execute_command_sanbox(self.db, exectime):
+                getattr(self.db, method)(*args, **kwargs)
 
         return True
 
