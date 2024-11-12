@@ -44,3 +44,9 @@ class BaseLitedis:
 
     def delete(self, *keys: str) -> int:
         raise NotImplementedError("子类实现")
+
+
+from litedis.aof import AOF  # noqa
+from litedis.expiry import Expiry  # noqa
+from litedis.rdb import RDB  # noqa
+from litedis.litedis import Litedis  # noqa
