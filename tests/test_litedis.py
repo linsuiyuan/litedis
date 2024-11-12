@@ -365,25 +365,25 @@ class TestLitedis:
         with pytest.raises(TypeError, match="string 不是有序集合"):
             self.db.zadd("wrong_type", {"Alice": 89.5})
 
-    def test_zscore(self):
-        """测试zscore命令"""
-        # 添加测试数据
+    def test_zcard(self):
+        """测试 zcard 命令"""
         self.db.zadd("scores", {"Alice": 89.5, "Bob": 92.0})
+        assert self.db.zcard("scores") == 2
+        assert self.db.zcard("nonexistent") == 0
 
-        # 测试获取存在的成员分数
-        assert self.db.zscore("scores", "Alice") == 89.5
-        assert self.db.zscore("scores", "Bob") == 92.0
+    def test_zincrby(self):
+        """测试 zincrby 命令"""
+        self.db.zadd("scores", {"Alice": 89.5})
+        assert self.db.zincrby("scores", 10, "Alice") == 99.5
+        assert self.db.zincrby("scores", -10, "Alice") == 89.5
+        assert self.db.zincrby("scores", 5, "Bob") == 5.0  # Bob 不存在，初始分数为 0
 
-        # 测试获取不存在的成员
-        assert self.db.zscore("scores", "Charlie") is None
-
-        # 测试获取不存在的键
-        assert self.db.zscore("not_exists", "Alice") is None
-
-        # 测试类型错误
-        self.db.set("wrong_type", "string")
-        with pytest.raises(TypeError, match="string 不是有序集合"):
-            self.db.zscore("wrong_type", "Alice")
+    def test_zrandmember(self):
+        """测试 zrandmember 命令"""
+        self.db.zadd("scores", {"Alice": 89.5, "Bob": 92.0, "Charlie": 78.5})
+        result = self.db.zrandmember("scores", 2)
+        assert len(result) == 2
+        assert all(member in {"Alice", "Bob", "Charlie"} for member in result)
 
     def test_zrange(self):
         """测试zrange命令"""
@@ -419,3 +419,60 @@ class TestLitedis:
         self.db.set("wrong_type", "string")
         with pytest.raises(TypeError, match="string 不是有序集合"):
             self.db.zrange("wrong_type", 0, -1)
+
+    def test_zrangebyscore(self):
+        """测试 zrangebyscore 命令"""
+        self.db.zadd("scores", {"Alice": 89.5, "Bob": 92.0, "Charlie": 81.5})
+        assert self.db.zrangebyscore("scores", 80, 90) == ["Charlie", "Alice"]
+        assert self.db.zrangebyscore("scores", 90, 100) == ["Bob"]
+        assert self.db.zrangebyscore("scores", 100, 200) == []
+
+    def test_zrem(self):
+        """测试 zrem 命令"""
+        self.db.zadd("scores", {"Alice": 89.5, "Bob": 92.0})
+        assert self.db.zrem("scores", "Alice") == 1
+        assert self.db.zrem("scores", "nonexistent") == 0
+        assert self.db.zcard("scores") == 1
+
+    def test_zscan(self):
+        """测试 zscan 命令"""
+        self.db.zadd("scores", {
+            "Alice": 89.5,
+            "Bob": 92.0,
+            "Charlie": 78.5,
+            "David": 95.0
+        })
+        cursor, members = self.db.zscan("scores", cursor=0, count=2)
+        assert len(members) <= 2  # 确保返回的成员数量不超过 count
+        assert all(member in {"Alice", "Bob", "Charlie", "David"} for member in members)
+
+        # 测试游标的返回
+        next_cursor = cursor
+        while next_cursor != 0:
+            next_cursor, members = self.db.zscan("scores", cursor=next_cursor, count=2)
+            assert len(members) <= 2  # 确保返回的成员数量不超过 count
+
+        # 测试类型错误
+        self.db.set("wrong_type", "string")
+        with pytest.raises(TypeError, match="string 不是有序集合"):
+            self.db.zscan("wrong_type")
+
+    def test_zscore(self):
+        """测试zscore命令"""
+        # 添加测试数据
+        self.db.zadd("scores", {"Alice": 89.5, "Bob": 92.0})
+
+        # 测试获取存在的成员分数
+        assert self.db.zscore("scores", "Alice") == 89.5
+        assert self.db.zscore("scores", "Bob") == 92.0
+
+        # 测试获取不存在的成员
+        assert self.db.zscore("scores", "Charlie") is None
+
+        # 测试获取不存在的键
+        assert self.db.zscore("not_exists", "Alice") is None
+
+        # 测试类型错误
+        self.db.set("wrong_type", "string")
+        with pytest.raises(TypeError, match="string 不是有序集合"):
+            self.db.zscore("wrong_type", "Alice")

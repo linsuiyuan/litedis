@@ -1,4 +1,5 @@
 import inspect
+import random
 import time
 import threading
 import weakref
@@ -6,7 +7,7 @@ from typing import (Any,
                     Dict,
                     List,
                     Optional,
-                    Set)
+                    Set, Tuple)
 from pathlib import Path
 from urllib import parse
 
@@ -406,17 +407,54 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
 
             return count
 
-    def zscore(self, key: str, member: str) -> Optional[float]:
-        """获取有序集合成员的分数"""
+    def zcard(self, key: str) -> int:
+        """获取有序集合的成员数量"""
         if not self.exists(key):
-            return None
+            return 0
 
         if self.data_types[key] != DataType.ZSET:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
-        return self.data[key].get(member)
+        return len(self.data[key])
 
-    def zrange(self, key: str, start: int, stop: int, withscores: bool = False) -> List[Any]:
+    @collect_command_to_aof
+    def zincrby(self, key: str, increment: float, member: str) -> float:
+        """增加有序集合成员的分数"""
+        if not self.exists(key):
+            self.data[key] = {}
+            self.data_types[key] = DataType.ZSET
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        with self.db_lock:
+            current_score = self.data[key].get(member, 0.0)
+            new_score = current_score + increment
+            self.data[key][member] = new_score
+            return new_score
+
+    def zrandmember(self, key: str, count: int = 1) -> List[str]:
+        """随机获取有序集合的成员"""
+        if not self.exists(key):
+            return []
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        members = list(self.data[key].keys())
+        if count < 0:
+            count = abs(count)
+        if count > len(members):
+            count = len(members)
+        return random.sample(members, count)
+
+    def zrange(
+            self,
+            key: str,
+            start: int,
+            stop: int,
+            withscores: bool = False
+    ) -> List[Any]:
         """获取有序集合的范围"""
         if not self.exists(key):
             return []
@@ -438,3 +476,66 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if withscores:
             return [(member, score) for member, score in result]
         return [member for member, _ in result]
+
+    def zrangebyscore(self, key: str, min_score: float, max_score: float) -> List[str]:
+        """根据分数范围获取有序集合的成员"""
+        if not self.exists(key):
+            return []
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        sorted_members = sorted(self.data[key].items(), key=lambda x: (x[1], x[0]))
+
+        return [member
+                for member, score in sorted_members
+                if min_score <= score <= max_score]
+
+    @collect_command_to_aof
+    def zrem(self, key: str, *members: str) -> int:
+        """移除有序集合中的成员"""
+        if not self.exists(key):
+            return 0
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        count = 0
+        with self.db_lock:
+            for member in members:
+                if member in self.data[key]:
+                    del self.data[key][member]
+                    count += 1
+        return count
+
+    def zscan(self,
+              key: str,
+              cursor: int = 0,
+              count: int = 10) -> Tuple[int, List[str]]:
+        """
+        扫描有序集合成员
+
+        redis 里 scan 是非阻塞的，所以这里也是，因此结果可能有重复或遗漏
+        """
+        if not self.exists(key):
+            return 0, []
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        members = sorted(self.data[key].items(), key=lambda x: (x[1], x[0]))
+        total = len(members)
+        start = cursor
+        end = min(cursor + count, total)
+        next_cursor = end if end < total else 0
+        return next_cursor, [member for member, _ in members[start:end]]
+
+    def zscore(self, key: str, member: str) -> Optional[float]:
+        """获取有序集合成员的分数"""
+        if not self.exists(key):
+            return None
+
+        if self.data_types[key] != DataType.ZSET:
+            raise TypeError(f"{self.data_types[key]} 不是有序集合")
+
+        return self.data[key].get(member)
