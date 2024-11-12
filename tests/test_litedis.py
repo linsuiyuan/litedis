@@ -444,7 +444,7 @@ class TestLitedis:
         })
         cursor, members = self.db.zscan("scores", cursor=0, count=2)
         assert len(members) <= 2  # 确保返回的成员数量不超过 count
-        assert all(member in {"Alice", "Bob", "Charlie", "David"} for member in members)
+        assert all(member in {"Alice", "Bob", "Charlie", "David"} for member, _ in members)
 
         # 测试游标的返回
         next_cursor = cursor

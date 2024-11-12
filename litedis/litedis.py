@@ -65,7 +65,6 @@ class _SingletonMeta(type):
                 raise ValueError("未知错误，请检查 connection_string,data_dir,db_name参数")
 
             if connection_string not in cls._instances:
-                print('creating')
                 instance = super().__call__(*args, **kwargs)
                 cls._instances[connection_string] = instance
 
@@ -386,7 +385,10 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
     # 有序集合 操作
     @collect_command_to_aof
     def zadd(self, key: str, mapping: Dict[str, float]) -> int:
-        """添加有序集合成员
+        """
+        添加有序集合成员
+
+        不存在就添加，存在则更新分数
 
         用法: zadd(key, {"member1": score1, "member2": score2, ...})
         """
@@ -528,7 +530,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         start = cursor
         end = min(cursor + count, total)
         next_cursor = end if end < total else 0
-        return next_cursor, [member for member, _ in members[start:end]]
+        return next_cursor, members[start:end]
 
     def zscore(self, key: str, member: str) -> Optional[float]:
         """获取有序集合成员的分数"""
