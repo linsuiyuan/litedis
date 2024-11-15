@@ -5,9 +5,14 @@ import pytest  # noqa
 from litedis import PersistenceType
 from litedis.refactor import BasicKey
 from litedis.refactor import ListType
+from litedis.refactor import SetType
 
 
-class DB(ListType, BasicKey):
+class DB(
+    SetType,
+    ListType,
+    BasicKey
+):
     """组合 mixin"""
 
 
@@ -307,3 +312,153 @@ class TestListType:
         
         # 测试不存在的键
         assert db.lsort("nonexistent") == []
+
+
+class TestSetType:
+    def test_sadd_and_smembers(self, db):
+        # 测试基本的添加功能
+        assert db.sadd("myset", "one") == 1
+        assert db.sadd("myset", "two", "three") == 2
+        
+        # 测试添加重复元素
+        assert db.sadd("myset", "one") == 0
+        
+        # 测试获取所有成员
+        assert db.smembers("myset") == {"one", "two", "three"}
+        
+        # 测试不存在的集合
+        assert db.smembers("nonexistent") == set()
+
+    def test_scard(self, db):
+        # 测试空集合
+        assert db.scard("nonexistent") == 0
+        
+        # 测试有成员的集合
+        db.sadd("myset", "one", "two", "three")
+        assert db.scard("myset") == 3
+        
+        # 测试添加后的计数
+        db.sadd("myset", "four")
+        assert db.scard("myset") == 4
+
+    def test_sdiff(self, db):
+        # 准备测试数据
+        db.sadd("set1", "a", "b", "c")
+        db.sadd("set2", "b", "c", "d")
+        db.sadd("set3", "c", "d", "e")
+        
+        # 测试两个集合的差集
+        assert db.sdiff(["set1", "set2"]) == {"a"}
+        
+        # 测试多个集合的差集
+        assert db.sdiff(["set1", "set2", "set3"]) == {"a"}
+        
+        # 测试包含不存在的集合
+        assert db.sdiff(["set1", "nonexistent"]) == {"a", "b", "c"}
+
+    def test_sinter(self, db):
+        # 准备测试数据
+        db.sadd("set1", "a", "b", "c")
+        db.sadd("set2", "b", "c", "d")
+        db.sadd("set3", "c", "d", "e")
+        
+        # 测试两个集合的交集
+        assert db.sinter(["set1", "set2"]) == {"b", "c"}
+        
+        # 测试多个集合的交集
+        assert db.sinter(["set1", "set2", "set3"]) == {"c"}
+        
+        # 测试包含不存在的集合
+        assert db.sinter(["set1", "nonexistent"]) == set()
+
+    def test_sismember_and_smismember(self, db):
+        db.sadd("myset", "one", "two", "three")
+        
+        # 测试单个成员检查
+        assert db.sismember("myset", "one") is True
+        assert db.sismember("myset", "four") is False
+        assert db.sismember("nonexistent", "one") is False
+        
+        # 测试多个成员检查
+        assert db.smismember("myset", ["one", "four", "two"]) == [True, False, True]
+        assert db.smismember("nonexistent", ["one", "two"]) == []
+
+    def test_smove(self, db):
+        db.sadd("source", "one", "two")
+        db.sadd("destination", "three")
+        
+        # 测试成功移动
+        assert db.smove("source", "destination", "two") is True
+        assert db.smembers("source") == {"one"}
+        assert db.smembers("destination") == {"two", "three"}
+        
+        # 测试移动不存在的成员
+        assert db.smove("source", "destination", "nonexistent") is False
+        
+        # 测试从不存在的集合移动
+        assert db.smove("nonexistent", "destination", "one") is False
+
+    def test_spop(self, db):
+        db.sadd("myset", "one", "two", "three", "four")
+        
+        # 测试弹出单个元素
+        popped = db.spop("myset")
+        assert popped in {"one", "two", "three", "four"}
+        assert db.scard("myset") == 3
+        
+        # 测试弹出多个元素
+        popped_multiple = db.spop("myset", 2)
+        assert len(popped_multiple) == 2
+        assert db.scard("myset") == 1
+        
+        # 测试空集合弹出
+        assert db.spop("nonexistent") is None
+
+    def test_srandmember(self, db):
+        db.sadd("myset", "one", "two", "three", "four")
+        
+        # 测试获取单个随机成员
+        member = db.srandmember("myset")
+        assert member in {"one", "two", "three", "four"}
+        
+        # 测试获取多个不重复随机成员
+        members = db.srandmember("myset", 2)
+        assert len(members) == 2
+        assert len(set(members)) == 2  # 确保没有重复
+        
+        # 测试获取可能重复的随机成员
+        members = db.srandmember("myset", -2)
+        assert len(members) == 2
+        
+        # 测试空集合
+        assert db.srandmember("nonexistent") is None
+        assert db.srandmember("nonexistent", 2) is None
+
+    def test_srem(self, db):
+        db.sadd("myset", "one", "two", "three")
+        
+        # 测试移除单个成员
+        assert db.srem("myset", "one") == 1
+        assert db.smembers("myset") == {"two", "three"}
+        
+        # 测试移除多个成员
+        assert db.srem("myset", "two", "three", "nonexistent") == 2
+        assert db.smembers("myset") == set()
+        
+        # 测试移除不存在集合的成员
+        assert db.srem("nonexistent", "one") == 0
+
+    def test_sunion(self, db):
+        # 准备测试数据
+        db.sadd("set1", "a", "b", "c")
+        db.sadd("set2", "c", "d", "e")
+        db.sadd("set3", "e", "f", "g")
+        
+        # 测试两个集合的并集
+        assert db.sunion(["set1", "set2"]) == {"a", "b", "c", "d", "e"}
+        
+        # 测试多个集合的并集
+        assert db.sunion(["set1", "set2", "set3"]) == {"a", "b", "c", "d", "e", "f", "g"}
+        
+        # 测试包含不存在的集合
+        assert db.sunion(["set1", "nonexistent"]) == {"a", "b", "c"}

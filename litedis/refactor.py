@@ -2,7 +2,8 @@ import json
 import random
 import time
 from fnmatch import fnmatchcase
-from typing import Optional, List, Union, Iterable, Mapping, Callable
+from functools import reduce
+from typing import Optional, List, Union, Iterable, Mapping, Callable, Set
 
 from litedis import BaseLitedis, DataType
 from litedis.typing import StringableT
@@ -812,3 +813,249 @@ class ListType(BaseLitedis):
             self.data[name].sort(key=key, reverse=desc)
 
             return self.data[name]
+
+
+class SetType(BaseLitedis):
+
+    def _check_set_type(self, name):
+        if self.data_types[name] != DataType.SET:
+            raise TypeError(f"{name}的数据类型 不是集合！")
+
+    def sadd(self, name: str, *values: StringableT) -> int:
+        """
+        添加 ``value(s)`` 到 ``name`` 集合
+
+        如果集合不存在，则会创建一个新的集合。
+
+        该命令返回添加到集合中的新成员的数量，不包括已经存在于集合中的成员。
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                set_ = self.data[name] = set()
+                self.data_types[name] = DataType.SET
+            else:
+                self._check_set_type(name)
+
+            set_to_add = set(values) - set_
+
+            self.data[name] = set_ | set_to_add
+
+            return len(set_to_add)
+
+    def scard(self, name: str) -> int:
+        """
+        返回集合``name``中的元素数量
+
+        如果集合不存在，返回值将是 0
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return 0
+
+            self._check_set_type(name)
+
+            return len(set_)
+
+    def sdiff(self, keys: List[str], *args: str) -> Set[StringableT]:
+        """
+        返回指定的``keys``的集合的差集
+        """
+        with self.db_lock:
+            args = list_or_args(keys, args)
+
+            for name in args:
+                if name in self.data:
+                    self._check_set_type(name)
+
+            set_list = [self.data.get(name, set()) for name in args]
+
+            return reduce(lambda s1, s2: s1 - s2, set_list)
+
+    def sinter(self, keys: List[str], *args: str) -> Set[StringableT]:
+        """
+        返回指定的``keys``的集合的交集
+        """
+        with self.db_lock:
+            args = list_or_args(keys, args)
+
+            for name in args:
+                if name in self.data:
+                    self._check_set_type(name)
+
+            set_list = [self.data.get(name, set()) for name in args]
+
+            return reduce(lambda s1, s2: s1 & s2, set_list)
+
+    def sismember(self, name: str, value: StringableT) -> bool:
+        """
+        返回``value``是否是集合``name``的成员：
+
+        - 如果``value``是集合的成员，则返回 True。
+        - 如果``value``不是集合的成员，或者键不存在，则返回 False。
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return False
+
+            self._check_set_type(name)
+
+            return value in set_
+
+    def smembers(self, name: str) -> Set:
+        """
+        返回集合``name``的所有成员
+
+        如果集合不存在，SMEMBERS 将返回一个空的列表。
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return set()
+
+            self._check_set_type(name)
+
+            return set_
+
+    def smismember(self, name: str, values: List[StringableT], *args: str) -> List[bool]:
+        """
+        判断每个在``values``中的值是否是集合``name``的成员，以``values``的顺序返回一个列表
+
+        - 如果值是集合的成员，则返回 True。
+        - 如果值不是集合的成员，或者键不存在，则返回 False。
+
+        如果集合``name``不存在，返回一个空数组。
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return []
+
+            self._check_set_type(name)
+
+            args = list_or_args(values, args)
+            return [v in set_ for v in args]
+
+    def smove(self, src: str, dst: str, value: StringableT) -> bool:
+        """
+        原子地将``value``从集合``src``移动到集合``dst``。
+
+        如果 value 成功地从 source 集合中移除并添加到 destination 集合中，命令返回 True。
+
+        如果 source 集合不存在，返回 False。
+
+        如果 value 不在 source 集合中，命令返回 False。
+
+        如果 destination 集合不存在，自动创建它。
+        """
+        with self.db_lock:
+            set_src = self.data.get(src, None)
+            if set_src is None:
+                return False
+
+            self._check_set_type(src)
+
+            if value not in set_src:
+                return False
+
+            set_dst = self.data.get(dst, None)
+            if set_dst is None:
+                set_dst = self.data[dst] = set()
+                self.data_types[dst] = DataType.SET
+            else:
+                self._check_set_type(dst)
+
+            set_src.remove(value)
+            set_dst.add(value)
+
+            return True
+
+    def spop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
+        """
+        从集合``name``中移除并返回一个随机成员
+
+        集合``name``不存在或为空，返回 None
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return None
+
+            self._check_set_type(name)
+
+            if not set_:
+                return None
+
+            if count is None:
+                return set_.pop()
+
+            num = min(count, len(set_))
+            return [set_.pop() for _ in range(num)]
+
+    def srandmember(self, name: str, number: Optional[int] = None) -> Union[StringableT, List, None]:
+        """
+        如果``number``为 None，则返回集合``name``的一个随机成员。
+
+        如果``number``不为 None，则返回集合``name``的``number``个随机成员的列表。
+
+        如果 number 是正数，返回指定数量的随机不同元素；如果是负数，则返回指定数量的随机元素，可以重复。
+
+        如果集合不存在或为空，返回 None
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return None
+
+            self._check_set_type(name)
+
+            if not set_:
+                return None
+
+            if number is None:
+                return random.sample(set_, 1)[0]
+
+            if number == 0:
+                return []
+            elif number < 0:
+                return random.choices(list(set_), k=abs(number))
+            else:
+                return random.sample(set_, number)
+
+    def srem(self, name: str, *values: StringableT) -> int:
+        """
+        从集合``name``中移除``values``
+
+        返回被成功移除的成员数量。如果指定的成员在集合中不存在，返回值仍然是成功移除的成员数量。
+        """
+        with self.db_lock:
+            set_ = self.data.get(name, None)
+            if set_ is None:
+                return 0
+
+            self._check_set_type(name)
+
+            num = 0
+            for v in values:
+                if v in set_:
+                    set_.remove(v)
+                    num += 1
+
+            return num
+
+    def sunion(self, keys: List[StringableT], *args: StringableT) -> Set[StringableT]:
+        """
+        返回指定的``keys``的集合的并集
+        """
+        with self.db_lock:
+            args = list_or_args(keys, args)
+
+            for name in args:
+                if name in self.data:
+                    self._check_set_type(name)
+
+            set_list = [self.data.get(name, set()) for name in args]
+
+            return reduce(lambda s1, s2: s1 | s2, set_list)
