@@ -52,7 +52,7 @@ class BasicKey(BaseLitedis):
         返回 True 表示复制成功，返回 False 表示源键不存在
         """
         with self.db_lock:
-            if not self.exists(source):
+            if source not in self.data:
                 return False
 
             if destination in self.data and not replace:
@@ -113,7 +113,12 @@ class BasicKey(BaseLitedis):
 
         返回存在的键的数量。如果没有键存在，则返回 0。
         """
-        return len(set(names) & set(self.data.keys()))
+        with self.db_lock:
+            num = 0
+            for name in names:
+                if name in self.data:
+                    num += 1
+            return num
 
     __contains__ = exists
 
@@ -169,7 +174,7 @@ class BasicKey(BaseLitedis):
         返回 True 表示成功设置过期时间，返回 False 表示键不存在或过期时间未设置。
         """
         with self.db_lock:
-            if not self.exists(name):
+            if name not in self.data:
                 return False
 
             if nx and name in self.expires:
