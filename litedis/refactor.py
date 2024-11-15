@@ -2,11 +2,11 @@ import json
 import random
 import time
 from fnmatch import fnmatchcase
-from typing import Optional, List, Union, Iterable, Mapping
+from typing import Optional, List, Union, Iterable, Mapping, Callable
 
 from litedis import BaseLitedis, DataType
 from litedis.typing import StringableT
-from litedis.utils import list_or_args
+from litedis.utils import list_or_args, find_index_from_right, find_index_from_left
 
 
 class BasicKey(BaseLitedis):
@@ -486,3 +486,324 @@ class BasicKey(BaseLitedis):
                 return "none"
 
             return self.data_types[name]
+
+
+class ListType(BaseLitedis):
+
+    def _check_list_type(self, name):
+        if self.data_types[name] != DataType.LIST:
+            raise TypeError(f"{name}的数据类型 不是列表！")
+
+    def lindex(self, name: str, index: int) -> Optional[StringableT]:
+        """
+        返回列表“name”中位置“index”的项。
+
+        支持负索引。
+
+        如果索引超出范围或键不存在，返回 None
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return None
+
+            self._check_list_type(name)
+
+            if abs(index) >= len(list_):
+                return None
+
+            return list_[index]
+
+    def linsert(self, name: str, where: str, refvalue: StringableT, value: StringableT) -> int:
+        """
+        在列表 name 中以 refvalue 为基准的 where 位置（BEFORE/AFTER）插入 value 。
+
+        成功时返回列表的新长度，如果 refvalue 不在列表中则返回-1。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return -1
+
+            self._check_list_type(name)
+
+            if refvalue not in list_:
+                return -1
+
+            ref_index = list_.index(refvalue)
+            if where.lower() == "after":
+                ref_index += 1
+
+            list_.insert(ref_index, value)
+
+            return len(list_)
+
+    def llen(self, name: str) -> int:
+        """
+        返回列表“name”的长度。
+
+        如果键不存在，返回 0。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return 0
+
+            self._check_list_type(name)
+
+            return len(list_)
+
+    def lpop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
+        """
+        移除并返回列表 name 的前面几个元素。
+
+        默认情况下，命令从列表的开头弹出一个元素。
+
+        当提供可选的 count参数时，返回最多count个元素。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return None
+
+            self._check_list_type(name)
+
+            if not list_:
+                return None
+
+            if count is None:
+                return list_.pop(0)
+
+            num = min(count, len(list_))
+            return [list_.pop(0) for _ in range(num)]
+
+    def lpush(self, name: str, *values: StringableT) -> int:
+        """
+        将 values 推送到列表 name 的头部。
+
+        返回插入后列表的长度
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is not None:
+                self._check_list_type(name)
+            else:
+                list_ = self.data[name] = []
+                self.data_types[name] = DataType.LIST
+
+            for v in values:
+                list_.insert(0, v)
+
+            return len(list_)
+
+    def lpushx(self, name: str, *values: StringableT) -> int:
+        """
+        如果 name 存在，则将 value 推送到列表 name 的头部。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return 0
+
+            self._check_list_type(name)
+
+            for v in values:
+                list_.insert(0, v)
+
+            return len(list_)
+
+    def lrange(self, name: str, start: int, end: int) -> List:
+        """
+        返回列表 name 在位置 start 和 end 之间的切片。
+
+        start 和 end 可以是负数，就像Python的切片表示法一样。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return []
+
+            self._check_list_type(name)
+
+            # 处理索引, Redis 是包含右边界的
+            if end < 0:
+                end = len(list_) + end + 1
+            else:
+                end += 1
+
+            return list_[start:end]
+
+    def lrem(self, name: str, count: int, value: str) -> int:
+        """
+        从存储在 name 中的列表中删除与 value 相等的元素的第一个 count 次出现。
+
+        count 参数影响操作的方式：
+            count > 0：从头到尾移动，删除与 value 相等的元素。
+
+            count < 0：从尾到头移动，删除与 value 相等的元素。
+
+            count = 0：删除所有与 value 相等的元素。
+
+        返回实际删除的元素数量。
+        """
+
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return 0
+
+            self._check_list_type(name)
+
+            # 小于 0，从右查找，否则从左查找
+            if count < 0:
+                find_index = find_index_from_right
+            else:
+                find_index = find_index_from_left
+
+            num = 0
+            # 一直删除，直到达到 count 值或者全部删完
+            while index := find_index(list_, value) >= 0:
+                list_.pop(index)
+                num += 1
+                if abs_count := abs(count) > 0:
+                    if num >= abs_count:
+                        break
+            return num
+
+    def lset(self, name: str, index: int, value: str) -> bool:
+        """
+        将列表 name 中位置 index 的元素设置为 value 。
+
+        返回 True 表示成功设置元素的值。
+
+        如果 name 不存在或者索引超出范围，Redis 将返回错误。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                raise ValueError(f"name: {name} 不存在相应的值")
+
+            self._check_list_type(name)
+
+            if abs(index) > len(list_):
+                raise IndexError(f"index: {index} 超出索引范围")
+
+            list_[index] = value
+
+            return True
+
+    def ltrim(self, name: str, start: int, end: int) -> bool:
+        """
+        修剪列表“name”，删除不在“start”和“end”之间的所有值。
+
+        “start”和“end”可以是负数。
+
+        返回 True 表示成功修剪列表。
+
+        如果键不存在，列表将被创建为空列表。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                list_ = self.data[name] = []
+                self.data_types[name] = DataType.LIST
+            else:
+                self._check_list_type(name)
+
+            # 处理索引, Redis 是包含右边界的
+            if end < 0:
+                end = len(list_) + end + 1
+            else:
+                end += 1
+
+            self.data[name] = list_[start:end]
+
+            return True
+
+    def rpop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
+        """
+        移除并返回列表 name 的最后元素。
+
+        默认情况下，命令从列表的末尾弹出一个元素。
+
+        当提供可选的 count 参数时，将根据列表的长度返回最多count个元素。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return None
+
+            self._check_list_type(name)
+
+            if count is None:
+                return list_.pop()
+
+            num = min(count, len(list_))
+            return [list_.pop() for _ in range(num)]
+
+    def rpush(self, name: str, *values: StringableT) -> int:
+        """
+        将 values 添加到列表 name 的尾部。
+
+        返回插入后列表的长度。
+
+        如果指定的键不存在，RPUSH 会创建一个新的列表。
+
+        如果键的值不是列表类型，Redis 将返回错误。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                list_ = self.data[name] = []
+                self.data_types[name] = DataType.LIST
+            else:
+                self._check_list_type(name)
+
+            list_.extend(values)
+
+            return len(list_)
+
+    def rpushx(self, name: str, *values: StringableT) -> int:
+        """
+        如果 name 存在，则将 value 添加到列表 name 的尾部。
+
+        返回插入后列表的长度。如果指定的列表不存在，则返回 0。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return 0
+
+            self._check_list_type(name)
+
+            list_.extend(values)
+
+            return len(list_)
+
+    def lsort(
+            self,
+            name: str,
+            key: Optional[Callable] = None,
+            desc: bool = False
+    ) -> List[StringableT]:
+        """
+        对列表 name 进行排序并返回。
+
+        key 自定义排序
+
+        desc 是否反转排序
+
+        返回排序后的元素列表。
+
+        如果指定的键不存在，返回空列表。
+        """
+        with self.db_lock:
+            list_ = self.data.get(name, None)
+            if list_ is None:
+                return []
+
+            self._check_list_type(name)
+
+            self.data[name].sort(key=key, reverse=desc)
+
+            return self.data[name]

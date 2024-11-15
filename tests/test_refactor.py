@@ -4,6 +4,11 @@ import pytest  # noqa
 
 from litedis import PersistenceType
 from litedis.refactor import BasicKey
+from litedis.refactor import ListType
+
+
+class DB(ListType, BasicKey):
+    """组合 mixin"""
 
 
 @pytest.fixture
@@ -15,7 +20,7 @@ def temp_dir(tmp_path):
 @pytest.fixture
 def db(temp_dir):
     """测试用的数据库数据"""
-    db = BasicKey()
+    db = DB()
     db.db_lock = threading.Lock()
     db.db_name = "test_db"
     db.data_dir = temp_dir
@@ -168,3 +173,137 @@ class TestBasicKey:
         db.set("string_key", "value")
         assert db.type("string_key") == "string"
         assert db.type("nonexistent") == "none"
+
+
+class TestListType:
+    def test_lpush_and_lrange(self, db):
+        # 测试基本的 lpush 和 lrange 功能
+        assert db.lpush("mylist", "world", "hello") == 2
+        assert db.lrange("mylist", 0, -1) == ["hello", "world"]
+        
+        # 测试空列表的 lrange
+        assert db.lrange("nonexistent", 0, -1) == []
+    
+    def test_rpush_and_lrange(self, db):
+        # 测试基本的 rpush 功能
+        assert db.rpush("mylist", "hello", "world") == 2
+        assert db.lrange("mylist", 0, -1) == ["hello", "world"]
+        
+        # 测试向已存在的列表追加
+        assert db.rpush("mylist", "!") == 3
+        assert db.lrange("mylist", 0, -1) == ["hello", "world", "!"]
+    
+    def test_lpop(self, db):
+        db.rpush("mylist", "one", "two", "three")
+        
+        # 测试单个弹出
+        assert db.lpop("mylist") == "one"
+        assert db.lrange("mylist", 0, -1) == ["two", "three"]
+        
+        # 测试多个弹出
+        db.rpush("mylist", "four", "five")
+        assert db.lpop("mylist", 2) == ["two", "three"]
+        
+        # 测试空列表弹出
+        assert db.lpop("nonexistent") is None
+    
+    def test_rpop(self, db):
+        db.rpush("mylist", "one", "two", "three")
+        
+        # 测试单个弹出
+        assert db.rpop("mylist") == "three"
+        assert db.lrange("mylist", 0, -1) == ["one", "two"]
+        
+        # 测试多个弹出
+        db.rpush("mylist", "three", "four")
+        assert db.rpop("mylist", 2) == ["four", "three"]
+        
+        # 测试空列表弹出
+        assert db.rpop("nonexistent") is None
+    
+    def test_llen(self, db):
+        # 测试空列表长度
+        assert db.llen("nonexistent") == 0
+        
+        # 测试有内容的列表长度
+        db.rpush("mylist", "one", "two", "three")
+        assert db.llen("mylist") == 3
+    
+    def test_lindex(self, db):
+        db.rpush("mylist", "one", "two", "three")
+        
+        # 测试正向索引
+        assert db.lindex("mylist", 0) == "one"
+        assert db.lindex("mylist", 2) == "three"
+        
+        # 测试负向索引
+        assert db.lindex("mylist", -1) == "three"
+        
+        # 测试超出范围的索引
+        assert db.lindex("mylist", 99) is None
+        assert db.lindex("nonexistent", 0) is None
+    
+    def test_linsert(self, db):
+        db.rpush("mylist", "one", "three")
+        
+        # 测试在指定值前插入
+        assert db.linsert("mylist", "before", "three", "two") == 3
+        assert db.lrange("mylist", 0, -1) == ["one", "two", "three"]
+        
+        # 测试在指定值后插入
+        assert db.linsert("mylist", "after", "three", "four") == 4
+        assert db.lrange("mylist", 0, -1) == ["one", "two", "three", "four"]
+        
+        # 测试插入不存在的参考值
+        assert db.linsert("mylist", "before", "nonexistent", "value") == -1
+    
+    def test_lset(self, db):
+        db.rpush("mylist", "one", "two", "three")
+        
+        # 测试设置已存在的索引
+        assert db.lset("mylist", 1, "TWO") is True
+        assert db.lrange("mylist", 0, -1) == ["one", "TWO", "three"]
+        
+        # 测试设置负数索引
+        assert db.lset("mylist", -1, "THREE") is True
+        assert db.lrange("mylist", 0, -1) == ["one", "TWO", "THREE"]
+        
+        # 测试索引超出范围
+        with pytest.raises(IndexError):
+            db.lset("mylist", 99, "value")
+        
+        # 测试不存在的键
+        with pytest.raises(ValueError):
+            db.lset("nonexistent", 0, "value")
+    
+    def test_ltrim(self, db):
+        db.rpush("mylist", "one", "two", "three", "four", "five")
+        
+        # 测试基本修剪
+        assert db.ltrim("mylist", 1, 3) is True
+        assert db.lrange("mylist", 0, -1) == ["two", "three", "four"]
+        
+        # 测试负数索引修剪
+        db.rpush("mylist2", "one", "two", "three", "four", "five")
+        assert db.ltrim("mylist2", 1, -2) is True
+        assert db.lrange("mylist2", 0, -1) == ["two", "three", "four"]
+        
+        # 测试不存在的键
+        assert db.ltrim("nonexistent", 0, 1) is True
+        assert db.lrange("nonexistent", 0, -1) == []
+    
+    def test_lsort(self, db):
+        db.rpush("mylist", "3", "1", "2")
+        
+        # 测试基本排序
+        assert db.lsort("mylist") == ["1", "2", "3"]
+        
+        # 测试降序排序
+        assert db.lsort("mylist", desc=True) == ["3", "2", "1"]
+        
+        # 测试自定义排序
+        db.rpush("mylist2", "abc", "a", "ab")
+        assert db.lsort("mylist2", key=len) == ["a", "ab", "abc"]
+        
+        # 测试不存在的键
+        assert db.lsort("nonexistent") == []

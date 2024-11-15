@@ -15,3 +15,17 @@ def list_or_args(keys: Union[str, Iterable[str]], args: Tuple[str, ...]) -> List
     if args:
         keys.extend(args)
     return keys
+
+
+def find_index_from_left(lst, value):
+    for index in range(len(lst)):
+        if lst[index] == value:
+            return index
+    return -1
+
+
+def find_index_from_right(lst, value):
+    for index in range(len(lst) - 1, -1, -1):
+        if lst[index] == value:
+            return index
+    return -1
