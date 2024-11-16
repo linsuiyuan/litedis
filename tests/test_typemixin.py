@@ -1,9 +1,11 @@
 import threading
+import time
+import weakref
 
 import pytest  # noqa
 
-from litedis import PersistenceType
-from litedis.refactor import (
+from litedis import PersistenceType, Expiry
+from litedis.typemixin import (
     BasicKey,
     ListType,
     SetType,
@@ -35,10 +37,11 @@ def db(temp_dir):
     db.db_lock = threading.Lock()
     db.db_name = "test_db"
     db.data_dir = temp_dir
-    db.persistence = PersistenceType.MIXED
+    db.persistence = PersistenceType.NONE
     db.data = {}
     db.data_types = {}
     db.expires = {}
+    db.expiry = Expiry(db=weakref.ref(db))
     return db
 
 
@@ -94,22 +97,22 @@ class TestBasicKey:
         assert db.exists("nonexistent") == 0
 
     # todo 过期功能待以后测试
-    # def test_expire(self, db):
-    #     db.set("key", "value")
-    #
-    #     # 测试普通过期设置
-    #     assert db.expire("key", 1) is True
-    #     time.sleep(1.1)
-    #     assert db.get("key") is None
-    #
-    #     # 测试 nx 选项
-    #     db.set("key2", "value")
-    #     db.expire("key2", 10)
-    #     assert db.expire("key2", 5, nx=True) is False
-    #
-    #     # ���试 xx 选项
-    #     db.set("key3", "value")
-    #     assert db.expire("key3", 5, xx=True) is False
+    def test_expire(self, db):
+        db.set("key", "value")
+
+        # 测试普通过期设置
+        assert db.expire("key", 1) is True
+        time.sleep(1.1)
+        assert db.get("key") is None
+
+        # 测试 nx 选项
+        db.set("key2", "value")
+        db.expire("key2", 10)
+        assert db.expire("key2", 5, nx=True) is False
+
+        # 测试 xx 选项
+        db.set("key3", "value")
+        assert db.expire("key3", 5, xx=True) is False
 
     def test_get_set(self, db):
         # 测试基本的设置和获取

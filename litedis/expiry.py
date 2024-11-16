@@ -47,7 +47,7 @@ class Expiry:
             ]
             if expired_keys:
                 self.db.delete(*expired_keys)
-            time.sleep(3)
+            time.sleep(1)
 
     def check_expired(self, key: str) -> bool:
         """

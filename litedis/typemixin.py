@@ -6,6 +6,7 @@ from functools import reduce, partial
 from typing import Optional, List, Union, Iterable, Mapping, Callable, Set, Dict
 
 from litedis import BaseLitedis, DataType
+from litedis.aof import collect_command_to_aof
 from litedis.typing import StringableT, Number
 from litedis.utils import list_or_args, find_index_from_right, find_index_from_left
 
@@ -29,6 +30,7 @@ class BasicKey(BaseLitedis):
         if exat:
             self.expires[name] = exat
 
+    @collect_command_to_aof
     def append(self, key: str, value: StringableT) -> int:
         """
         将一个字符串值追加到已存在的键的末尾
@@ -41,6 +43,7 @@ class BasicKey(BaseLitedis):
 
             return len(self.data[key])
 
+    @collect_command_to_aof
     def copy(
             self,
             source: str,
@@ -65,6 +68,7 @@ class BasicKey(BaseLitedis):
 
             return True
 
+    @collect_command_to_aof
     def decrby(self, name: str, amount: int = 1) -> int:
         """
         将指定键的整数值减少指定的增量。
@@ -73,8 +77,10 @@ class BasicKey(BaseLitedis):
 
         返回递减操作后，键的当前值
         """
-        return self.incrby(name, -amount)
+        with self.db_lock:
+            return self._incrby(name, -amount)
 
+    @collect_command_to_aof
     def delete(self, *names: str) -> int:
         """
         删除一个或多个键
@@ -149,6 +155,7 @@ class BasicKey(BaseLitedis):
         when = seconds + int(time.time())
         return self.expireat(name, when, nx=nx, xx=xx, gt=gt, lt=lt)
 
+    @collect_command_to_aof
     def expireat(
             self,
             name: str,
@@ -235,6 +242,16 @@ class BasicKey(BaseLitedis):
 
         raise KeyError(name)
 
+    def _incrby(self, name: str, amount: Number = 1) -> Number:
+        if name not in self.data:
+            self._set_string_value(name, 0, check_string_type=False)
+        else:
+            self._check_string_type(name)
+
+        self.data[name] = type(amount)(self.data[name]) + amount
+        return self.data[name]
+
+    @collect_command_to_aof
     def incrby(self, name: str, amount: int = 1) -> int:
         """
         将“key”的值增加“amount”。
@@ -242,16 +259,11 @@ class BasicKey(BaseLitedis):
         如果键不存在，值将被初始化为“amount”。
         """
         with self.db_lock:
-            if name not in self.data:
-                self._set_string_value(name, 0, check_string_type=False)
-            else:
-                self._check_string_type(name)
-
-            self.data[name] = int(self.data[name]) + amount
-            return self.data[name]
+            return self._incrby(name, amount)
 
     incr = incrby
 
+    @collect_command_to_aof
     def incrbyfloat(self, name: str, amount: float = 1.0) -> float:
         """
         将键“name”的值按浮点数“amount”增加。
@@ -259,14 +271,7 @@ class BasicKey(BaseLitedis):
         如果键不存在，值将被初始化为“amount”。
         """
         with self.db_lock:
-
-            if name not in self.data:
-                self._set_string_value(name, .0, check_string_type=False)
-            else:
-                self._check_string_type(name)
-
-            self.data[name] = float(self.data[name]) + amount
-            return self.data[name]
+            return self._incrby(name, amount)
 
     def keys(self, pattern: str = "*") -> List[str]:
         """
@@ -293,6 +298,7 @@ class BasicKey(BaseLitedis):
                     for arg in args
                     if arg in self.data]
 
+    @collect_command_to_aof
     def mset(self, mapping: Mapping[str, StringableT]) -> bool:
         """
         根据映射设置键/值。映射是键/值对的字典。
@@ -303,8 +309,9 @@ class BasicKey(BaseLitedis):
             for k, v in mapping.items():
                 self._set_string_value(k, v, check_string_type=False)
 
-        return True
+            return True
 
+    @collect_command_to_aof
     def msetnx(self, mapping: Mapping[str, StringableT]) -> bool:
         """
         如果没有任何键已经设置，根据映射设置键/值。
@@ -322,6 +329,7 @@ class BasicKey(BaseLitedis):
 
             return True
 
+    @collect_command_to_aof
     def persist(self, name: str) -> bool:
         """
         删除键“name”的到期时间。
@@ -345,6 +353,7 @@ class BasicKey(BaseLitedis):
         """
         return random.choice(list(self.data.keys()))
 
+    @collect_command_to_aof
     def rename(self, src: str, dst: str) -> bool:
         """
         将键 “src” 重命名为 “dst”
@@ -366,6 +375,7 @@ class BasicKey(BaseLitedis):
 
             return True
 
+    @collect_command_to_aof
     def renamenx(self, src: str, dst: str):
         """
         如果 “dst” 不存在，则将键 “src” 重命名为 “dst”
@@ -386,6 +396,7 @@ class BasicKey(BaseLitedis):
             if src in self.expires:
                 self.expires[dst] = self.expires.pop(src)
 
+    @collect_command_to_aof
     def set(
             self,
             name: str,
@@ -520,6 +531,7 @@ class ListType(BaseLitedis):
 
             return list_[index]
 
+    @collect_command_to_aof
     def linsert(self, name: str, where: str, refvalue: StringableT, value: StringableT) -> int:
         """
         在列表 name 中以 refvalue 为基准的 where 位置（BEFORE/AFTER）插入 value 。
@@ -559,6 +571,7 @@ class ListType(BaseLitedis):
 
             return len(list_)
 
+    @collect_command_to_aof
     def lpop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
         """
         移除并返回列表 name 的前面几个元素。
@@ -583,6 +596,7 @@ class ListType(BaseLitedis):
             num = min(count, len(list_))
             return [list_.pop(0) for _ in range(num)]
 
+    @collect_command_to_aof
     def lpush(self, name: str, *values: StringableT) -> int:
         """
         将 values 推送到列表 name 的头部。
@@ -602,6 +616,7 @@ class ListType(BaseLitedis):
 
             return len(list_)
 
+    @collect_command_to_aof
     def lpushx(self, name: str, *values: StringableT) -> int:
         """
         如果 name 存在，则将 value 推送到列表 name 的头部。
@@ -639,6 +654,7 @@ class ListType(BaseLitedis):
 
             return list_[start:end]
 
+    @collect_command_to_aof
     def lrem(self, name: str, count: int, value: str) -> int:
         """
         从存储在 name 中的列表中删除与 value 相等的元素的第一个 count 次出现。
@@ -676,6 +692,7 @@ class ListType(BaseLitedis):
                         break
             return num
 
+    @collect_command_to_aof
     def lset(self, name: str, index: int, value: str) -> bool:
         """
         将列表 name 中位置 index 的元素设置为 value 。
@@ -698,6 +715,7 @@ class ListType(BaseLitedis):
 
             return True
 
+    @collect_command_to_aof
     def ltrim(self, name: str, start: int, end: int) -> bool:
         """
         修剪列表“name”，删除不在“start”和“end”之间的所有值。
@@ -726,6 +744,7 @@ class ListType(BaseLitedis):
 
             return True
 
+    @collect_command_to_aof
     def rpop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
         """
         移除并返回列表 name 的最后元素。
@@ -747,6 +766,7 @@ class ListType(BaseLitedis):
             num = min(count, len(list_))
             return [list_.pop() for _ in range(num)]
 
+    @collect_command_to_aof
     def rpush(self, name: str, *values: StringableT) -> int:
         """
         将 values 添加到列表 name 的尾部。
@@ -769,6 +789,7 @@ class ListType(BaseLitedis):
 
             return len(list_)
 
+    @collect_command_to_aof
     def rpushx(self, name: str, *values: StringableT) -> int:
         """
         如果 name 存在，则将 value 添加到列表 name 的尾部。
@@ -786,6 +807,7 @@ class ListType(BaseLitedis):
 
             return len(list_)
 
+    @collect_command_to_aof
     def lsort(
             self,
             name: str,
@@ -821,6 +843,7 @@ class SetType(BaseLitedis):
         if self.data_types[name] != DataType.SET:
             raise TypeError(f"{name}的数据类型 不是集合！")
 
+    @collect_command_to_aof
     def sadd(self, name: str, *values: StringableT) -> int:
         """
         添加 ``value(s)`` 到 ``name`` 集合
@@ -938,6 +961,7 @@ class SetType(BaseLitedis):
             args = list_or_args(values, args)
             return [v in set_ for v in args]
 
+    @collect_command_to_aof
     def smove(self, src: str, dst: str, value: StringableT) -> bool:
         """
         原子地将``value``从集合``src``移动到集合``dst``。
@@ -972,6 +996,7 @@ class SetType(BaseLitedis):
 
             return True
 
+    @collect_command_to_aof
     def spop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
         """
         从集合``name``中移除并返回一个随机成员
@@ -1024,6 +1049,7 @@ class SetType(BaseLitedis):
             else:
                 return random.sample(set_, number)
 
+    @collect_command_to_aof
     def srem(self, name: str, *values: StringableT) -> int:
         """
         从集合``name``中移除``values``
@@ -1067,6 +1093,7 @@ class SortedSetType(BaseLitedis):
         if self.data_types[name] != DataType.SortedSet:
             raise TypeError(f"{name}的数据类型 不是有序集合！")
 
+    @collect_command_to_aof
     def zadd(
             self,
             name: str,
@@ -1174,6 +1201,7 @@ class SortedSetType(BaseLitedis):
                 keys=keys,
                 withscores=withscores)
 
+    @collect_command_to_aof
     def zincrby(self, name: str, amount: Number, value: str) -> Number:
         """
         将有序集合``name``中的``value``的分数增加``amount``
@@ -1228,7 +1256,7 @@ class SortedSetType(BaseLitedis):
             inter = zsets[0].keys()
             for num in range(1, numkeys):
                 inter = inter & zsets[num]
-                if limit is not 0 and len(inter) >= limit:
+                if limit != 0 and len(inter) >= limit:
                     return limit
 
             return len(inter)
@@ -1268,6 +1296,7 @@ class SortedSetType(BaseLitedis):
                 for t in pop_lists
                 for i in t]
 
+    @collect_command_to_aof
     def zpopmax(self, name: str, count: int = 1) -> List:
         """
         从有序集合``name``中删除并返回分数最高的成员
@@ -1281,6 +1310,7 @@ class SortedSetType(BaseLitedis):
         with self.db_lock:
             return self._zpopmaxmin(type_="max", name=name, count=count)
 
+    @collect_command_to_aof
     def zpopmin(self, name: str, count: int = 1) -> List:
         """
         移除并返回有序集合``name``中分数最低的成员
@@ -1338,6 +1368,7 @@ class SortedSetType(BaseLitedis):
                     list_ = [k for k in list_]
                 return list_
 
+    @collect_command_to_aof
     def zmpop(
             self,
             keys: List[str],
@@ -1520,6 +1551,7 @@ class SortedSetType(BaseLitedis):
 
             return None
 
+    @collect_command_to_aof
     def zrem(self, name: str, *values: StringableT) -> int:
         """
         从有序集合(sorted set)中删除一个或多个成员。
@@ -1543,6 +1575,7 @@ class SortedSetType(BaseLitedis):
 
             return num
 
+    @collect_command_to_aof
     def zremrangebyscore(self, name: str, min_: Number, max_: Number) -> int:
         """
         移除有序集合``name``中分数在``min``和``max``之间的所有元素。
@@ -1668,6 +1701,7 @@ class HashType(BaseLitedis):
         if self.data_types[name] != DataType.HASH:
             raise TypeError(f"{name}的数据类型 不是哈希！")
 
+    @collect_command_to_aof
     def hdel(self, name: str, *keys: str) -> int:
         """
         从哈希 name 中删除一个或多个字段
@@ -1749,6 +1783,7 @@ class HashType(BaseLitedis):
 
         return hash_[key]
 
+    @collect_command_to_aof
     def hincrby(self, name: str, key: str, amount: int = 1) -> int:
         """
         对哈希表中指定字段的整数值进行增量操作
@@ -1758,6 +1793,7 @@ class HashType(BaseLitedis):
         with self.db_lock:
             return self._hincrby(name, key, amount)
 
+    @collect_command_to_aof
     def hincrbyfloat(self, name: str, key: str, amount: float = 1.0) -> float:
         """
         对哈希表中指定字段的整数值进行增量操作。
@@ -1798,11 +1834,12 @@ class HashType(BaseLitedis):
 
             return len(hash_)
 
+    @collect_command_to_aof
     def hset(
             self,
             name: str,
             key: Optional[str] = None,
-            value: Optional[str] = None,
+            value: Optional[StringableT] = None,
             mapping: Optional[dict] = None,
             items: Optional[list] = None,
     ) -> int:
@@ -1839,6 +1876,7 @@ class HashType(BaseLitedis):
 
             return num
 
+    @collect_command_to_aof
     def hsetnx(self, name: str, key: str, value: str) -> bool:
         """
         指定的字段不存在时，设置该哈希字段的值
