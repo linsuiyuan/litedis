@@ -395,9 +395,9 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         with self.db_lock:
             if key not in self.data:
                 self.data[key] = {}
-                self.data_types[key] = DataType.ZSET
+                self.data_types[key] = DataType.SortedSet
 
-            if self.data_types[key] != DataType.ZSET:
+            if self.data_types[key] != DataType.SortedSet:
                 raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
             count = 0
@@ -414,7 +414,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return 0
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         return len(self.data[key])
@@ -424,9 +424,9 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         """增加有序集合成员的分数"""
         if not self.exists(key):
             self.data[key] = {}
-            self.data_types[key] = DataType.ZSET
+            self.data_types[key] = DataType.SortedSet
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         with self.db_lock:
@@ -440,7 +440,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return []
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         members = list(self.data[key].keys())
@@ -461,7 +461,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return []
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         # 按分数排序
@@ -484,7 +484,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return []
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         sorted_members = sorted(self.data[key].items(), key=lambda x: (x[1], x[0]))
@@ -499,7 +499,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return 0
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         count = 0
@@ -522,7 +522,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return 0, []
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         members = sorted(self.data[key].items(), key=lambda x: (x[1], x[0]))
@@ -537,7 +537,7 @@ class Litedis(BaseLitedis, metaclass=_SingletonMeta):
         if not self.exists(key):
             return None
 
-        if self.data_types[key] != DataType.ZSET:
+        if self.data_types[key] != DataType.SortedSet:
             raise TypeError(f"{self.data_types[key]} 不是有序集合")
 
         return self.data[key].get(member)

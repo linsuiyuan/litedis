@@ -2,11 +2,11 @@ import json
 import random
 import time
 from fnmatch import fnmatchcase
-from functools import reduce
+from functools import reduce, partial
 from typing import Optional, List, Union, Iterable, Mapping, Callable, Set
 
 from litedis import BaseLitedis, DataType
-from litedis.typing import StringableT
+from litedis.typing import StringableT, Number
 from litedis.utils import list_or_args, find_index_from_right, find_index_from_left
 
 
@@ -1059,3 +1059,605 @@ class SetType(BaseLitedis):
             set_list = [self.data.get(name, set()) for name in args]
 
             return reduce(lambda s1, s2: s1 | s2, set_list)
+
+
+class SortedSetType(BaseLitedis):
+
+    def _check_sortedset_type(self, name):
+        if self.data_types[name] != DataType.SortedSet:
+            raise TypeError(f"{name}的数据类型 不是有序集合！")
+
+    def zadd(
+            self,
+            name: str,
+            mapping: Mapping[str, StringableT],
+            nx: bool = False,
+            xx: bool = False,
+            gt: bool = False,
+            lt: bool = False,
+    ) -> int:
+        """
+        将任意数量的元素-名称、分数对设置到键``name``。对是指定为元素名称键到分数值的字典。
+
+        ``nx`` 强制ZADD只创建新元素，而不更新已存在元素的分数。
+
+        ``xx`` 强制ZADD只更新已存在元素的分数。新元素不会被添加。
+
+        ``LT`` 仅在新分数小于当前分数时更新现有元素。此标志不会阻止添加新元素。
+
+        ``GT`` 仅在新分数大于当前分数时更新现有元素。此标志不会阻止添加新元素。
+
+        ZADD的返回值根据指定的模式而变化。没有选项时，ZADD返回添加到有序集合的新元素数量。
+
+        ``NX``、``LT``和``GT``是互斥的选项。
+        """
+        with self.db_lock:
+            if not mapping:
+                raise ValueError("ZADD需要至少一个元素/分数对")
+
+            if nx and xx:
+                raise ValueError("ZADD只允许'nx'或'xx'，不能同时使用")
+            if gt and lt:
+                raise ValueError("ZADD只允许'gt'或'lt'，不能同时使用")
+            if nx and (gt or lt):
+                raise ValueError("只能定义'nx'、'lt'或'gr'中的一个。")
+
+            zset = self.data.get(name, None)
+
+            if zset is None:
+                zset = self.data[name] = {}
+                self.data_types[name] = DataType.SortedSet
+            else:
+                self._check_sortedset_type(name)
+
+            add_num = 0
+            for item, score in mapping.items():
+                if item in zset:
+                    if nx:
+                        continue
+                    # 已存在，更新，但要排除 lt 或 gt 的限制
+                    if lt and score >= zset[item]:
+                        continue
+                    if gt and score <= zset[item]:
+                        continue
+                    zset[item] = score
+                else:
+                    if xx:
+                        continue
+                    # 不存在，添加
+                    zset[item] = score
+                    add_num += 1
+
+            return add_num
+
+    def zcard(self, name: str) -> int:
+        """
+        返回有序集合``name``中的元素数量
+
+        如果该有序集合不存在，返回值将是 0
+        """
+        with self.db_lock:
+            zset = self.data.get(name, None)
+
+            if zset is None:
+                return 0
+
+            self._check_sortedset_type(name)
+
+            return len(zset.keys())
+
+    def zcount(self, name: str, min_: Number, max_: Number) -> int:
+        """
+        返回键``name``中分数在``min``和``max``之间的元素数量。
+        """
+        with self.db_lock:
+            zset = self.data.get(name, None)
+
+            if zset is None:
+                return 0
+
+            self._check_sortedset_type(name)
+
+            count = 0
+            for _, score in zset.items():
+                if min_ <= score <= max_:
+                    count += 1
+            return count
+
+    def zdiff(self, keys: List[str], withscores: bool = False) -> List:
+        """
+        返回在``keys``中提供的第一个和所有后续输入有序集合之间的差异。
+        """
+        with self.db_lock:
+            return self._sortedset_reduce_openration(
+                lambda s1, s2: s1.keys() - s2.keys(),
+                keys=keys,
+                withscores=withscores)
+
+    def zincrby(self, name: str, amount: Number, value: str) -> Number:
+        """
+        将有序集合``name``中的``value``的分数增加``amount``
+
+        如果成员在有序集合中存在，返回成员的新分数。
+
+        如果成员在有序集合中不存在，ZINCRBY 会将该成员添加到集合中，并将其分数设置为增量值（即 increment 的值）。
+        """
+        with self.db_lock:
+            zset = self.data.get(name, None)
+
+            if zset is None:
+                zset = self.data[name] = {}
+                self.data_types[name] = DataType.SortedSet
+            else:
+                self._check_sortedset_type(name)
+
+            if value not in zset:
+                zset[value] = amount
+            else:
+                zset[value] += amount
+
+            return zset[value]
+
+    def zinter(self, keys: List[str], withscores: bool = False) -> List:
+        """
+        返回由``keys``指定的多个有序集合的交集。
+        """
+        with self.db_lock:
+            return self._sortedset_reduce_openration(
+                lambda s1, s2: s1.keys() & s2.keys(),
+                keys=keys,
+                withscores=withscores)
+
+    def zintercard(self, numkeys: int, keys: List[str], limit: int = 0) -> int:
+        """
+        返回由``keys``指定的多个有序集合的交集的基数。
+
+        numkeys: 要计算交集的有序集合个数
+
+        limit: 可选参数，限制要计算的元素数量
+        """
+        with self.db_lock:
+            for name in keys:
+                if name in self.data:
+                    self._check_sortedset_type(name)
+
+            zsets = [self.data.get(n, {}) for n in keys]
+
+            # 计算交集
+            numkeys = min(numkeys, len(keys))
+            inter = zsets[0].keys()
+            for num in range(1, numkeys):
+                inter = inter & zsets[num]
+                if limit is not 0 and len(inter) >= limit:
+                    return limit
+
+            return len(inter)
+
+    def _zpopmaxmin(self, type_, name: str, count: int = 1) -> List:
+
+        if count < 1:
+            raise ValueError(f"count:{count} 不能小于 1")
+
+        zset = self.data.get(name, None)
+
+        if zset is None:
+            return []
+
+        self._check_sortedset_type(name)
+
+        # 按分数排序
+        sorted_members = sorted(zset.items(), key=lambda x: (x[1], x[0]))
+
+        if type_ == "max":
+            partial_pop = partial(sorted_members.pop)
+        else:
+            partial_pop = partial(sorted_members.pop, 0)
+
+        if count == 1:
+            pop_lists = [partial_pop()]
+        else:
+            count = min(count, len(sorted_members))
+            pop_lists = [partial_pop() for _ in range(count)]
+
+        # 有序集合移除相应的成员
+        for v, s in pop_lists:
+            zset.pop(v, None)
+
+        # 展平列表再返回
+        return [i
+                for t in pop_lists
+                for i in t]
+
+    def zpopmax(self, name: str, count: int = 1) -> List:
+        """
+        从有序集合``name``中删除并返回分数最高的成员
+
+        count: 可选参数，指定要返回的成员数量，默认为1
+
+        返回被删除的成员和它们的分数。如果键不存在，返回空数组。
+
+        返回格式为: member1 score1 [member2 score2 ...]
+        """
+        with self.db_lock:
+            return self._zpopmaxmin(type_="max", name=name, count=count)
+
+    def zpopmin(self, name: str, count: int = 1) -> List:
+        """
+        移除并返回有序集合``name``中分数最低的成员
+
+        count: 可选参数，指定要返回的成员数量，默认为1
+
+        返回被删除的成员和它们的分数。如果键不存在，返回空数组。
+
+        返回格式为: member1 score1 [member2 score2 ...]
+        """
+        with self.db_lock:
+            return self._zpopmaxmin(type_="min", name=name, count=count)
+
+    def zrandmember(self, key: str, count: int = 1, withscores: bool = False) -> Union[List, StringableT, None]:
+        """
+        从有序集合中随机返回一个或多个成员。该命令在 Redis 6.2.0 版本中新增。
+
+        count: 可选参数，指定要返回的成员数量
+            正数: 返回不重复的成员
+
+            负数: 返回可能重复的成员
+
+            不指定: 默认返回1个成员
+        """
+
+        with self.db_lock:
+            zset = self.data.get(key, None)
+
+            if zset is None:
+                return None if count == 1 else []
+
+            self._check_sortedset_type(key)
+
+            # 默认情况
+            if abs(count) <= 1:
+                r_value = random.sample(zset.keys(), 1)[0]
+                if withscores:
+                    return [r_value, zset[r_value]]
+                else:
+                    return r_value
+
+            else:
+                # 正数
+                if count > 0:
+                    list_ = random.sample(list(zset), count)
+                # 负数
+                else:
+                    list_ = random.choices(list(zset), k=abs(count))
+
+                if withscores:
+                    list_ = [kv
+                             for item in list_
+                             for kv in (item, zset[item])]
+                else:
+                    list_ = [k for k in list_]
+                return list_
+
+    def zmpop(
+            self,
+            keys: List[str],
+            min_: Optional[bool] = False,
+            max_: Optional[bool] = False,
+            count: int = 1,
+    ) -> List:
+        """
+        从第一个非空有序集合上弹出并返回分值最小或最大的成员。
+
+        返回一个数组,包含以下内容:
+            第一个元素是成功弹出元素的有序集合的键名
+            第二个元素是一个数组,包含弹出的成员和分值对
+        """
+        if (min_ and max_) or (not min_ and not max_):
+            raise ValueError(f"min_和 max_必须要有一个为真，但不能都为真")
+        with self.db_lock:
+            zset = None
+            name = None
+            for key in keys:
+                zset = self.data.get(key, None)
+                if zset:
+                    name = key
+                    break
+
+            if zset is None:
+                return []
+
+            self._check_sortedset_type(name)
+
+            type_ = "min" if min_ else "max"
+            list_ = self._zpopmaxmin(type_=type_, name=name, count=count)
+            return [name, list_]
+
+    def _zrange(self,
+                name: str,
+                start: int,
+                end: int,
+                min_: Optional[Number] = None,
+                max_: Optional[Number] = None,
+                desc: bool = False,
+                withscores: bool = False,
+                ) -> List:
+
+        zset = self.data.get(name, None)
+
+        if zset is None:
+            return []
+
+        self._check_sortedset_type(name)
+
+        # 按分数排序
+        sorted_zset_tuple = sorted(self.data[name].items(),
+                                   key=lambda x: (x[1], x[0]),
+                                   reverse=desc)
+
+        # 过滤分数范围
+        if min_ is not None and max_ is not None:
+            sorted_zset_tuple = [(v, s) for v, s in sorted_zset_tuple if min_ <= s <= max_]
+
+        # 处理索引, Redis 是包含右边界的
+        if end < 0:
+            end = len(sorted_zset_tuple) + end + 1
+        else:
+            end += 1
+
+        result = sorted_zset_tuple[start:end]
+
+        if withscores:
+            return [kv
+                    for t in result
+                    for kv in t]
+        return [member for member, _ in result]
+
+    def zrange(self, name: str, start: int, end: int, withscores: bool = False, ) -> List:
+        """
+        获取有序集合(sorted set)中指定范围的成员。成员按照 score 值从小到大进行排序。
+
+        返回指定范围的成员列表。如果使用 WITHSCORES 参数，则会同时返回成员的分数。
+        """
+        with self.db_lock:
+            return self._zrange(name=name,
+                                start=start,
+                                end=end,
+                                withscores=withscores)
+
+    def zrevrange(self, name: str, start: int, end: int, withscores: bool = False, ) -> List:
+        """
+        获取有序集合(sorted set)中指定范围的成员。成员按照 score 值从大到小进行排序。
+
+        返回指定范围的成员列表。如果使用 WITHSCORES 参数，则会同时返回成员的分数。
+        """
+        with self.db_lock:
+            return self._zrange(name=name,
+                                start=start,
+                                end=end,
+                                desc=True,
+                                withscores=withscores)
+
+    def zrangebyscore(
+            self,
+            name: str,
+            min_: Number,
+            max_: Number,
+            start: Optional[int] = None,
+            num: Optional[int] = None,
+            withscores=False,
+    ) -> List:
+        """
+        获取有序集合中指定分数区间内的成员。返回的成员是按照分数从小到大排序的。
+
+        返回一个列表，包含指定分数范围的成员
+        如果使用 WITHSCORES，则返回的列表中交替包含成员和分数
+        如果 name 不存在或没有匹配的成员，返回空列表
+        """
+        with self.db_lock:
+            if start is None:
+                start = 0
+            end = -1 if num is None else start + num
+
+            return self._zrange(name=name,
+                                start=start,
+                                end=end,
+                                min_=min_,
+                                max_=max_,
+                                desc=False,
+                                withscores=withscores)
+
+    def zrevrangebyscore(
+            self,
+            name: str,
+            min_: Number,
+            max_: Number,
+            start: Optional[int] = None,
+            num: Optional[int] = None,
+            withscores=False,
+    ) -> List:
+        """
+        获取有序集合中指定分数区间内的成员。返回的成员是按照分数从大到小排序的。
+
+        返回一个列表，包含指定分数范围的成员
+        如果使用 WITHSCORES，则返回的列表中交替包含成员和分数
+        如果 name 不存在或没有匹配的成员，返回空列表
+        """
+        with self.db_lock:
+            if start is None:
+                start = 0
+            end = -1 if num is None else start + num
+
+            return self._zrange(name=name,
+                                start=start,
+                                end=end,
+                                min_=min_,
+                                max_=max_,
+                                desc=True,
+                                withscores=withscores)
+
+    def zrank(
+            self,
+            name: str,
+            value: StringableT,
+            withscore: bool = False,
+    ) -> Optional[int]:
+        """
+        获取有序集合中成员的排名,按分数值从小到大排序。排名从0开始计算。
+
+        如果成员存在于有序集合中,返回其排名(从0开始的整数)
+        如果成员不存在或key不存在,返回 None
+        """
+        with self.db_lock:
+            list_ = self._zrange(name=name, start=0, end=-1, withscores=withscore)
+            if not withscore:
+                members = list_
+            else:
+                members = [m for m in range(0, len(list_), 2)]
+
+            for i, v in enumerate(members):
+                if v == value:
+                    return i
+
+            return None
+
+    def zrem(self, name: str, *values: StringableT) -> int:
+        """
+        从有序集合(sorted set)中删除一个或多个成员。
+
+        返回整数值，表示成功删除的成员数量。
+        如果 key 不存在，返回 0。
+        """
+        with self.db_lock:
+
+            zset = self.data.get(name, None)
+            if zset is None:
+                return 0
+
+            self._check_sortedset_type(name)
+
+            num = 0
+            for v in values:
+                if v in zset:
+                    zset.pop(v, None)
+                    num += 1
+
+            return num
+
+    def zremrangebyscore(self, name: str, min_: Number, max_: Number) -> int:
+        """
+        移除有序集合``name``中分数在``min``和``max``之间的所有元素。
+
+        返回被移除的元素数量。
+        """
+        with self.db_lock:
+            list_ = self._zrange(name=name, start=0, end=-1, min_=min_, max_=max_)
+            if not list_:
+                return 0
+
+            zset = self.data[name]
+            num = 0
+            for v in list_:
+                zset.pop(v, None)
+                num += 1
+
+            return num
+
+    def zrevrank(self, name: str, value: StringableT, withscore: bool = False,
+                 ) -> Optional[int]:
+        """
+        获取有序集合中成员的排名,按分数值从大到小排序。排名从0开始计算。
+
+        如果成员存在于有序集合中,返回其排名(从0开始的整数)
+        如果成员不存在或key不存在,返回 None
+        """
+        with self.db_lock:
+            list_ = self._zrange(name=name, start=0, end=-1, desc=True, withscores=withscore)
+            if not withscore:
+                members = list_
+            else:
+                members = [m for m in range(0, len(list_), 2)]
+
+            for i, v in enumerate(members):
+                if v == value:
+                    return i
+
+            return None
+
+    def zscore(self, name: str, value: StringableT) -> Optional[float]:
+        """
+        获取有序集合中指定成员的分数
+
+        如果指定的键不存在或成员不存在，返回 None。
+        """
+        with self.db_lock:
+
+            zset = self.data.get(name, None)
+            if zset is None:
+                return None
+
+            self._check_sortedset_type(name)
+
+            if value not in zset:
+                return None
+
+            return zset[value]
+
+    def _sortedset_reduce_openration(
+            self,
+            reduce_openration,
+            keys: List[str],
+            withscores: bool = False
+    ) -> List:
+        """
+        有序集合运算相同的部分
+        """
+        for name in keys:
+            if name in self.data:
+                self._check_sortedset_type(name)
+
+        zsets = [self.data.get(n, {}) for n in keys]
+
+        # 集合运算
+        result = reduce(reduce_openration, zsets)
+
+        if withscores:
+            # 差集和交集可以不用这么复杂的，但是为了和并集兼容，所以需要这样做
+            # 以先出现的成员和分数为准，所以这里需要倒序以防止被后面的覆盖
+            mapping = {k: v
+                       for s in reversed(zsets)
+                       for k, v in s.items()}
+            result = [(member, mapping[member])
+                      for member in result]
+
+        else:
+            result = list(result)
+
+        return result
+
+    def zunion(self, keys: List[str], withscores: bool = False, ) -> List:
+        """
+        返回由``keys``指定的多个有序集合的并集。
+        """
+        with self.db_lock:
+            return self._sortedset_reduce_openration(
+                lambda s1, s2: s1.keys() | s2.keys(),
+                keys=keys,
+                withscores=withscores)
+
+    def zmscore(self, key: str, members: List[str]) -> List[Optional[float]]:
+        """
+        返回存储在key的有序集合中与指定成员关联的分数。
+
+        返回分数列表([9.0, None])
+            如果指定的成员存在于有序集合中，返回该成员的分数。
+            如果指定的成员不存在，对应位置的分数为 None。
+        """
+        with self.db_lock:
+            zset = self.data.get(key, None)
+            if zset is None:
+                return [None for _ in members]
+
+            self._check_sortedset_type(key)
+
+            return [None if m not in zset else zset[m]
+                    for m in members]

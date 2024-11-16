@@ -3,15 +3,19 @@ import threading
 import pytest  # noqa
 
 from litedis import PersistenceType
-from litedis.refactor import BasicKey
-from litedis.refactor import ListType
-from litedis.refactor import SetType
+from litedis.refactor import (
+    BasicKey,
+    ListType,
+    SetType,
+    SortedSetType,
+)
 
 
 class DB(
+    SortedSetType,
     SetType,
     ListType,
-    BasicKey
+    BasicKey,
 ):
     """组合 mixin"""
 
@@ -462,3 +466,201 @@ class TestSetType:
         
         # 测试包含不存在的集合
         assert db.sunion(["set1", "nonexistent"]) == {"a", "b", "c"}
+
+
+class TestSortedSetType:
+    def test_zadd_and_zscore(self, db):
+        # 测试基本添加功能
+        assert db.zadd("myset", {"one": 1, "two": 2, "three": 3}) == 3
+        assert db.zscore("myset", "one") == 1.0
+        assert db.zscore("myset", "two") == 2.0
+        
+        # 测试更新分数
+        assert db.zadd("myset", {"one": 1.5}) == 0
+        assert db.zscore("myset", "one") == 1.5
+        
+        # 测试 nx 选项 (只添加新元素)
+        assert db.zadd("myset", {"one": 2.0}, nx=True) == 0
+        assert db.zscore("myset", "one") == 1.5
+        
+        # 测试 xx 选项 (只更新已存在的元素)
+        assert db.zadd("myset", {"four": 4}, xx=True) == 0
+        assert db.zscore("myset", "four") is None
+        
+        # 测试 gt 选项 (只在新分数大于当前分数时更新)
+        assert db.zadd("myset", {"one": 1.0}, gt=True) == 0
+        assert db.zscore("myset", "one") == 1.5
+        assert db.zadd("myset", {"one": 2.0}, gt=True) == 0
+        assert db.zscore("myset", "one") == 2.0
+        
+        # 测试 lt 选项 (只在新分数小于当前分数时更新)
+        assert db.zadd("myset", {"one": 2.5}, lt=True) == 0
+        assert db.zscore("myset", "one") == 2.0
+        assert db.zadd("myset", {"one": 1.5}, lt=True) == 0
+        assert db.zscore("myset", "one") == 1.5
+
+    def test_zcard_and_zcount(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试集合基数
+        assert db.zcard("myset") == 4
+        assert db.zcard("nonexistent") == 0
+        
+        # 测试计数范围
+        assert db.zcount("myset", 2, 3) == 2
+        assert db.zcount("myset", 1, 4) == 4
+        assert db.zcount("myset", 5, 6) == 0
+        assert db.zcount("nonexistent", 1, 2) == 0
+
+    def test_zdiff_and_zinter(self, db):
+        # 准备测试数据
+        db.zadd("set1", {"a": 1, "b": 2, "c": 3})
+        db.zadd("set2", {"b": 2, "c": 3, "d": 4})
+        
+        # 测试差集
+        assert db.zdiff(["set1", "set2"]) == ["a"]
+        assert db.zdiff(["set1", "set2"], withscores=True) == [("a", 1.0)]
+        
+        # 测试交集
+        assert set(db.zinter(["set1", "set2"])) == {"b", "c"}
+        result = db.zinter(["set1", "set2"], withscores=True)
+        assert len(result) == 2  # 2个元素 * (元素+分数)
+
+    def test_zincrby(self, db):
+        # 测试基本增量
+        assert db.zincrby("myset", 2.0, "member") == 2.0
+        assert db.zincrby("myset", 3.0, "member") == 5.0
+        
+        # 测试负增量
+        assert db.zincrby("myset", -1.0, "member") == 4.0
+        
+        # 测试新成员
+        assert db.zincrby("myset", 1.0, "newmember") == 1.0
+
+    def test_zpopmax_and_zpopmin(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试弹出最大值
+        assert db.zpopmax("myset") == ["four", 4.0]
+        assert db.zpopmax("myset", 2) == ["three", 3.0, "two", 2.0]
+        
+        # 测试弹出最小值
+        db.zadd("myset2", {"one": 1, "two": 2, "three": 3, "four": 4})
+        assert db.zpopmin("myset2") == ["one", 1.0]
+        assert db.zpopmin("myset2", 2) == ["two", 2.0, "three", 3.0]
+
+    def test_zrange_and_zrevrange(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试正序范围查询
+        assert db.zrange("myset", 0, -1) == ["one", "two", "three", "four"]
+        assert db.zrange("myset", 1, 2) == ["two", "three"]
+        assert db.zrange("myset", 0, -1, withscores=True) == [
+            "one", 1.0, "two", 2.0, "three", 3.0, "four", 4.0
+        ]
+        
+        # 测试逆序范围查询
+        assert db.zrevrange("myset", 0, -1) == ["four", "three", "two", "one"]
+        assert db.zrevrange("myset", 1, 2) == ["three", "two"]
+        assert db.zrevrange("myset", 0, -1, withscores=True) == [
+            "four", 4.0, "three", 3.0, "two", 2.0, "one", 1.0
+        ]
+
+    def test_zrangebyscore_and_zrevrangebyscore(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试按分数范围查询
+        assert db.zrangebyscore("myset", 2, 3) == ["two", "three"]
+        assert db.zrangebyscore("myset", 2, 3, withscores=True) == ["two", 2.0, "three", 3.0]
+        
+        # 测试按分数范围逆序查询
+        assert db.zrevrangebyscore("myset", 2, 3) == ["three", "two"]
+        assert db.zrevrangebyscore("myset", 2, 3, withscores=True) == ["three", 3.0, "two", 2.0]
+        
+        # 测试带起始位置和数量的查询
+        assert db.zrangebyscore("myset", 1, 4, start=1, num=2) == ["two", "three", "four"]
+        assert db.zrevrangebyscore("myset", 1, 4, start=1, num=2) == ["three", "two", "one"]
+
+    def test_zrank_and_zrevrank(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试获取排名
+        assert db.zrank("myset", "one") == 0
+        assert db.zrank("myset", "four") == 3
+        assert db.zrank("myset", "nonexistent") is None
+        
+        # 测试获取逆序排名
+        assert db.zrevrank("myset", "four") == 0
+        assert db.zrevrank("myset", "one") == 3
+        assert db.zrevrank("myset", "nonexistent") is None
+
+    def test_zrem_and_zremrangebyscore(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试删除成员
+        assert db.zrem("myset", "one", "two") == 2
+        assert db.zcard("myset") == 2
+        assert db.zrem("myset", "nonexistent") == 0
+        
+        # 测试按分数范围删除
+        db.zadd("myset2", {"one": 1, "two": 2, "three": 3, "four": 4})
+        assert db.zremrangebyscore("myset2", 2, 3) == 2
+        assert db.zcard("myset2") == 2
+        assert set(db.zrange("myset2", 0, -1)) == {"one", "four"}
+
+    def test_zunion(self, db):
+        db.zadd("set1", {"a": 1, "b": 2, "c": 3})
+        db.zadd("set2", {"b": 4, "c": 5, "d": 6})
+        
+        # 测试并集
+        result = set(db.zunion(["set1", "set2"]))
+        assert result == {"a", "b", "c", "d"}
+        
+        # 测试带分数的并集
+        result = db.zunion(["set1", "set2"], withscores=True)
+        assert len(result) == 4  # 4个元素 * (元素+分数)
+
+    def test_zmscore(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3})
+        
+        # 测试获取多个成员分数
+        assert db.zmscore("myset", ["one", "three", "nonexistent"]) == [1.0, 3.0, None]
+        assert db.zmscore("nonexistent", ["one", "two"]) == [None, None]
+
+    def test_zrandmember(self, db):
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+        
+        # 测试随机获取单个成员
+        member = db.zrandmember("myset")
+        assert member in ["one", "two", "three", "four"]
+        
+        # 测试随机获取多个不重复成员
+        members = db.zrandmember("myset", 2)
+        assert len(members) == 2
+        assert len(set(members)) == 2
+        
+        # 测试随机获取可能重复的成员
+        members = db.zrandmember("myset", -2)
+        assert len(members) == 2
+        
+        # 测试带分数获取
+        result = db.zrandmember("myset", 2, withscores=True)
+        assert len(result) == 4  # 2个元素 * (元素+分数)
+
+    def test_zmpop(self, db):
+        db.zadd("set1", {"a": 1, "b": 2, "c": 3})
+        db.zadd("set2", {"d": 4, "e": 5, "f": 6})
+        
+        # 测试弹出最小值
+        result = db.zmpop(2, ["set1", "set2"], min_=True)
+        assert result[0] == "set1"  # 从第一个非空集合弹出
+        assert result[1] == ["a", 1.0]
+        
+        # 测试弹出最大值
+        result = db.zmpop(2, ["set1", "set2"], max_=True)
+        assert result[0] == "set1"
+        assert result[1] == ["c", 3.0]
+        
+        # 测试空集合
+        result = db.zmpop(1, ["nonexistent"], min_=True)
+        assert result == []

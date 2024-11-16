@@ -10,7 +10,7 @@ class DataType:
     LIST = "list"
     HASH = "hash"
     SET = "set"
-    ZSET = "zset"
+    SortedSet = "sortedset"
 
 
 class PersistenceType:
