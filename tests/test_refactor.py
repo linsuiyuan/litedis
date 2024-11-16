@@ -8,10 +8,12 @@ from litedis.refactor import (
     ListType,
     SetType,
     SortedSetType,
+    HashType,
 )
 
 
 class DB(
+    HashType,
     SortedSetType,
     SetType,
     ListType,
@@ -105,7 +107,7 @@ class TestBasicKey:
     #     db.expire("key2", 10)
     #     assert db.expire("key2", 5, nx=True) is False
     #
-    #     # 测试 xx 选项
+    #     # ���试 xx 选项
     #     db.set("key3", "value")
     #     assert db.expire("key3", 5, xx=True) is False
 
@@ -330,7 +332,7 @@ class TestSetType:
         # 测试获取所有成员
         assert db.smembers("myset") == {"one", "two", "three"}
         
-        # 测试不存在的集合
+        # 测试���存在的集合
         assert db.smembers("nonexistent") == set()
 
     def test_scard(self, db):
@@ -652,15 +654,159 @@ class TestSortedSetType:
         db.zadd("set2", {"d": 4, "e": 5, "f": 6})
         
         # 测试弹出最小值
-        result = db.zmpop(2, ["set1", "set2"], min_=True)
+        result = db.zmpop(["set1", "set2"], min_=True)
         assert result[0] == "set1"  # 从第一个非空集合弹出
         assert result[1] == ["a", 1.0]
         
         # 测试弹出最大值
-        result = db.zmpop(2, ["set1", "set2"], max_=True)
+        result = db.zmpop(["set1", "set2"], max_=True)
         assert result[0] == "set1"
         assert result[1] == ["c", 3.0]
         
         # 测试空集合
-        result = db.zmpop(1, ["nonexistent"], min_=True)
+        result = db.zmpop(["nonexistent"], min_=True)
         assert result == []
+
+
+class TestHashType:
+    def test_hset_and_hget(self, db):
+        # 测试基本的设置和获取
+        assert db.hset("myhash", "field1", "value1") == 1
+        assert db.hget("myhash", "field1") == "value1"
+        
+        # 测试使用mapping设置多个字段
+        assert db.hset("myhash", mapping={"field2": "value2", "field3": "value3"}) == 2
+        assert db.hget("myhash", "field2") == "value2"
+        assert db.hget("myhash", "field3") == "value3"
+        
+        # 测试使用items列表设置
+        assert db.hset("myhash", items=[("field4", "value4"), ("field5", "value5")]) == 2
+        assert db.hget("myhash", "field4") == "value4"
+        
+        # 测试获取不存在的字段
+        assert db.hget("myhash", "nonexistent") is None
+        assert db.hget("nonexistent", "field") is None
+
+    def test_hdel(self, db):
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2", "field3": "value3"})
+        
+        # 测试删除单个字段
+        assert db.hdel("myhash", "field1") == 1
+        assert db.hget("myhash", "field1") is None
+        
+        # 测试删除多个字段
+        assert db.hdel("myhash", "field2", "field3", "nonexistent") == 2
+        assert db.hget("myhash", "field2") is None
+        assert db.hget("myhash", "field3") is None
+        
+        # 测试删除不存在的哈希表中的字段
+        assert db.hdel("nonexistent", "field") == 0
+
+    def test_hexists(self, db):
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2"})
+        
+        # 测试字段存在
+        assert db.hexists("myhash", "field1") is True
+        
+        # 测试字段不存在
+        assert db.hexists("myhash", "nonexistent") is False
+        
+        # 测试哈希表不存在
+        assert db.hexists("nonexistent", "field") is False
+
+    def test_hgetall(self, db):
+        # 测试空哈希表
+        assert db.hgetall("nonexistent") == {}
+        
+        # 测试有值的哈希表
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2"})
+        result = db.hgetall("myhash")
+        assert result == {"field1": "value1", "field2": "value2"}
+
+    def test_hincrby(self, db):
+        # 测试基本增量
+        assert db.hincrby("myhash", "field", 2) == 2
+        assert db.hincrby("myhash", "field", 3) == 5
+        
+        # 测试负增量
+        assert db.hincrby("myhash", "field", -1) == 4
+        
+        # 测试新字段
+        assert db.hincrby("myhash", "newfield", 1) == 1
+
+    def test_hincrbyfloat(self, db):
+        # 测试基本浮点数增量
+        assert db.hincrbyfloat("myhash", "field", 2.5) == 2.5
+        assert db.hincrbyfloat("myhash", "field", 3.2) == 5.7
+        
+        # 测试负增量
+        assert db.hincrbyfloat("myhash", "field", -1.2) == 4.5
+        
+        # 测试新字段
+        assert db.hincrbyfloat("myhash", "newfield", 1.5) == 1.5
+
+    def test_hkeys(self, db):
+        # 测试空哈希表
+        assert db.hkeys("nonexistent") == []
+        
+        # 测试有值的哈希表
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2"})
+        assert set(db.hkeys("myhash")) == {"field1", "field2"}
+
+    def test_hlen(self, db):
+        # 测试空哈希表
+        assert db.hlen("nonexistent") == 0
+        
+        # 测试有值的哈希表
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2"})
+        assert db.hlen("myhash") == 2
+        
+        # 测试添加字段后的长度
+        db.hset("myhash", "field3", "value3")
+        assert db.hlen("myhash") == 3
+
+    def test_hmget(self, db):
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2", "field3": "value3"})
+        
+        # 测试获取多个存在的字段
+        assert db.hmget("myhash", ["field1", "field2"]) == ["value1", "value2"]
+        
+        # 测试获取包含不存在字段
+        assert db.hmget("myhash", ["field1", "nonexistent", "field3"]) == ["value1", None, "value3"]
+        
+        # 测试不存在的哈希表
+        assert db.hmget("nonexistent", ["field1", "field2"]) == []
+
+    def test_hsetnx(self, db):
+        # 测试设置新字段
+        assert db.hsetnx("myhash", "field1", "value1") is True
+        assert db.hget("myhash", "field1") == "value1"
+        
+        # 测试设置已存在的字段
+        assert db.hsetnx("myhash", "field1", "newvalue") is False
+        assert db.hget("myhash", "field1") == "value1"
+        
+        # 测试新哈希表中设置字段
+        assert db.hsetnx("newhash", "field1", "value1") is True
+        assert db.hget("newhash", "field1") == "value1"
+
+    def test_hvals(self, db):
+        # 测试空哈希表
+        assert db.hvals("nonexistent") == []
+        
+        # 测试有值的哈希表
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value2"})
+        assert set(db.hvals("myhash")) == {"value1", "value2"}
+
+    def test_hstrlen(self, db):
+        db.hset("myhash", mapping={"field1": "value1", "field2": "value"})
+        
+        # 测试获取字段值的长度
+        assert db.hstrlen("myhash", "field1") == 6
+        assert db.hstrlen("myhash", "field2") == 5
+        
+        # 测试不存在的字段
+        assert db.hstrlen("myhash", "nonexistent") == 0
+        
+        # 测试不存在的哈希表
+        assert db.hstrlen("nonexistent", "field") == 0

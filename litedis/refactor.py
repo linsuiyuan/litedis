@@ -3,7 +3,7 @@ import random
 import time
 from fnmatch import fnmatchcase
 from functools import reduce, partial
-from typing import Optional, List, Union, Iterable, Mapping, Callable, Set
+from typing import Optional, List, Union, Iterable, Mapping, Callable, Set, Dict
 
 from litedis import BaseLitedis, DataType
 from litedis.typing import StringableT, Number
@@ -1659,5 +1659,256 @@ class SortedSetType(BaseLitedis):
 
             self._check_sortedset_type(key)
 
-            return [None if m not in zset else zset[m]
-                    for m in members]
+            return [zset.get(m, None) for m in members]
+
+
+class HashType(BaseLitedis):
+
+    def _check_hash_type(self, name):
+        if self.data_types[name] != DataType.HASH:
+            raise TypeError(f"{name}的数据类型 不是哈希！")
+
+    def hdel(self, name: str, *keys: str) -> int:
+        """
+        从哈希 name 中删除一个或多个字段
+
+        返回被成功删除的字段数量。如果指定的哈希表或字段不存在，则返回 0。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return 0
+
+            self._check_hash_type(name)
+
+            num = 0
+            for k in keys:
+                if k in hash_:
+                    hash_.pop(k)
+                    num += 1
+
+            return num
+
+    def hexists(self, name: str, key: str) -> bool:
+        """
+        检查给定的哈希表中是否存在指定的字段。
+
+        如果哈希表或字段不存在，返回 False。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return False
+
+            self._check_hash_type(name)
+
+            return key in hash_
+
+    def hget(self, name: str, key: str) -> Optional[StringableT]:
+        """
+        获取哈希表中指定字段的值。
+
+        如果哈希表或字段不存在，返回 None
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return None
+
+            self._check_hash_type(name)
+
+            return hash_.get(key, None)
+
+    def hgetall(self, name: str) -> Dict:
+        """
+        获取哈希表中所有字段及其对应值
+
+        如果指定的 key 不存在，返回空字典。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return {}
+
+            self._check_hash_type(name)
+
+            return {**hash_}
+
+    def _hincrby(self, name: str, key: str, amount: Number = 1) -> Number:
+        hash_ = self.data.get(name, None)
+        if hash_ is None:
+            hash_ = self.data[name] = {}
+            self.data_types[name] = DataType.HASH
+        else:
+            self._check_hash_type(name)
+
+        if key not in hash_:
+            hash_[key] = 0
+
+        hash_[key] += amount
+
+        return hash_[key]
+
+    def hincrby(self, name: str, key: str, amount: int = 1) -> int:
+        """
+        对哈希表中指定字段的整数值进行增量操作
+
+        如果哈希表或字段不存在，会先初始化为 0 再增量
+        """
+        with self.db_lock:
+            return self._hincrby(name, key, amount)
+
+    def hincrbyfloat(self, name: str, key: str, amount: float = 1.0) -> float:
+        """
+        对哈希表中指定字段的整数值进行增量操作。
+
+        如果哈希表或字段不存在，会先初始化为 0 再增量
+        """
+        with self.db_lock:
+            return self._hincrby(name, key, amount)
+
+    def hkeys(self, name: str) -> List:
+        """
+        获取 哈希表中所有字段的名称
+
+        返回一个包含哈希表中所有字段名称的数组。
+        如果指定的键不存在，返回一个空数组。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return []
+
+            self._check_hash_type(name)
+
+            return list(hash_.keys())
+
+    def hlen(self, name: str) -> int:
+        """
+        获取哈希表中字段数量
+
+        返回哈希表中字段的数量。如果指定的 key 不存在，返回值为 0。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return 0
+
+            self._check_hash_type(name)
+
+            return len(hash_)
+
+    def hset(
+            self,
+            name: str,
+            key: Optional[str] = None,
+            value: Optional[str] = None,
+            mapping: Optional[dict] = None,
+            items: Optional[list] = None,
+    ) -> int:
+        """
+        将一个或多个字段及其值设置到哈希表中。如果哈希表不存在，则会创建一个新的哈希表。
+
+        返回值为设置成功的字段数量。
+        如果字段已经存在，则会更新其值，但不会增加计数。
+        """
+        if key is None and not mapping and not items:
+            raise ValueError("没有给出要设置的键值对")
+        pieces = {}
+        if items:
+            for k, v in items:
+                pieces[k] = v
+        if key is not None:
+            pieces[key] = value
+        if mapping:
+            pieces.update(mapping)
+
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                hash_ = self.data[name] = {}
+                self.data_types[name] = DataType.HASH
+            else:
+                self._check_hash_type(name)
+
+            num = 0
+            for k, v in pieces.items():
+                if k not in hash_:
+                    num += 1
+                hash_[k] = v
+
+            return num
+
+    def hsetnx(self, name: str, key: str, value: str) -> bool:
+        """
+        指定的字段不存在时，设置该哈希字段的值
+        """
+
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                hash_ = self.data[name] = {}
+                self.data_types[name] = DataType.HASH
+            else:
+                self._check_hash_type(name)
+
+            if key not in hash_:
+                hash_[key] = value
+                return True
+
+            return False
+
+    # def hmset(self, name: str, mapping: dict) -> str:
+    #     """
+    #     从 Redis 4.0 开始，HMSET 被标记为过时，建议使用 HSET 命令来替代。
+    #     """
+
+    def hmget(self, name: str, keys: List) -> List:
+        """
+        从 Redis 哈希中获取一个或多个字段的值。
+
+        返回一个数组，包含请求的字段的值。如果某个字段不存在，则返回 None。
+        如果哈希不存在，返回一个空数组。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return []
+
+            self._check_hash_type(name)
+
+            return [hash_.get(k, None) for k in keys]
+
+    def hvals(self, name: str) -> List:
+        """
+        获取哈希表中所有字段的值。
+
+        如果指定的 key 不存在，返回空数组。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return []
+
+            self._check_hash_type(name)
+
+            return hash_.values()
+
+    def hstrlen(self, name: str, key: str) -> int:
+        """
+        获取哈希表中指定字段的字符串长度
+
+        如果字段不存在，返回 0。
+        如果哈希表不存在，返回 0。
+        """
+        with self.db_lock:
+            hash_ = self.data.get(name, None)
+            if hash_ is None:
+                return 0
+
+            self._check_hash_type(name)
+
+            if key not in hash_:
+                return 0
+
+            return len(hash_[key])
