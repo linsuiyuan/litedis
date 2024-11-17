@@ -663,6 +663,28 @@ class TestSortedSetType:
         result = db.zmpop(["nonexistent"], min_=True)
         assert result == []
 
+    def test_zscan(self, db):
+        # 准备测试数据
+        db.zadd("myset", {"one": 1, "two": 2, "three": 3, "four": 4})
+
+        # 测试基本扫描功能
+        members = []
+        for member, score in db.zscan("myset"):
+            members.append((member, score))
+        assert len(members) == 4
+
+        # 测试带count参数的扫描
+        members = []
+        for member, score in db.zscan("myset", count=2):
+            members.append((member, score))
+        assert len(members) == 2  # 最终应该返回所有成员
+
+        # 测试空集合的扫描
+        members = []
+        for member, score in db.zscan("nonexistent"):
+            members.append((member, score))
+        assert len(members) == 0
+
 
 class TestHashType:
     def test_hset_and_hget(self, db):

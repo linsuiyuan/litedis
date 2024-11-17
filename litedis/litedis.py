@@ -1674,6 +1674,29 @@ class SortedSetType(BaseLitedis):
 
             return None
 
+    def zscan(
+            self,
+            name: str,
+            count: Union[int, None] = None,
+    ):
+        """
+        遍历有序集合。
+
+        这里和 Redis 的行为不同，将直接一次性扫描完成
+        """
+        with self.db_lock:
+            zset = self.data.get(name, None)
+            if zset is None:
+                return
+
+            self._check_sortedset_type(name)
+
+            members = sorted(zset.items(), key=lambda x: (x[1], x[0]))
+            for i, m in enumerate(members):
+                yield m
+                if count and count <= i + 1:
+                    break
+
     def zscore(self, name: str, value: StringableT) -> Optional[float]:
         """
         获取有序集合中指定成员的分数
