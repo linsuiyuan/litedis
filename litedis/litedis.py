@@ -4,8 +4,9 @@ import random
 import threading
 import time
 import weakref
+from collections import OrderedDict
 from fnmatch import fnmatchcase
-from functools import reduce, partial
+from functools import reduce
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, Union
 from pathlib import Path
 from urllib import parse
@@ -16,6 +17,157 @@ from litedis.rdb import RDB
 from litedis.expiry import Expiry
 from litedis.typing import Number, StringableT
 from litedis.utils import find_index_from_left, find_index_from_right, list_or_args
+
+
+class SortedSet(Iterable):
+
+    def __init__(self, iterable: Iterable = None):
+        if iterable is None:
+            self._data = OrderedDict()
+        else:
+            self._data = OrderedDict(iterable)
+            self._sort_data()
+
+    def members(self):
+        return self._data.keys()
+
+    def scores(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
+    def _sort_data(self):
+        sortdata = sorted(self, key=lambda x: (x[1], x[0]))
+        self._data = OrderedDict(sortdata)
+
+    def __contains__(self, m) -> bool:
+        return m in self._data
+
+    def __iter__(self):
+        return iter(self.items())
+
+    def __getitem__(self, item):
+        return self._data[item]
+
+    def __setitem__(self, key, value):
+        self._data[key] = value
+
+    def __len__(self):
+        return len(self._data)
+
+    def __repr__(self):
+        return f"{list(self)!r}"
+
+    def add(self, item: (str, Number)):
+        """
+        添加元素到有序集合，不存在则添加，存在则更新
+        :param item: 成员+分数 元组
+        """
+        m, s = item
+        self[m] = float(s)
+
+        self._sort_data()
+
+    def count(self, min_: Number, max_: Number) -> int:
+        """
+        分数在 min_ 和 max_ 之间的元素数量
+        """
+        if min_ > max_:
+            raise ValueError("min_ 不能大于 max_")
+
+        c = 0
+        for s in self.scores():
+            if s < min_:
+                continue
+            if s > max_:
+                break
+            c += 1
+
+        return c
+
+    def difference(self, other: "SortedSet"):
+        ms = self.members() - other.members()
+        return SortedSet({m: self[m] for m in ms})
+
+    __sub__ = difference
+
+    def get(self, member, default=None):
+        return self._data.get(member, default)
+
+    def incr(self, member: str, amount: Number) -> Number:
+        if member in self:
+            self[member] += amount
+        else:
+            self[member] = amount
+
+        return self[member]
+
+    def intersection(self, other: "SortedSet"):
+        ms = self.members() & other.members()
+        return SortedSet({m: self[m] for m in ms})
+
+    __and__ = intersection
+
+    def pop(self, member, default=None):
+        return self._data.pop(member, default)
+
+    def popitem(self, last=True):
+        return self._data.popitem(last=last)
+
+    def randmember(self, count: int = 1, unique=True):
+        if unique:
+            return random.sample(list(self), count)
+        else:
+            return random.choices(list(self), k=count)
+
+    def range(self,
+              start: int,
+              end: int,
+              min_: Optional[Number] = None,
+              max_: Optional[Number] = None,
+              desc: bool = False,
+              ) -> List:
+
+        if desc:
+            sorted_items = sorted(self, key=lambda x: (x[1], x[0]), reverse=True)
+        else:
+            sorted_items = list(self)
+
+        # 过滤分数范围
+        if min_ is not None and max_ is not None:
+            sorted_items = [(m, s)
+                            for m, s in sorted_items
+                            if min_ <= s <= max_]
+
+        # 处理索引, Redis 是包含右边界的
+        if end < 0:
+            end = len(sorted_items) + end + 1
+        else:
+            end += 1
+
+        if start > end:
+            return []
+
+        return sorted_items[start:end]
+
+    def rank(self, member: str, desc=False) -> Optional[int]:
+        if member not in self:
+            return None
+
+        if desc:
+            return list(reversed(self.members())).index(member)
+        else:
+            return list(self.members()).index(member)
+
+    score = get
+
+    def union(self, other: "SortedSet"):
+        ms = self.members() | other.members()
+        ms_mapping = {**self._data, **other._data}
+        return SortedSet({m: ms_mapping[m] for m in ms})
+
+    __or__ = union
 
 
 class _SingletonMeta(type):
@@ -1190,7 +1342,7 @@ class SortedSetType(BaseLitedis):
             zset = self.data.get(name, None)
 
             if zset is None:
-                zset = self.data[name] = {}
+                zset = self.data[name] = SortedSet()
                 self.data_types[name] = DataType.SortedSet
             else:
                 self._check_sortedset_type(name)
@@ -1229,7 +1381,7 @@ class SortedSetType(BaseLitedis):
 
             self._check_sortedset_type(name)
 
-            return len(zset.keys())
+            return len(zset)
 
     def zcount(self, name: str, min_: Number, max_: Number) -> int:
         """
@@ -1243,11 +1395,7 @@ class SortedSetType(BaseLitedis):
 
             self._check_sortedset_type(name)
 
-            count = 0
-            for _, score in zset.items():
-                if min_ <= score <= max_:
-                    count += 1
-            return count
+            return zset.count(min_, max_)
 
     def zdiff(self, keys: List[str], withscores: bool = False) -> List:
         """
@@ -1255,7 +1403,7 @@ class SortedSetType(BaseLitedis):
         """
         with self.db_lock:
             return self._sortedset_reduce_openration(
-                lambda s1, s2: s1.keys() - s2.keys(),
+                lambda s1, s2: s1 - s2,
                 keys=keys,
                 withscores=withscores)
 
@@ -1272,17 +1420,12 @@ class SortedSetType(BaseLitedis):
             zset = self.data.get(name, None)
 
             if zset is None:
-                zset = self.data[name] = {}
+                zset = self.data[name] = SortedSet()
                 self.data_types[name] = DataType.SortedSet
             else:
                 self._check_sortedset_type(name)
 
-            if value not in zset:
-                zset[value] = amount
-            else:
-                zset[value] += amount
-
-            return zset[value]
+            return zset.incr(member=value, amount=amount)
 
     def zinter(self, keys: List[str], withscores: bool = False) -> List:
         """
@@ -1290,7 +1433,7 @@ class SortedSetType(BaseLitedis):
         """
         with self.db_lock:
             return self._sortedset_reduce_openration(
-                lambda s1, s2: s1.keys() & s2.keys(),
+                lambda s1, s2: s1 & s2,
                 keys=keys,
                 withscores=withscores)
 
@@ -1307,11 +1450,11 @@ class SortedSetType(BaseLitedis):
                 if name in self.data:
                     self._check_sortedset_type(name)
 
-            zsets = [self.data.get(n, {}) for n in keys]
+            zsets = [self.data.get(n, SortedSet()) for n in keys]
 
             # 计算交集
             numkeys = min(numkeys, len(keys))
-            inter = zsets[0].keys()
+            inter = zsets[0]
             for num in range(1, numkeys):
                 inter = inter & zsets[num]
                 if limit != 0 and len(inter) >= limit:
@@ -1331,23 +1474,11 @@ class SortedSetType(BaseLitedis):
 
         self._check_sortedset_type(name)
 
-        # 按分数排序
-        sorted_members = sorted(zset.items(), key=lambda x: (x[1], x[0]))
-
-        if type_ == "max":
-            partial_pop = partial(sorted_members.pop)
-        else:
-            partial_pop = partial(sorted_members.pop, 0)
-
         if count == 1:
-            pop_lists = [partial_pop()]
+            pop_lists = [zset.popitem(last=type_ == "max")]
         else:
-            count = min(count, len(sorted_members))
-            pop_lists = [partial_pop() for _ in range(count)]
-
-        # 有序集合移除相应的成员
-        for v, s in pop_lists:
-            zset.pop(v, None)
+            count = min(count, len(zset))
+            pop_lists = [zset.popitem(last=type_ == "max") for _ in range(count)]
 
         # 展平列表再返回
         return [i
@@ -1402,29 +1533,17 @@ class SortedSetType(BaseLitedis):
 
             self._check_sortedset_type(key)
 
-            # 默认情况
-            if abs(count) <= 1:
-                r_value = random.sample(zset.keys(), 1)[0]
-                if withscores:
-                    return [r_value, zset[r_value]]
-                else:
-                    return r_value
-
+            mems = zset.randmember(count=abs(count), unique=count > 0)
+            if withscores:
+                # 展平
+                return [ms
+                        for item in mems
+                        for ms in item]
             else:
-                # 正数
-                if count > 0:
-                    list_ = random.sample(list(zset), count)
-                # 负数
+                if len(mems) == 1:
+                    return mems[0][0]
                 else:
-                    list_ = random.choices(list(zset), k=abs(count))
-
-                if withscores:
-                    list_ = [kv
-                             for item in list_
-                             for kv in (item, zset[item])]
-                else:
-                    list_ = [k for k in list_]
-                return list_
+                    return [m for m, s in mems]
 
     @collect_command_to_aof
     def zmpop(
@@ -1478,28 +1597,11 @@ class SortedSetType(BaseLitedis):
 
         self._check_sortedset_type(name)
 
-        # 按分数排序
-        sorted_zset_tuple = sorted(self.data[name].items(),
-                                   key=lambda x: (x[1], x[0]),
-                                   reverse=desc)
+        result = zset.range(start, end, min_=min_, max_=max_, desc=desc)
 
-        # 过滤分数范围
-        if min_ is not None and max_ is not None:
-            sorted_zset_tuple = [(v, s) for v, s in sorted_zset_tuple if min_ <= s <= max_]
-
-        # 处理索引, Redis 是包含右边界的
-        if end < 0:
-            end = len(sorted_zset_tuple) + end + 1
-        else:
-            end += 1
-
-        result = sorted_zset_tuple[start:end]
-
-        if withscores:
-            return [kv
-                    for t in result
-                    for kv in t]
-        return [member for member, _ in result]
+        if not withscores:
+            return [m for m, s in result]
+        return result
 
     def zrange(self, name: str, start: int, end: int, withscores: bool = False, ) -> List:
         """
@@ -1584,12 +1686,7 @@ class SortedSetType(BaseLitedis):
                                 desc=True,
                                 withscores=withscores)
 
-    def zrank(
-            self,
-            name: str,
-            value: StringableT,
-            withscore: bool = False,
-    ) -> Optional[int]:
+    def zrank(self, name: str, value: StringableT) -> Optional[int]:
         """
         获取有序集合中成员的排名,按分数值从小到大排序。排名从0开始计算。
 
@@ -1597,17 +1694,14 @@ class SortedSetType(BaseLitedis):
         如果成员不存在或key不存在,返回 None
         """
         with self.db_lock:
-            list_ = self._zrange(name=name, start=0, end=-1, withscores=withscore)
-            if not withscore:
-                members = list_
-            else:
-                members = [m for m in range(0, len(list_), 2)]
+            zset = self.data.get(name, None)
 
-            for i, v in enumerate(members):
-                if v == value:
-                    return i
+            if zset is None:
+                return None
 
-            return None
+            self._check_sortedset_type(name)
+
+            return zset.rank(value)
 
     @collect_command_to_aof
     def zrem(self, name: str, *values: StringableT) -> int:
@@ -1653,8 +1747,7 @@ class SortedSetType(BaseLitedis):
 
             return num
 
-    def zrevrank(self, name: str, value: StringableT, withscore: bool = False,
-                 ) -> Optional[int]:
+    def zrevrank(self, name: str, value: StringableT) -> Optional[int]:
         """
         获取有序集合中成员的排名,按分数值从大到小排序。排名从0开始计算。
 
@@ -1662,23 +1755,16 @@ class SortedSetType(BaseLitedis):
         如果成员不存在或key不存在,返回 None
         """
         with self.db_lock:
-            list_ = self._zrange(name=name, start=0, end=-1, desc=True, withscores=withscore)
-            if not withscore:
-                members = list_
-            else:
-                members = [m for m in range(0, len(list_), 2)]
+            zset = self.data.get(name, None)
 
-            for i, v in enumerate(members):
-                if v == value:
-                    return i
+            if zset is None:
+                return None
 
-            return None
+            self._check_sortedset_type(name)
 
-    def zscan(
-            self,
-            name: str,
-            count: Union[int, None] = None,
-    ):
+            return zset.rank(value, desc=True)
+
+    def zscan(self, name: str, cursor: int = 0, count: int = 10):
         """
         遍历有序集合。
 
@@ -1687,15 +1773,15 @@ class SortedSetType(BaseLitedis):
         with self.db_lock:
             zset = self.data.get(name, None)
             if zset is None:
-                return
+                return 0, []
 
             self._check_sortedset_type(name)
 
-            members = sorted(zset.items(), key=lambda x: (x[1], x[0]))
-            for i, m in enumerate(members):
-                yield m
-                if count and count <= i + 1:
-                    break
+            total = len(zset)
+            start = cursor
+            end = min(cursor + count, total)
+            next_cursor = end if end < total else 0
+            return next_cursor, list(zset.items())[start:end]
 
     def zscore(self, name: str, value: StringableT) -> Optional[float]:
         """
@@ -1711,10 +1797,7 @@ class SortedSetType(BaseLitedis):
 
             self._check_sortedset_type(name)
 
-            if value not in zset:
-                return None
-
-            return zset[value]
+            return zset.get(value)
 
     def _sortedset_reduce_openration(
             self,
@@ -1729,20 +1812,13 @@ class SortedSetType(BaseLitedis):
             if name in self.data:
                 self._check_sortedset_type(name)
 
-        zsets = [self.data.get(n, {}) for n in keys]
+        zsets = [self.data.get(n, SortedSet()) for n in keys]
 
         # 集合运算
         result = reduce(reduce_openration, zsets)
 
-        if withscores:
-            # 差集和交集可以不用这么复杂的，但是为了和并集兼容，所以需要这样做
-            # 以先出现的成员和分数为准，所以这里需要倒序以防止被后面的覆盖
-            mapping = {k: v
-                       for s in reversed(zsets)
-                       for k, v in s.items()}
-            result = [(member, mapping[member])
-                      for member in result]
-
+        if not withscores:
+            result = [m for m, _ in result]
         else:
             result = list(result)
 
@@ -1754,7 +1830,7 @@ class SortedSetType(BaseLitedis):
         """
         with self.db_lock:
             return self._sortedset_reduce_openration(
-                lambda s1, s2: s1.keys() | s2.keys(),
+                lambda s1, s2: s1 | s2,
                 keys=keys,
                 withscores=withscores)
 

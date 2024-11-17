@@ -554,14 +554,14 @@ class TestSortedSetType:
         assert db.zrange("myset", 0, -1) == ["one", "two", "three", "four"]
         assert db.zrange("myset", 1, 2) == ["two", "three"]
         assert db.zrange("myset", 0, -1, withscores=True) == [
-            "one", 1.0, "two", 2.0, "three", 3.0, "four", 4.0
+            ("one", 1.0), ("two", 2.0), ("three", 3.0), ("four", 4.0)
         ]
 
         # 测试逆序范围查询
         assert db.zrevrange("myset", 0, -1) == ["four", "three", "two", "one"]
         assert db.zrevrange("myset", 1, 2) == ["three", "two"]
         assert db.zrevrange("myset", 0, -1, withscores=True) == [
-            "four", 4.0, "three", 3.0, "two", 2.0, "one", 1.0
+            ("four", 4.0), ("three", 3.0), ("two", 2.0), ("one", 1.0)
         ]
 
     def test_zrangebyscore_and_zrevrangebyscore(self, db):
@@ -569,11 +569,11 @@ class TestSortedSetType:
 
         # 测试按分数范围查询
         assert db.zrangebyscore("myset", 2, 3) == ["two", "three"]
-        assert db.zrangebyscore("myset", 2, 3, withscores=True) == ["two", 2.0, "three", 3.0]
+        assert db.zrangebyscore("myset", 2, 3, withscores=True) == [("two", 2.0), ("three", 3.0)]
 
         # 测试按分数范围逆序查询
         assert db.zrevrangebyscore("myset", 2, 3) == ["three", "two"]
-        assert db.zrevrangebyscore("myset", 2, 3, withscores=True) == ["three", 3.0, "two", 2.0]
+        assert db.zrevrangebyscore("myset", 2, 3, withscores=True) == [("three", 3.0), ("two", 2.0)]
 
         # 测试带起始位置和数量的查询
         assert db.zrangebyscore("myset", 1, 4, start=1, num=2) == ["two", "three", "four"]
@@ -669,19 +669,25 @@ class TestSortedSetType:
 
         # 测试基本扫描功能
         members = []
-        for member, score in db.zscan("myset"):
-            members.append((member, score))
+        while True:
+            cursor, elements = db.zscan("myset")
+            for member, score in elements:
+                members.append((member, score))
+            if cursor == 0:
+                break
         assert len(members) == 4
 
         # 测试带count参数的扫描
         members = []
-        for member, score in db.zscan("myset", count=2):
+        cursor, elements = db.zscan("myset", count=2)
+        for member, score in elements:
             members.append((member, score))
         assert len(members) == 2  # 最终应该返回所有成员
 
         # 测试空集合的扫描
         members = []
-        for member, score in db.zscan("nonexistent"):
+        cursor, elements = db.zscan("nonexistent")
+        for member, score in elements:
             members.append((member, score))
         assert len(members) == 0
 
