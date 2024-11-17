@@ -5,8 +5,7 @@ import threading
 import time
 import weakref
 
-from litedis import (BaseLitedis,
-                     PersistenceType)
+from litedis import BaseLitedis, PersistenceType
 
 
 class RDB:

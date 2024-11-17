@@ -2,11 +2,9 @@ import threading
 import time
 import weakref
 
-import pytest
+import pytest  # noqa
 
-from litedis import (BaseLitedis,
-                     DataType,
-                     PersistenceType)
+from litedis import BaseLitedis, DataType, PersistenceType
 from litedis.rdb import RDB
 
 

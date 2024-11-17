@@ -1,4 +1,4 @@
-from typing import Tuple, List, Union, Iterable
+from typing import Iterable, List, Tuple, Union
 
 
 def list_or_args(keys: Union[str, Iterable[str]], args: Tuple[str, ...]) -> List[str]:

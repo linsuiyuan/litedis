@@ -2,12 +2,9 @@ import json
 import time
 import weakref
 
-import pytest
+import pytest  # noqa
 
-from litedis import (AOFFsyncStrategy,
-                     BaseLitedis,
-                     DataType,
-                     PersistenceType)
+from litedis import AOFFsyncStrategy, BaseLitedis, DataType, PersistenceType
 from litedis.aof import AOF
 
 

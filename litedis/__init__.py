@@ -1,7 +1,6 @@
 import threading
 from pathlib import Path
-from typing import (Dict,
-                    Any)
+from typing import Dict, Any
 
 
 class DataType:
