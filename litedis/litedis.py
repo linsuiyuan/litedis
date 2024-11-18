@@ -1350,21 +1350,21 @@ class SortedSetType(BaseLitedis):
                 self._check_sortedset_type(name)
 
             add_num = 0
-            for item, score in mapping.items():
-                if item in zset:
+            for mem, score in mapping.items():
+                if mem in zset:
                     if nx:
                         continue
                     # 已存在，更新，但要排除 lt 或 gt 的限制
-                    if lt and score >= zset[item]:
+                    if lt and score >= zset[mem]:
                         continue
-                    if gt and score <= zset[item]:
+                    if gt and score <= zset[mem]:
                         continue
-                    zset[item] = score
+                    zset.add({mem: score})
                 else:
                     if xx:
                         continue
                     # 不存在，添加
-                    zset[item] = score
+                    zset.add({mem: score})
                     add_num += 1
 
             return add_num
