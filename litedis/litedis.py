@@ -1590,7 +1590,7 @@ class SortedSetType(BaseLitedis):
                 withscores: bool = False,
                 ) -> List:
 
-        zset = self.data.get(name, None)
+        zset: SortedSet = self.data.get(name, None)
 
         if zset is None:
             return []
@@ -1764,14 +1764,16 @@ class SortedSetType(BaseLitedis):
 
             return zset.rank(value, desc=True)
 
-    def zscan(self, name: str, cursor: int = 0, count: int = 10):
+    def zscan(self, name: str, cursor: int = 0, count: int = 0):
         """
         遍历有序集合。
 
-        这里和 Redis 的行为不同，将直接一次性扫描完成
+        :param name:
+        :param cursor:
+        :param count: 每次扫描的个数，为 0 时表示扫描到结尾
         """
         with self.db_lock:
-            zset = self.data.get(name, None)
+            zset: SortedSet = self.data.get(name, None)
             if zset is None:
                 return 0, []
 
@@ -1779,9 +1781,15 @@ class SortedSetType(BaseLitedis):
 
             total = len(zset)
             start = cursor
+
+            if count < 0:
+                raise ValueError(f"count 不能小于 0")
+            elif count == 0:
+                count = total
+
             end = min(cursor + count, total)
             next_cursor = end if end < total else 0
-            return next_cursor, list(zset.items())[start:end]
+            return next_cursor, list(zset)[start:end]
 
     def zscore(self, name: str, value: StringableT) -> Optional[float]:
         """
