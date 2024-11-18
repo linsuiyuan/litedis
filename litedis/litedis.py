@@ -101,6 +101,8 @@ class SortedSet(Iterable):
         else:
             self[member] = amount
 
+        self._sort_data()
+
         return self[member]
 
     def intersection(self, other: "SortedSet"):
