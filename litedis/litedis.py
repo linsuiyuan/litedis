@@ -51,7 +51,9 @@ class SortedSet(Iterable):
         return self._data[item]
 
     def __setitem__(self, key, value):
-        self._data[key] = value
+        self._data[key] = float(value)
+
+        self._sort_data()
 
     def __len__(self):
         return len(self._data)
@@ -65,9 +67,7 @@ class SortedSet(Iterable):
         :param item: 成员+分数 元组
         """
         m, s = item
-        self[m] = float(s)
-
-        self._sort_data()
+        self[m] = s
 
     def count(self, min_: Number, max_: Number) -> int:
         """
@@ -100,8 +100,6 @@ class SortedSet(Iterable):
             self[member] += amount
         else:
             self[member] = amount
-
-        self._sort_data()
 
         return self[member]
 
