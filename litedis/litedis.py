@@ -1357,12 +1357,12 @@ class SortedSetType(BaseLitedis):
                         continue
                     if gt and score <= zset[mem]:
                         continue
-                    zset.add({mem: score})
+                    zset.add((mem, score))
                 else:
                     if xx:
                         continue
                     # 不存在，添加
-                    zset.add({mem: score})
+                    zset.add((mem, score))
                     add_num += 1
 
             return add_num
