@@ -163,9 +163,7 @@ class SortedSet(Iterable):
     score = get
 
     def union(self, other: "SortedSet"):
-        ms = self.members() | other.members()
-        ms_mapping = {**self._data, **other._data}
-        return SortedSet({m: ms_mapping[m] for m in ms})
+        return SortedSet({**other._data, **self._data})
 
     __or__ = union
 
