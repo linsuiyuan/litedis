@@ -41,13 +41,17 @@ class Expiry:
             if not self.db:
                 break
 
-            expired_keys = [
-                key for key in self.db.expires.keys()
-                if self.is_expired(key)
-            ]
-            if expired_keys:
-                self.db.delete(*expired_keys)
+            self.check_and_delete_expired_keys()
+
             time.sleep(1)
+
+    def check_and_delete_expired_keys(self):
+        expired_keys = [
+            key for key in self.db.expires.keys()
+            if self.is_expired(key)
+        ]
+        if expired_keys:
+            self.db.delete(*expired_keys)
 
     def check_expired(self, key: str) -> bool:
         """

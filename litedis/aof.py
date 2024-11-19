@@ -14,19 +14,17 @@ def collect_command_to_aof(func):
 
     @functools.wraps(func)
     def wrapper(db, *args, **kwargs):
-        command_exectime = kwargs.pop("command_exectime", None)
+
         result = func(db, *args, **kwargs)
 
-        # command_exectime 是重放 aof 命令时才有的参数，为 None 表示非重放
-        if command_exectime is None:
-            if db.aof:
-                command = {
-                    "method": func.__name__,
-                    "args": args,
-                    "kwargs": kwargs,
-                    "exectime": time.time(),  # 运行命令时间
-                }
-                db.aof.append(command)
+        if db.aof:
+            command = {
+                "method": func.__name__,
+                "args": args,
+                "kwargs": kwargs,
+                "exectime": time.time(),  # 运行命令时间
+            }
+            db.aof.append(command)
 
         return result
 
@@ -127,7 +125,8 @@ class AOF:
             # 应用命令
             method, args, kwargs, exectime = command.values()
             with execute_command_sanbox(exectime):
-                getattr(self.db, method)(*args, **kwargs, command_exectime=exectime)
+                # 取原始函数进行调用
+                getattr(self.db, method).__wrapped__(self.db, *args, **kwargs)
 
         return True
 

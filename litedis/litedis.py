@@ -2189,7 +2189,10 @@ class Litedis(
         # 是否关闭状态
         self.closed = False
 
-        # 加载数据
+        # 初始化数据
+        self._init_data()
+
+    def _init_data(self):
         # 尝试从 RDB 加载
         self.rdb and self.rdb.read_rdb()
         # 如果有 AOF , 加载到数据库, 再清理 AOF
@@ -2197,6 +2200,9 @@ class Litedis(
             result = self.aof.read_aof()
             if result and self.rdb:
                 self.rdb.save_rdb()
+
+        # 扫描一下过期键
+        self.expiry.check_and_delete_expired_keys()
 
     def close(self):
         """
