@@ -1,21 +1,8 @@
-import threading
-import weakref
-
 import pytest  # noqa
 import time
 from pathlib import Path
-from litedis.litedis import BasicKey, HashType, ListType, Litedis, SetType, SortedSetType
-from litedis import Expiry, PersistenceType
-
-
-class DB(
-    HashType,
-    SortedSetType,
-    SetType,
-    ListType,
-    BasicKey,
-):
-    """组合 mixin"""
+from litedis.litedis import Litedis
+from litedis import PersistenceType
 
 
 @pytest.fixture
@@ -27,15 +14,12 @@ def temp_dir(tmp_path):
 @pytest.fixture
 def db(temp_dir):
     """测试用的数据库数据"""
-    db = DB()
-    db.db_lock = threading.Lock()
-    db.db_name = "test_db"
-    db.data_dir = temp_dir
-    db.persistence = PersistenceType.NONE
-    db.data = {}
-    db.data_types = {}
-    db.expires = {}
-    db.expiry = Expiry(db=weakref.ref(db))
+    db = Litedis(
+        db_name="test_db",
+        data_dir=temp_dir,
+        singleton=False,
+        persistence=PersistenceType.MIXED
+    )
     return db
 
 
@@ -307,10 +291,6 @@ class TestListType:
 
         # 测试降序排序
         assert db.lsort("mylist", desc=True) == ["3", "2", "1"]
-
-        # 测试自定义排序
-        db.rpush("mylist2", "abc", "a", "ab")
-        assert db.lsort("mylist2", key=len) == ["a", "ab", "abc"]
 
         # 测试不存在的键
         assert db.lsort("nonexistent") == []

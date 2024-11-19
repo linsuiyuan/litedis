@@ -48,12 +48,6 @@ def aof_everysec(weakref_db):
     return AOF(weakref_db, AOFFsyncStrategy.EVERYSEC)
 
 
-@pytest.fixture
-def aof_no(weakref_db):
-    """创建一个 fsync=AOFFsyncStrategy.NO 的 AOF 实例"""
-    return AOF(weakref_db, AOFFsyncStrategy.NO)
-
-
 class TestAOF:
     def test_append_and_read_with_always_fsync(self, aof_always):
         """测试 always 模式下的命令追加和读取"""
@@ -103,21 +97,6 @@ class TestAOF:
 
         # 确认文件已删除
         assert not aof_always.aof_path.exists()
-
-    def test_flush_buffer(self, aof_no):
-        """测试手动刷新缓冲区"""
-        test_command = {"cmd": "SET", "args": ["key1", "value1"]}
-
-        # 追加命令到缓冲区
-        aof_no.append(test_command)
-
-        # 手动刷新缓冲区
-        aof_no.flush_buffer()
-
-        # 验证命令已写入文件
-        with open(aof_no.aof_path, 'r', encoding='utf-8') as f:
-            saved_command = json.loads(f.readline().strip())
-            assert saved_command == test_command
 
     def test_invalid_file_handling(self, aof_always):
         """测试文件操作异常处理"""

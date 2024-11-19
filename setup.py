@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='litedis',
-    version='2.1.6',
+    version='2.1.7',
     author='Linsuiyuan',
     author_email='linsuiyuan@icloud.com',
     description='Litedis 是一个轻量级的 模仿Redis 的本地实现，它实现了和 Redis 类似的功能',

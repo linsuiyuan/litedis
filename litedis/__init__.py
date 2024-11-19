@@ -25,7 +25,6 @@ class PersistenceType:
 
 class AOFFsyncStrategy:
     """AOF 同步策略"""
-    NO = "no"
     ALWAYS = "always"
     EVERYSEC = "everysec"
 

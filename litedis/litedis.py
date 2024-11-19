@@ -7,7 +7,7 @@ import weakref
 from collections import OrderedDict
 from fnmatch import fnmatchcase
 from functools import reduce
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Union
 from pathlib import Path
 from urllib import parse
 
@@ -1019,7 +1019,6 @@ class ListType(BaseLitedis):
     def lsort(
             self,
             name: str,
-            key: Optional[Callable] = None,
             desc: bool = False
     ) -> List[StringableT]:
         """
@@ -1040,7 +1039,7 @@ class ListType(BaseLitedis):
 
             self._check_list_type(name)
 
-            self.data[name].sort(key=key, reverse=desc)
+            self.data[name].sort(key=str, reverse=desc)
 
             return self.data[name]
 
@@ -2128,7 +2127,7 @@ class Litedis(
     def __init__(self,
                  connection_string: Optional[str] = None,
                  db_name: str = "litedis",
-                 data_dir: str = "./data",
+                 data_dir: Union[str, Path] = "./data",
                  persistence=PersistenceType.MIXED,
                  aof_fsync=AOFFsyncStrategy.ALWAYS,
                  rdb_save_frequency: int = 600,
@@ -2162,22 +2161,28 @@ class Litedis(
             self.data_dir = Path(path)
             self.db_name = name
         else:
-            self.data_dir = Path(data_dir)
+            self.data_dir = Path(data_dir) if isinstance(data_dir, str) else data_dir
             self.db_name = db_name
-            self.connection_string = f"litedis:///{data_dir.lstrip('./|/').rstrip('/')}/{db_name}"
+            self.connection_string = f"litedis:///{self.data_dir.name.lstrip('./|/').rstrip('/')}/{db_name}"
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # 持久化 相关
         self.persistence = persistence
         weak_self = weakref.ref(self)
         # AOF 相关
-        self.aof = AOF(db=weak_self,
-                       aof_fsync=aof_fsync)
+        if self.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
+            self.aof = AOF(db=weak_self,
+                           aof_fsync=aof_fsync)
+        else:
+            self.aof = None
         # RDB 相关
-        self.rdb = RDB(db=weak_self,
-                       rdb_save_frequency=rdb_save_frequency,
-                       compression=compression,
-                       callback_after_save_rdb=self.aof.clear_aof)
+        if self.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
+            self.rdb = RDB(db=weak_self,
+                           rdb_save_frequency=rdb_save_frequency,
+                           compression=compression,
+                           callback_after_save_rdb=self.aof.clear_aof)
+        else:
+            self.rdb = None
         # 过期 相关
         self.expiry = Expiry(db=weak_self)
 
@@ -2186,11 +2191,12 @@ class Litedis(
 
         # 加载数据
         # 尝试从 RDB 加载
-        self.rdb.read_rdb()
+        self.rdb and self.rdb.read_rdb()
         # 如果有 AOF , 加载到数据库, 再清理 AOF
-        result = self.aof.read_aof()
-        if result:
-            self.rdb.save_rdb()
+        if self.aof:
+            result = self.aof.read_aof()
+            if result and self.rdb:
+                self.rdb.save_rdb()
 
     def close(self):
         """
@@ -2198,7 +2204,7 @@ class Litedis(
         """
         # 确保 aof 有持久化就可以了，这里的内容在重新初始化数据库的时候，会同步到 rdb 里
         # 虽然这里也可以直接保存 rdb，但rdb 可能比较费时，退出的时候，可能来不及保存好（通过 __del__触发的时候）
-        self.aof.flush_buffer()
+        self.aof and self.aof.flush_buffer()
         self.closed = True
 
         del self

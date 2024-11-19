@@ -5,7 +5,7 @@ import threading
 import time
 import weakref
 
-from litedis import BaseLitedis, PersistenceType
+from litedis import BaseLitedis
 
 
 class RDB:
@@ -26,8 +26,7 @@ class RDB:
         self.tmp_rdb_path = self.db.data_dir / f"{self.db.db_name}.rdb.tmp"
 
         # 后台持久化任务
-        if self.db.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
-            self.save_task_in_background()
+        self.save_task_in_background()
 
     @property
     def db(self) -> BaseLitedis:

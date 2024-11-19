@@ -6,7 +6,7 @@ import weakref
 from contextlib import contextmanager
 from typing import Dict
 
-from litedis import AOFFsyncStrategy, BaseLitedis, PersistenceType
+from litedis import AOFFsyncStrategy, BaseLitedis
 
 
 def collect_command_to_aof(func):
@@ -14,28 +14,28 @@ def collect_command_to_aof(func):
 
     @functools.wraps(func)
     def wrapper(db, *args, **kwargs):
+        command_exectime = kwargs.pop("command_exectime", None)
         result = func(db, *args, **kwargs)
-        if db.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
-            command = {
-                "method": func.__name__,
-                "args": args,
-                "kwargs": kwargs,
-                "exectime": time.time(),  # 运行命令时间
-            }
-            db.aof.append(command)
+
+        # command_exectime 是重放 aof 命令时才有的参数，为 None 表示非重放
+        if command_exectime is None:
+            if db.aof:
+                command = {
+                    "method": func.__name__,
+                    "args": args,
+                    "kwargs": kwargs,
+                    "exectime": time.time(),  # 运行命令时间
+                }
+                db.aof.append(command)
+
         return result
 
     return wrapper
 
 
 @contextmanager
-def execute_command_sanbox(db: BaseLitedis,
-                           exectime: float):
+def execute_command_sanbox(exectime: float):
     """执行 aof 命令沙盒，以提供特定的执行环境"""
-
-    # 初始化时的不需要记录AOF
-    persistence = db.persistence
-    db.persistence = PersistenceType.NONE
 
     # hook 原来命令的执行时间
     builtin_time = time.time
@@ -47,9 +47,6 @@ def execute_command_sanbox(db: BaseLitedis,
     finally:
         # 恢复内置 time函数
         time.time = builtin_time
-
-        # 恢复原来的持久化方式
-        db.persistence = persistence
 
 
 class AOF:
@@ -68,7 +65,7 @@ class AOF:
         self._buffer_lock = threading.Lock()
 
         # 后台持久化任务
-        if self.db.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
+        if self.aof_fsync == AOFFsyncStrategy.EVERYSEC:
             self.run_fsync_task_in_background()
 
     @property
@@ -129,8 +126,8 @@ class AOF:
         for command in self.read_aof_commands():
             # 应用命令
             method, args, kwargs, exectime = command.values()
-            with execute_command_sanbox(self.db, exectime):
-                getattr(self.db, method)(*args, **kwargs)
+            with execute_command_sanbox(exectime):
+                getattr(self.db, method)(*args, **kwargs, command_exectime=exectime)
 
         return True
 
@@ -140,6 +137,5 @@ class AOF:
             self.aof_path.unlink(missing_ok=True)
 
     def run_fsync_task_in_background(self):
-        if self.aof_fsync == AOFFsyncStrategy.EVERYSEC:
-            aof_thread = threading.Thread(target=self.fsync_task, daemon=True)
-            aof_thread.start()
+        aof_thread = threading.Thread(target=self.fsync_task, daemon=True)
+        aof_thread.start()
