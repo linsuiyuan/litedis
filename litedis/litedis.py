@@ -2158,16 +2158,12 @@ class Litedis(
         if self.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
             self.aof = AOF(db=weak_self,
                            aof_fsync=aof_fsync)
-        else:
-            self.aof = None
         # RDB 相关
         if self.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
             self.rdb = RDB(db=weak_self,
                            rdb_save_frequency=rdb_save_frequency,
                            compression=compression,
                            callback_after_save_rdb=self.aof.clear_aof)
-        else:
-            self.rdb = None
         # 过期 相关
         self.expiry = Expiry(db=weak_self)
 
@@ -2189,6 +2185,7 @@ class Litedis(
         # 扫描一下过期键
         self.expiry.check_and_delete_expired_keys()
 
+    # 释放资源相关
     def close(self):
         """
         关闭数据库
@@ -2213,3 +2210,7 @@ class Litedis(
             print(f"发生异常: {exc_type}, 值: {exc_val}")
         self.close()
         return True
+
+    # 其他
+    def __getattr__(self, item):
+        return None
