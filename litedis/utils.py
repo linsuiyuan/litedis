@@ -1,4 +1,5 @@
-from typing import Iterable, List, Tuple, Union
+import inspect
+from typing import Iterable, List, Tuple, Union, Callable
 
 
 def list_or_args(keys: Union[str, Iterable[str]], args: Tuple[str, ...]) -> List[str]:
@@ -29,3 +30,20 @@ def find_index_from_right(lst, value):
         if lst[index] == value:
             return index
     return -1
+
+
+def combine_args_signature(method: Callable, *args, **kwargs):
+    """将实参和函数签名组合在一起，获得一个完成的参数键值对"""
+    sig = inspect.signature(method)
+    d = {
+        k: v.default if v.default != inspect._empty else None  # noqa
+        for k, v in sig.parameters.items()
+        if k != "self"
+    }
+    if args:
+        vs = list(d.values())
+        vs[:len(args)] = args
+        d = dict(zip(d.keys(), vs))
+    if kwargs:
+        d.update(kwargs)
+    return d

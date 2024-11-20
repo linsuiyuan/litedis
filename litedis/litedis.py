@@ -16,7 +16,7 @@ from litedis.aof import AOF, collect_command_to_aof
 from litedis.rdb import RDB
 from litedis.expiry import Expiry
 from litedis.typing import Number, StringableT
-from litedis.utils import find_index_from_left, find_index_from_right, list_or_args
+from litedis.utils import find_index_from_left, find_index_from_right, list_or_args, combine_args_signature
 
 
 class SortedSet(Iterable):
@@ -190,27 +190,12 @@ class _SingletonMeta(type):
             return super().__call__(*args, **kwargs)
 
         with cls._lock:
-            connection_string = None
-            # 如果 args 有值，则第一个位置参数必然是 connection_string
-            if args:
-                connection_string = args[0]
-            # args 没有，则从关键字参数里获取
+            args_dict = combine_args_signature(cls.__init__, *args, **kwargs)
+            connection_string = args_dict["connection_string"]
             if not connection_string:
-                connection_string = kwargs.get("connection_string", None)
-            # kwargs 也没有，代表没有使用 connection_string 参数，获取 data_dir 和 db_name
-            if not connection_string:
-                litedis_init_sign = inspect.signature(Litedis.__init__)
-                data_dir = kwargs.get("data_dir", None)
-                if not data_dir:
-                    data_dir = litedis_init_sign.parameters.get("data_dir", None)
-                db_name = kwargs.get("db_name", None)
-                if not db_name:
-                    db_name = litedis_init_sign.parameters.get("db_name", None)
-                if data_dir and db_name:
-                    connection_string = f"litedis:///{data_dir.lstrip('./|/').rstrip('/')}/{db_name}"
-
-            if not connection_string:
-                raise ValueError("未知错误，请检查 connection_string,data_dir,db_name参数")
+                data_dir = args_dict["data_dir"]
+                db_name = args_dict["db_name"]
+                connection_string = f"litedis:///{data_dir.lstrip('./|/').rstrip('/')}/{db_name}"
 
             if connection_string not in cls._instances:
                 instance = super().__call__(*args, **kwargs)
