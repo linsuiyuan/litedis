@@ -8,7 +8,7 @@ from litedis import BaseLitedis
 class Expiry:
 
     def __init__(self,
-                 db: weakref.ReferenceType[BaseLitedis]):
+                 db: weakref.ReferenceType):
         self._db = db
 
         # 过期检查任务

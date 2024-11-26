@@ -12,7 +12,7 @@ class RDB:
     """RDB 持久化类"""
 
     def __init__(self,
-                 db: weakref.ReferenceType[BaseLitedis],
+                 db: weakref.ReferenceType,
                  rdb_save_frequency: int = 600,
                  compression: bool = True,
                  callback_after_save_rdb=None):

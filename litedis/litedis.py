@@ -1,4 +1,3 @@
-import inspect
 import json
 import random
 import threading
@@ -6,17 +5,17 @@ import time
 import weakref
 from collections import OrderedDict
 from fnmatch import fnmatchcase
-from functools import reduce
+from functools import reduce, partial
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Union
 from pathlib import Path
-from urllib import parse
 
 from litedis import AOFFsyncStrategy, BaseLitedis, DataType, PersistenceType
 from litedis.aof import AOF, collect_command_to_aof
 from litedis.rdb import RDB
 from litedis.expiry import Expiry
 from litedis.typing import Number, StringableT
-from litedis.utils import find_index_from_left, find_index_from_right, list_or_args, combine_args_signature
+from litedis.utils import find_list_index, list_or_args, combine_args_signature, parse_database_url, \
+    combine_database_url
 
 
 class SortedSet(Iterable):
@@ -195,7 +194,7 @@ class _SingletonMeta(type):
             if not connection_string:
                 data_dir = args_dict["data_dir"]
                 db_name = args_dict["db_name"]
-                connection_string = f"litedis:///{data_dir.lstrip('./|/').rstrip('/')}/{db_name}"
+                connection_string = combine_database_url(scheme="litedis", path=data_dir, db=db_name)
 
             if connection_string not in cls._instances:
                 instance = super().__call__(*args, **kwargs)
@@ -871,9 +870,9 @@ class ListType(BaseLitedis):
 
             # 小于 0，从右查找，否则从左查找
             if count < 0:
-                find_index = find_index_from_right
+                find_index = partial(find_list_index, direction="right")
             else:
-                find_index = find_index_from_left
+                find_index = partial(find_list_index, direction="left")
 
             num = 0
             # 一直删除，直到达到 count 值或者全部删完
@@ -2138,17 +2137,13 @@ class Litedis(
 
         # 数据目录 相关
         if connection_string:
-            # litedis:///path/to/db_name --> (./path/to, db_name)
-            result = parse.urlparse(connection_string)
-            if result.netloc:
-                raise ValueError("connection_string格式不正确，应为：'litedis:///path/to/db_name'")
-            path, name = result.path.replace("/", "./", 1).rsplit("/", maxsplit=1)
-            self.data_dir = Path(path)
-            self.db_name = name
+            result = parse_database_url(connection_string)
+            self.data_dir = Path(result['path'].lstrip('/'))
+            self.db_name = result['db']
         else:
             self.data_dir = Path(data_dir) if isinstance(data_dir, str) else data_dir
             self.db_name = db_name
-            self.connection_string = f"litedis:///{self.data_dir.name.lstrip('./|/').rstrip('/')}/{db_name}"
+            self.connection_string = combine_database_url(scheme="litedis", path=self.data_dir.name, db=self.db_name)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # 持久化 相关

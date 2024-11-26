@@ -31,8 +31,3 @@ with Litedis("litedis:///data/db") as db:
     assert not db.get("key")
 ```
 
-
-## 存在问题
-
-- 不支持多进程（以后也不打算支持，有多进程需求的建议使用 Redis）
-- 还有一些 Redis 命令方法未实现

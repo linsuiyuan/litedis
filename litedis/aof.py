@@ -51,7 +51,7 @@ class AOF:
     """AOF 持久化类"""
 
     def __init__(self,
-                 db: weakref.ReferenceType[BaseLitedis],
+                 db: weakref.ReferenceType,
                  aof_fsync: AOFFsyncStrategy):
         self._db = db
         self.data_dir = self.db.data_dir
