@@ -23,12 +23,6 @@ class PersistenceType:
     MIXED = "mixed"
 
 
-class AOFFsyncStrategy:
-    """AOF 同步策略"""
-    ALWAYS = "always"
-    EVERYSEC = "everysec"
-
-
 class BaseLitedis:
     data: Dict[str, Any]
     data_types: Dict[str, str]

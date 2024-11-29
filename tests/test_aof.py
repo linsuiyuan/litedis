@@ -4,7 +4,7 @@ import weakref
 
 import pytest  # noqa
 
-from litedis import AOFFsyncStrategy, BaseLitedis, DataType, PersistenceType
+from litedis import BaseLitedis, DataType, PersistenceType
 from litedis.aof import AOF
 
 
@@ -39,13 +39,13 @@ def weakref_db(db):
 @pytest.fixture
 def aof_always(weakref_db):
     """创建一个 fsync=AOFFsyncStrategy.ALWAYS 的 AOF 实例"""
-    return AOF(weakref_db, AOFFsyncStrategy.ALWAYS)
+    return AOF(weakref_db, "always")
 
 
 @pytest.fixture
 def aof_everysec(weakref_db):
     """创建一个 fsync=AOFFsyncStrategy.EVERYSEC 的 AOF 实例"""
-    return AOF(weakref_db, AOFFsyncStrategy.EVERYSEC)
+    return AOF(weakref_db, "everysec")
 
 
 class TestAOF:

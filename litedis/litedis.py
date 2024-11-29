@@ -9,13 +9,18 @@ from functools import reduce, partial
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Union
 from pathlib import Path
 
-from litedis import AOFFsyncStrategy, BaseLitedis, DataType, PersistenceType
+from litedis import BaseLitedis, DataType, PersistenceType
 from litedis.aof import AOF, collect_command_to_aof
 from litedis.rdb import RDB
 from litedis.expiry import Expiry
-from litedis.typing import Number, StringableT
-from litedis.utils import find_list_index, list_or_args, combine_args_signature, parse_database_url, \
-    combine_database_url
+from litedis.typing import Number, StringableT, AOFFsyncStrategy
+from litedis.utils import (
+    find_list_index,
+    list_or_args,
+    combine_args_signature,
+    parse_database_url,
+    combine_database_url,
+)
 
 
 class SortedSet(Iterable):
@@ -1743,7 +1748,6 @@ class SortedSetType(BaseLitedis):
         如果指定的键不存在或成员不存在，返回 None。
         """
         with self.db_lock:
-
             zset = self.data.get(name, None)
             if zset is None:
                 return None
@@ -2113,7 +2117,7 @@ class Litedis(
                  db_name: str = "litedis",
                  data_dir: Union[str, Path] = "./data",
                  persistence=PersistenceType.MIXED,
-                 aof_fsync=AOFFsyncStrategy.ALWAYS,
+                 aof_fsync: AOFFsyncStrategy = "always",
                  rdb_save_frequency: int = 600,
                  compression: bool = True,
                  singleton=True):
@@ -2173,7 +2177,7 @@ class Litedis(
         self.rdb and self.rdb.read_rdb()
         # 如果有 AOF , 加载到数据库, 再清理 AOF
         if self.aof:
-            result = self.aof.read_aof()
+            result = self.aof.read_aof_to_db()
             if result and self.rdb:
                 self.rdb.save_rdb()
 

@@ -1,3 +1,7 @@
+"""
+AOF（Append Only File）持久化模块，用于记录所有对 Litedis 数据库的写操作。
+AOF 通过将每个写命令追加到文件中来实现数据的持久化，确保在 Litedis 重启后能够恢复数据。
+"""
 import functools
 import json
 import threading
@@ -6,14 +10,16 @@ import weakref
 from contextlib import contextmanager
 from typing import Dict
 
-from litedis import AOFFsyncStrategy, BaseLitedis
+from litedis import BaseLitedis
+from litedis.typing import AOFFsyncStrategy
 
 
 def collect_command_to_aof(func):
-    """记录 aof 命令的装饰器"""
+    """记录 AOF 命令的装饰器"""
 
     @functools.wraps(func)
-    def wrapper(db, *args, **kwargs):
+    def wrapper(db, *args, **kwargs):  # noqa
+
         # 先运行原函数，出现异常的话，该调用就不会被记录到 aof 文件里
         result = func(db, *args, **kwargs)
 
@@ -64,15 +70,16 @@ class AOF:
         self._buffer_lock = threading.Lock()
 
         # 后台持久化任务
-        if self.aof_fsync == AOFFsyncStrategy.EVERYSEC:
+        if self.aof_fsync == "everysec":
             self.run_fsync_task_in_background()
 
     @property
     def db(self) -> BaseLitedis:
+        """db属性，返回 self._db 的原引用"""
         return self._db()
 
-    def fsync_task(self):
-        """AOF同步任务"""
+    def _fsync_task(self):
+        """AOF 同步任务"""
         while True:
             time.sleep(1)
 
@@ -82,8 +89,13 @@ class AOF:
 
             self.flush_buffer()
 
+    def run_fsync_task_in_background(self):
+        """后台运行持久化任务"""
+        aof_thread = threading.Thread(target=self._fsync_task, daemon=True)
+        aof_thread.start()
+
     def flush_buffer(self):
-        """刷新AOF缓冲区到磁盘"""
+        """刷新 AOF 缓冲区到磁盘"""
         with self._buffer_lock:
             if not self._buffer:
                 return
@@ -92,20 +104,22 @@ class AOF:
                 with open(self.aof_path, 'a', encoding='utf-8') as f:
                     for command in self._buffer:
                         f.write(json.dumps(command) + '\n')
+
                 self._buffer.clear()
             except IOError as e:
                 print(f"刷新AOF缓冲区出现错误: {e}")
 
     def append(self, command: Dict):
-        """追加命令到AOF缓冲区"""
+        """追加命令到 AOF 缓冲区"""
 
         with self._buffer_lock:
             self._buffer.append(command)
 
-        if self.aof_fsync == AOFFsyncStrategy.ALWAYS:
+        if self.aof_fsync == "always":
             self.flush_buffer()
 
     def read_aof_commands(self):
+        """从 AOF 文件中读取记录"""
         if not self.aof_path.exists():
             return
 
@@ -119,8 +133,8 @@ class AOF:
             except (IOError, json.JSONDecodeError) as e:
                 raise Exception("读取 AOF 文件 出现错误") from e
 
-    def read_aof(self):
-        """读取 AOF 文件"""
+    def read_aof_to_db(self):
+        """读取 AOF 文件，恢复到数据库"""
 
         for command in self.read_aof_commands():
             # 应用命令
@@ -135,7 +149,3 @@ class AOF:
         """清理 AOF 文件"""
         with self._buffer_lock:
             self.aof_path.unlink(missing_ok=True)
-
-    def run_fsync_task_in_background(self):
-        aof_thread = threading.Thread(target=self.fsync_task, daemon=True)
-        aof_thread.start()
