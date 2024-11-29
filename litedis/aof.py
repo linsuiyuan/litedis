@@ -1,5 +1,6 @@
 """
-AOF（Append Only File）持久化模块，用于记录所有对 Litedis 数据库的写操作。
+AOF（Append Only File）持久化模块。
+用于记录所有对 Litedis 数据库的写操作。
 AOF 通过将每个写命令追加到文件中来实现数据的持久化，确保在 Litedis 重启后能够恢复数据。
 """
 import functools

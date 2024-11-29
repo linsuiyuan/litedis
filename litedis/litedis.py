@@ -11,7 +11,7 @@ from pathlib import Path
 
 from litedis import BaseLitedis, DataType, PersistenceType
 from litedis.aof import AOF, collect_command_to_aof
-from litedis.rdb import RDB
+from litedis.ldb import LDB
 from litedis.expiry import Expiry
 from litedis.typing import Number, StringableT, AOFFsyncStrategy
 from litedis.utils import (
@@ -2118,7 +2118,7 @@ class Litedis(
                  data_dir: Union[str, Path] = "./data",
                  persistence=PersistenceType.MIXED,
                  aof_fsync: AOFFsyncStrategy = "always",
-                 rdb_save_frequency: int = 600,
+                 ldb_save_frequency: int = 600,
                  compression: bool = True,
                  singleton=True):
         """初始化数据库
@@ -2129,8 +2129,8 @@ class Litedis(
             data_dir: 数据目录
             persistence: 持久化类型
             aof_fsync: AOF同步策略
-            rdb_save_frequency: RDB保存频率(秒)
-            compression: 是否压缩RDB文件
+            ldb_save_frequency: LDB保存频率(秒)
+            compression: 是否压缩LDB文件
             singleton: 是否创建单例，默认是，为 False 时否
         """
         self.data: Dict[str, Any] = {}
@@ -2157,12 +2157,12 @@ class Litedis(
         if self._need_aof_persistence():
             self.aof = AOF(db=weak_self,
                            aof_fsync=aof_fsync)
-        # RDB 相关
-        if self._need_rdb_persistence():
-            self.rdb = RDB(db=weak_self,
-                           rdb_save_frequency=rdb_save_frequency,
+        # LDB 相关
+        if self._need_ldb_persistence():
+            self.ldb = LDB(db=weak_self,
+                           ldb_save_frequency=ldb_save_frequency,
                            compression=compression,
-                           callback_after_save_rdb=self.aof.clear_aof)
+                           callback_after_save_ldb=self.aof.clear_aof)
         # 过期 相关
         self.expiry = Expiry(db=weak_self)
 
@@ -2173,13 +2173,13 @@ class Litedis(
         self._init_data()
 
     def _init_data(self):
-        # 尝试从 RDB 加载
-        self.rdb and self.rdb.read_rdb()
+        # 尝试从 LDB 加载
+        self.ldb and self.ldb.read_ldb()
         # 如果有 AOF , 加载到数据库, 再清理 AOF
         if self.aof:
             result = self.aof.read_aof_to_db()
-            if result and self.rdb:
-                self.rdb.save_rdb()
+            if result and self.ldb:
+                self.ldb.save_ldb()
 
         # 扫描一下过期键
         self.expiry.check_and_delete_expired_keys()
@@ -2190,14 +2190,14 @@ class Litedis(
         关闭数据库
         """
         if self.aof:
-            # 确保 aof 有持久化就可以了，这里的内容在重新初始化数据库的时候，会同步到 rdb 里
+            # 确保 aof 有持久化就可以了，这里的内容在重新初始化数据库的时候，会同步到 ldb 里
             self.aof.flush_buffer()
-        elif self.rdb:
-            # 没有 aof 持久化，则需及时进行 rdb 持久化
-            self.rdb.save_rdb()
+        elif self.ldb:
+            # 没有 aof 持久化，则需及时进行 ldb 持久化
+            self.ldb.save_ldb()
 
         del self.aof
-        del self.rdb
+        del self.ldb
         del self.expiry
 
         self.closed = True
@@ -2207,8 +2207,8 @@ class Litedis(
     def _need_aof_persistence(self):
         return self.persistence in (PersistenceType.AOF, PersistenceType.MIXED)
 
-    def _need_rdb_persistence(self):
-        return self.persistence in (PersistenceType.RDB, PersistenceType.MIXED)
+    def _need_ldb_persistence(self):
+        return self.persistence in (PersistenceType.LDB, PersistenceType.MIXED)
 
     def __del__(self):
         if not self.closed:

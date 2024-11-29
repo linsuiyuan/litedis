@@ -15,11 +15,11 @@ class DataType:
 class PersistenceType:
     """
     持久化类型
-    MIXED 表示同时使用 AOF 和 RDB
+    MIXED 表示同时使用 AOF 和 LDB
     """
     NONE = "none"
     AOF = "aof"
-    RDB = "rdb"
+    LDB = "ldb"
     MIXED = "mixed"
 
 
@@ -38,5 +38,5 @@ class BaseLitedis:
 
 from litedis.aof import AOF  # noqa
 from litedis.expiry import Expiry  # noqa
-from litedis.rdb import RDB  # noqa
+from litedis.ldb import LDB  # noqa
 from litedis.litedis import Litedis  # noqa
