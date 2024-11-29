@@ -167,42 +167,6 @@ class SortedSet(Iterable):
     __or__ = union
 
 
-class _SingletonMeta(type):
-    """
-    单例元类，确保一个类只有一个实例
-
-    主要给 Litedis 创建单例使用
-
-    使用 '/path/db' 作为单一实例依据，即同一个数据库只能创建一个单例
-    """
-    _instances = weakref.WeakValueDictionary()
-    _lock: threading.Lock = threading.Lock()
-
-    def __call__(cls, *args, **kwargs):
-        # 只能给Litedis使用
-        if cls is not Litedis:
-            raise TypeError(f"该元类只能给 {Litedis.__name__} 使用")
-
-        # 如果禁止，则不创建单例
-        singleton = kwargs.get('singleton', None)
-        if singleton is False:
-            return super().__call__(*args, **kwargs)
-
-        with cls._lock:
-            args_dict = combine_args_signature(cls.__init__, *args, **kwargs)
-            connection_string = args_dict["connection_string"]
-            if not connection_string:
-                data_dir = args_dict["data_dir"]
-                db_name = args_dict["db_name"]
-                connection_string = combine_database_url(scheme="litedis", path=data_dir, db=db_name)
-
-            if connection_string not in cls._instances:
-                instance = super().__call__(*args, **kwargs)
-                cls._instances[connection_string] = instance
-
-        return cls._instances[connection_string]
-
-
 class BasicKey(BaseLitedis):
 
     def _check_string_type(self, name):
@@ -2098,6 +2062,42 @@ class HashType(BaseLitedis):
             return len(hash_[key])
 
 
+class _SingletonMeta(type):
+    """
+    单例元类，确保一个类只有一个实例
+
+    主要给 Litedis 创建单例使用
+
+    使用 '/path/db' 作为单一实例依据，即同一个数据库只能创建一个单例
+    """
+    _instances = weakref.WeakValueDictionary()
+    _lock: threading.Lock = threading.Lock()
+
+    def __call__(cls, *args, **kwargs):
+        # 只能给Litedis使用
+        if cls is not Litedis:
+            raise TypeError(f"该元类只能给 {Litedis.__name__} 使用")
+
+        # 如果禁止，则不创建单例
+        singleton = kwargs.get('singleton', None)
+        if singleton is False:
+            return super().__call__(*args, **kwargs)
+
+        with cls._lock:
+            args_dict = combine_args_signature(cls.__init__, *args, **kwargs)
+            connection_string = args_dict["connection_string"]
+            if not connection_string:
+                data_dir = args_dict["data_dir"]
+                db_name = args_dict["db_name"]
+                connection_string = combine_database_url(scheme="litedis", path=data_dir, db=db_name)
+
+            if connection_string not in cls._instances:
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[connection_string] = instance
+
+        return cls._instances[connection_string]
+
+
 class Litedis(
     HashType,
     SortedSetType,
@@ -2150,11 +2150,11 @@ class Litedis(
         self.persistence = persistence
         weak_self = weakref.ref(self)
         # AOF 相关
-        if self.persistence in (PersistenceType.AOF, PersistenceType.MIXED):
+        if self._need_aof_persistence():
             self.aof = AOF(db=weak_self,
                            aof_fsync=aof_fsync)
         # RDB 相关
-        if self.persistence in (PersistenceType.RDB, PersistenceType.MIXED):
+        if self._need_rdb_persistence():
             self.rdb = RDB(db=weak_self,
                            rdb_save_frequency=rdb_save_frequency,
                            compression=compression,
@@ -2185,12 +2185,26 @@ class Litedis(
         """
         关闭数据库
         """
-        # 确保 aof 有持久化就可以了，这里的内容在重新初始化数据库的时候，会同步到 rdb 里
-        # 虽然这里也可以直接保存 rdb，但rdb 可能比较费时，退出的时候，可能来不及保存好（通过 __del__触发的时候）
-        self.aof and self.aof.flush_buffer()
+        if self.aof:
+            # 确保 aof 有持久化就可以了，这里的内容在重新初始化数据库的时候，会同步到 rdb 里
+            self.aof.flush_buffer()
+        elif self.rdb:
+            # 没有 aof 持久化，则需及时进行 rdb 持久化
+            self.rdb.save_rdb()
+
+        del self.aof
+        del self.rdb
+        del self.expiry
+
         self.closed = True
 
         del self
+
+    def _need_aof_persistence(self):
+        return self.persistence in (PersistenceType.AOF, PersistenceType.MIXED)
+
+    def _need_rdb_persistence(self):
+        return self.persistence in (PersistenceType.RDB, PersistenceType.MIXED)
 
     def __del__(self):
         if not self.closed:

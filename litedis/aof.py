@@ -14,9 +14,10 @@ def collect_command_to_aof(func):
 
     @functools.wraps(func)
     def wrapper(db, *args, **kwargs):
-
+        # 先运行原函数，出现异常的话，该调用就不会被记录到 aof 文件里
         result = func(db, *args, **kwargs)
 
+        # db.aof 属性存在则表示需要持久化，不存在则不需要 aof 持久化
         if db.aof:
             command = {
                 "method": func.__name__,

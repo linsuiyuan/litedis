@@ -38,8 +38,6 @@ class BaseLitedis:
     db_name: str
     data_dir: Path
 
-    persistence: PersistenceType
-
     def delete(self, *keys: str) -> int:
         raise NotImplementedError("子类实现")
 
