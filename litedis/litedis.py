@@ -1,3 +1,6 @@
+"""
+Litedis 主模块
+"""
 import json
 import random
 import threading
@@ -24,6 +27,10 @@ from litedis.utils import (
 
 
 class SortedSet(Iterable):
+    """
+    有序集合类，供数据库有序集合类型使用。
+    底层使用 OrderedDict 作为有序结构
+    """
 
     def __init__(self, iterable: Iterable = None):
         if iterable is None:
@@ -33,12 +40,15 @@ class SortedSet(Iterable):
             self._sort_data()
 
     def members(self):
+        """成员 View"""
         return self._data.keys()
 
     def scores(self):
+        """分数 View"""
         return self._data.values()
 
     def items(self):
+        """Items View"""
         return self._data.items()
 
     def _sort_data(self):
@@ -91,15 +101,32 @@ class SortedSet(Iterable):
         return c
 
     def difference(self, other: "SortedSet"):
+        """
+        差集
+        :param other:
+        :return:
+        """
         ms = self.members() - other.members()
         return SortedSet({m: self[m] for m in ms})
 
     __sub__ = difference
 
     def get(self, member, default=None):
+        """
+        获取某个成员的分数
+        :param member:
+        :param default:
+        :return:
+        """
         return self._data.get(member, default)
 
     def incr(self, member: str, amount: Number) -> Number:
+        """
+        递增某个成员的分数，如成员不存在，则以该分数初始化成员-分数键值对
+        :param member:
+        :param amount: 增加的分数值
+        :return:
+        """
         if member in self:
             self[member] += amount
         else:
@@ -108,18 +135,40 @@ class SortedSet(Iterable):
         return self[member]
 
     def intersection(self, other: "SortedSet"):
+        """
+        交集
+        :param other:
+        :return:
+        """
         ms = self.members() & other.members()
         return SortedSet({m: self[m] for m in ms})
 
     __and__ = intersection
 
     def pop(self, member, default=None):
+        """
+        移除并返回某个成员的分数
+        :param member:
+        :param default:
+        :return:
+        """
         return self._data.pop(member, default)
 
     def popitem(self, last=True):
+        """
+        从头部或者尾部弹出 item
+        :param last:
+        :return:
+        """
         return self._data.popitem(last=last)
 
     def randmember(self, count: int = 1, unique=True):
+        """
+        随机获取成员
+        :param count: 获取的成员数量，默认 1
+        :param unique: 获取的成员是否能重复
+        :return:
+        """
         if unique:
             return random.sample(list(self), count)
         else:
@@ -132,6 +181,15 @@ class SortedSet(Iterable):
               max_: Optional[Number] = None,
               desc: bool = False,
               ) -> List:
+        """
+        根据索引范围或分数范围获取相应范围的 成员-分数 键值对
+        :param start:
+        :param end:
+        :param min_:
+        :param max_:
+        :param desc:
+        :return:
+        """
 
         if desc:
             sorted_items = sorted(self, key=lambda x: (x[1], x[0]), reverse=True)
@@ -156,6 +214,12 @@ class SortedSet(Iterable):
         return sorted_items[start:end]
 
     def rank(self, member: str, desc=False) -> Optional[int]:
+        """
+        获取某个成员的排名
+        :param member:
+        :param desc: 是否按降序排名
+        :return:
+        """
         if member not in self:
             return None
 
@@ -167,12 +231,20 @@ class SortedSet(Iterable):
     score = get
 
     def union(self, other: "SortedSet"):
+        """
+        并集
+        :param other:
+        :return:
+        """
         return SortedSet({**other._data, **self._data})
 
     __or__ = union
 
 
 class BasicKey(BaseLitedis):
+    """
+    键的基本操作 Mixin 类
+    """
 
     def _check_string_type(self, name):
         if self.data_types[name] != DataType.STRING:
@@ -195,8 +267,9 @@ class BasicKey(BaseLitedis):
     def append(self, key: str, value: StringableT) -> int:
         """
         将一个字符串值追加到已存在的键的末尾
-
-        返回追加后的字符串的长度
+        :param key:
+        :param value:
+        :return: 追加后的字符串的长度
         """
         with self.db_lock:
             self._set_string_value(key,
@@ -212,9 +285,11 @@ class BasicKey(BaseLitedis):
             replace: bool = False,
     ) -> bool:
         """
-        复制一个键及其值`source`到另一个键`destination`
-
-        返回 True 表示复制成功，返回 False 表示源键不存在
+        复制一个键及其值到另一个键
+        :param source: 要复制的键
+        :param destination: 目标键
+        :param replace:
+        :return: 返回 True 表示复制成功，返回 False 表示源键不存在
         """
         with self.db_lock:
             if source not in self.data:
@@ -232,11 +307,12 @@ class BasicKey(BaseLitedis):
     @collect_command_to_aof
     def decrby(self, name: str, amount: int = 1) -> int:
         """
-        将指定键的整数值减少指定的增量。
+        递减指定键的整数值。
 
-        如果键不存在，DECRBY 命令会将键的值初始化为 0，然后再进行递减操作
-
-        返回递减操作后，键的当前值
+        如果键不存在，将键的值初始化为 0，然后再进行递减操作
+        :param name:
+        :param amount: 递减的数值，默认 1
+        :return: 键的当前值
         """
         with self.db_lock:
             return self._incrby(name, -amount)
@@ -245,8 +321,8 @@ class BasicKey(BaseLitedis):
     def delete(self, *names: str) -> int:
         """
         删除一个或多个键
-
-        返回回被删除的键的数量
+        :param names:
+        :return: 被删除的键的数量
         """
         with self.db_lock:
             num = 0
@@ -266,8 +342,8 @@ class BasicKey(BaseLitedis):
     def dump(self, name: str) -> Optional[str]:
         """
         序列化给定键的值并返回序列化后的字符串
-
-        返回序列化后的字符串。如果键不存在，则返回 None
+        :param name:
+        :return: 序列化后的字符串。如果键不存在则返回 None
         """
         with self.db_lock:
             if name not in self.data:
@@ -278,8 +354,8 @@ class BasicKey(BaseLitedis):
     def exists(self, *names: str) -> int:
         """
         检查一个或多个键是否存在
-
-        返回存在的键的数量。如果没有键存在，则返回 0。
+        :param names:
+        :return: 存在的键的数量。如果没有键存在则返回 0。
         """
         with self.db_lock:
             num = 0
@@ -300,18 +376,14 @@ class BasicKey(BaseLitedis):
             lt: bool = False,
     ) -> bool:
         """
-        设置一个键的过期时间
-
-        可选参数:
-            NX -> 未设置过期时间的才能设置
-
-            XX -> 有设置过期时间的才能设置
-
-            GT -> 仅在设置的过期时间大于当前的过期时间时，才能设置。如果当前没有过期时间，则会设置过期时间。
-
-            LT -> 仅在设置的过期时间小于当前的过期时间时，才能设置。如果当前没有过期时间，则不会设置过期时间。
-
-        返回 True 表示成功设置过期时间，返回 False 表示键不存在或过期时间未设置
+        设置一个键的过期时间。
+        :param name:
+        :param seconds: 过期秒数
+        :param nx: 未设置过期时间的才能设置
+        :param xx: 有设置过期时间的才能设置
+        :param gt: 仅在设置的过期时间大于当前的过期时间时，才能设置。如果当前没有过期时间，则会设置过期时间。
+        :param lt: 仅在设置的过期时间小于当前的过期时间时，才能设置。如果当前没有过期时间，则不会设置过期时间。
+        :return: 返回 True 表示成功设置过期时间，返回 False 表示键不存在或过期时间未设置
         """
         when = seconds + int(time.time())
         return self.expireat(name, when, nx=nx, xx=xx, gt=gt, lt=lt)
@@ -328,19 +400,13 @@ class BasicKey(BaseLitedis):
     ) -> bool:
         """
         设置一个键在特定时间点过期
-
-        when: 键的过期时间，以 Unix 时间戳（自 1970 年 1 月 1 日以来的秒数）表示。
-
-        可选参数:
-            NX -> 未设置过期时间的才能设置
-
-            XX -> 有设置过期时间的才能设置
-
-            GT -> 仅在设置的过期时间大于当前的过期时间时，才能设置。如果当前没有过期时间，则会设置过期时间。
-
-            LT -> 仅在设置的过期时间小于当前的过期时间时，才能设置。如果当前没有过期时间，则不会设置过期时间。
-
-        返回 True 表示成功设置过期时间，返回 False 表示键不存在或过期时间未设置。
+        :param name:
+        :param when: 键的过期时间，以 Unix 时间戳表示。
+        :param nx: 未设置过期时间的才能设置。
+        :param xx: 有设置过期时间的才能设置。
+        :param gt: 仅在设置的过期时间大于当前的过期时间时，才能设置。如果当前没有过期时间，则会设置过期时间。
+        :param lt: 仅在设置的过期时间小于当前的过期时间时，才能设置。如果当前没有过期时间，则不会设置过期时间。
+        :return: 返回 True 表示成功设置过期时间，返回 False 表示键不存在或过期时间未设置。
         """
         with self.db_lock:
             if name not in self.data:
@@ -364,8 +430,8 @@ class BasicKey(BaseLitedis):
     def expiretime(self, name: str) -> int:
         """
         获取指定键的过期时间
-
-        返回键的过期时间（以 Unix 时间戳的形式），如果键不存在或没有设置过期时间，则返回 -1。
+        :param name:
+        :return: 返回键的过期时间（以 Unix 时间戳的形式），如果键不存在或没有设置过期时间，则返回 -1。
         """
         with self.db_lock:
             if name not in self.data:
@@ -378,9 +444,9 @@ class BasicKey(BaseLitedis):
 
     def get(self, name: str) -> Optional[StringableT]:
         """
-        返回键“name”的值，
-
-        如果键不存在，则返回None
+        获取指定键的值。
+        :param name:
+        :return: 返回指定键的值，如果键不存在则返回 None
         """
         with self.db_lock:
             if name not in self.data:
@@ -391,11 +457,6 @@ class BasicKey(BaseLitedis):
             return self.data[name]
 
     def __getitem__(self, name: str):
-        """
-        返回键“name”的值，
-
-        如果键不存在则引发KeyError。
-        """
         value = self.get(name)
 
         if value is not None:
@@ -415,9 +476,11 @@ class BasicKey(BaseLitedis):
     @collect_command_to_aof
     def incrby(self, name: str, amount: int = 1) -> int:
         """
-        将“key”的值增加“amount”。
-
-        如果键不存在，值将被初始化为“amount”。
+        递增指定键的整数值。
+        如果键不存在，则添加键并设置值为 0，然后再递增
+        :param name:
+        :param amount: 递增的整数值，默认 1
+        :return: 返回递增后的值
         """
         with self.db_lock:
             return self._incrby(name, amount)
@@ -427,16 +490,19 @@ class BasicKey(BaseLitedis):
     @collect_command_to_aof
     def incrbyfloat(self, name: str, amount: float = 1.0) -> float:
         """
-        将键“name”的值按浮点数“amount”增加。
-
-        如果键不存在，值将被初始化为“amount”。
+        类似 incrby，不过这里递增的是浮点数
+        :param name:
+        :param amount:
+        :return:
         """
         with self.db_lock:
             return self._incrby(name, amount)
 
     def keys(self, pattern: str = "*") -> List[str]:
         """
-        返回与“pattern”匹配的键的列表。
+        获取符合匹配模式的所有键
+        :param pattern: 匹配模式
+        :return: 符合的键
         """
         with self.db_lock:
             # 这里取个巧
@@ -449,7 +515,10 @@ class BasicKey(BaseLitedis):
 
     def mget(self, keys: Union[str, Iterable[str]], *args: str) -> List[StringableT]:
         """
-        返回与“keys”的顺序相同的值列表。
+        获取指定键的值，可以批量
+        :param keys:
+        :param args:
+        :return:
         """
 
         with self.db_lock:
@@ -462,9 +531,10 @@ class BasicKey(BaseLitedis):
     @collect_command_to_aof
     def mset(self, mapping: Mapping[str, StringableT]) -> bool:
         """
-        根据映射设置键/值。映射是键/值对的字典。
-
-        如果键已存在，将被覆盖，不同数据类型的也一样
+        根据映射批量设置值。
+        如果键已存在将被覆盖。
+        :param mapping:
+        :return:
         """
         with self.db_lock:
             for k, v in mapping.items():
@@ -476,8 +546,8 @@ class BasicKey(BaseLitedis):
     def msetnx(self, mapping: Mapping[str, StringableT]) -> bool:
         """
         如果没有任何键已经设置，根据映射设置键/值。
-
-        返回一个布尔值，指示操作是否成功。
+        :param mapping:
+        :return:
         """
         with self.db_lock:
             # 相交key集合
@@ -493,10 +563,9 @@ class BasicKey(BaseLitedis):
     @collect_command_to_aof
     def persist(self, name: str) -> bool:
         """
-        删除键“name”的到期时间。
-
-        如果键存在并且成功移除过期时间，返回 True。
-        如果键不存在，或者键没有设置过期时间，返回 False。
+        删除指定键的到期时间。
+        :param name:
+        :return: 如果键存在并且成功移除过期时间，返回 True。如果键不存在，或者键没有设置过期时间，返回 False。
         """
         with self.db_lock:
             if name not in self.data:
@@ -510,20 +579,20 @@ class BasicKey(BaseLitedis):
 
     def randomkey(self) -> str:
         """
-        返回一个随机键的名称
+        获取一个随机键的名称
+        :return:
         """
         return random.choice(list(self.data.keys()))
 
     @collect_command_to_aof
     def rename(self, src: str, dst: str) -> bool:
         """
-        将键 “src” 重命名为 “dst”
+        重命名指定键到目标键。
 
-        如果重命名成功，返回 True。
-
-        如果 “src” 不存在，将触发异常。
-
-        如果 “dst” 存在，将被覆盖
+        如果指定键不存在，将触发异常。如果目标键存在，将被覆盖。
+        :param src:
+        :param dst:
+        :return:
         """
         with self.db_lock:
             if src not in self.data:
@@ -539,11 +608,12 @@ class BasicKey(BaseLitedis):
     @collect_command_to_aof
     def renamenx(self, src: str, dst: str):
         """
-        如果 “dst” 不存在，则将键 “src” 重命名为 “dst”
+        如果目标键不存在，则将指定键重命名为目标键
 
-        如果重命名成功，返回 True。
-
-        如果 “src” 不存在，将触发异常。
+        如果指定键不存在，将触发异常。
+        :param src:
+        :param dst:
+        :return:
         """
         with self.db_lock:
             if dst in self.data:
@@ -569,17 +639,15 @@ class BasicKey(BaseLitedis):
             exat: Union[int, None] = None,
     ) -> Union[bool, StringableT]:
         """
-        将键 ``name`` 的值设置为 ``value``
-
-        ``ex`` 在键 ``name`` 上设置一个过期标志，过期时间为 ``ex`` 秒。
-
-        ``nx`` 如果设置为 True，则仅当键不存在时，才将键 ``name`` 的值设置为 ``value``。
-
-        ``xx`` 如果设置为 True，则仅当键存在时，才将键 ``name`` 的值设置为 ``value``。
-
-        ``get`` 如果为 True，则将键 ``name`` 的值设置为 ``value``，并返回键 ``name`` 的旧值，或者如果键不存在，则返回 None。
-
-        ``exat`` 在键 ``name`` 上设置一个过期标志，过期时间为 ``ex`` 秒，指定为unix时间。
+        设置指定键的值。
+        :param name:
+        :param value:
+        :param ex: 在指定键设置一个过期秒数。
+        :param nx: 如果为 True，则仅当键不存在时才设置值
+        :param xx: 如果为 True，则仅当键存在时，才设置值
+        :param get: 如果为 True，则返回键的旧值，或者如果键不存在，则返回 None
+        :param exat: 在指定键上设置一个过期时间，时间为绝对时间戳秒数。
+        :return:
         """
         with self.db_lock:
             if nx and name in self.data:
@@ -609,9 +677,11 @@ class BasicKey(BaseLitedis):
 
     def strlen(self, name: str) -> int:
         """
-        返回键 ``name`` 的值中存储的字符串长度
+        获取指定键存储的字符串长度。
 
-        如果键不存在，返回 0
+        如果键不存在，返回 0。
+        :param name:
+        :return:
         """
         with self.db_lock:
             if name not in self.data:
@@ -621,11 +691,13 @@ class BasicKey(BaseLitedis):
 
     def substr(self, name: str, start: int, end: int = -1) -> StringableT:
         """
-        返回键 ``name`` 的字符串值的子串。
+        获取指定键的字符串的子串。
 
-        ``start`` 和 ``end`` 指定要返回的子串的部分。
-
-        如果键不存在，返回空字符串
+        如果键不存在，返回空字符串。
+        :param name:
+        :param start:
+        :param end:
+        :return:
         """
         with self.db_lock:
             if name not in self.data:
@@ -638,11 +710,9 @@ class BasicKey(BaseLitedis):
 
     def ttl(self, name: str) -> int:
         """
-        返回键 ``name`` 将过期的秒数
-
-        如果键不存在，返回 -2。
-
-        如果键存在但没有设置过期时间，返回 -1。
+        获取指定键将过期的秒数。
+        :param name:
+        :return: 如果键不存在，返回 -2。如果键存在但没有设置过期时间，返回 -1。
         """
         with self.db_lock:
             if name not in self.data:
@@ -653,20 +723,21 @@ class BasicKey(BaseLitedis):
 
             return max(0, round(self.expires[name] - time.time()))
 
-    def type(self, name: str) -> str:
+    def type(self, name: str) -> Optional[str]:
         """
-        返回键 ``name`` 的类型
-
-        如果键不存在，返回 ``none``
+        获取指定键的类型。
+        :param name:
+        :return: 如果键不存在，返回 None
         """
         with self.db_lock:
             if name not in self.data:
-                return "none"
+                return None
 
             return self.data_types[name]
 
 
 class ListType(BaseLitedis):
+    """列表类型 Mixin 类"""
 
     def _check_list_type(self, name):
         if self.data_types[name] != DataType.LIST:
@@ -674,11 +745,10 @@ class ListType(BaseLitedis):
 
     def lindex(self, name: str, index: int) -> Optional[StringableT]:
         """
-        返回列表“name”中位置“index”的项。
-
-        支持负索引。
-
-        如果索引超出范围或键不存在，返回 None
+        返回列表中指定索引的项。 支持负索引。
+        :param name:
+        :param index:
+        :return: 如果索引超出范围或键不存在，返回 None
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -695,9 +765,12 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def linsert(self, name: str, where: str, refvalue: StringableT, value: StringableT) -> int:
         """
-        在列表 name 中以 refvalue 为基准的 where 位置（BEFORE/AFTER）插入 value 。
-
-        成功时返回列表的新长度，如果 refvalue 不在列表中则返回-1。
+        在列表中以 refvalue 为基准的 where 位置插入 value 。
+        :param name:
+        :param where: 位置，BEFORE 或者 AFTER
+        :param refvalue:
+        :param value:
+        :return: 成功时返回列表的新长度，如果 refvalue 不在列表中则返回-1。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -719,9 +792,9 @@ class ListType(BaseLitedis):
 
     def llen(self, name: str) -> int:
         """
-        返回列表“name”的长度。
-
-        如果键不存在，返回 0。
+        返回列表的长度。
+        :param name:
+        :return: 如果键不存在，返回 0。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -740,6 +813,9 @@ class ListType(BaseLitedis):
         默认情况下，命令从列表的开头弹出一个元素。
 
         当提供可选的 count参数时，返回最多count个元素。
+        :param name:
+        :param count:
+        :return:
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -760,9 +836,10 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def lpush(self, name: str, *values: StringableT) -> int:
         """
-        将 values 推送到列表 name 的头部。
-
-        返回插入后列表的长度
+        将一系列值添加到列表的头部。
+        :param name:
+        :param values:
+        :return: 插入后列表的长度
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -780,7 +857,10 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def lpushx(self, name: str, *values: StringableT) -> int:
         """
-        如果 name 存在，则将 value 推送到列表 name 的头部。
+        如果列表存在，则将值添加到列表头部。
+        :param name:
+        :param values:
+        :return:
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -796,9 +876,13 @@ class ListType(BaseLitedis):
 
     def lrange(self, name: str, start: int, end: int) -> List:
         """
-        返回列表 name 在位置 start 和 end 之间的切片。
+        获取列表指定范围之间的切片。
 
         start 和 end 可以是负数，就像Python的切片表示法一样。
+        :param name:
+        :param start:
+        :param end:
+        :return:
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -818,7 +902,7 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def lrem(self, name: str, count: int, value: str) -> int:
         """
-        从存储在 name 中的列表中删除与 value 相等的元素的第一个 count 次出现。
+        从列表中删除与指定值相等的元素。
 
         count 参数影响操作的方式：
             count > 0：从头到尾移动，删除与 value 相等的元素。
@@ -826,8 +910,10 @@ class ListType(BaseLitedis):
             count < 0：从尾到头移动，删除与 value 相等的元素。
 
             count = 0：删除所有与 value 相等的元素。
-
-        返回实际删除的元素数量。
+        :param name:
+        :param count: 删除的个数
+        :param value:
+        :return: 实际删除的元素数量。
         """
 
         with self.db_lock:
@@ -856,11 +942,11 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def lset(self, name: str, index: int, value: str) -> bool:
         """
-        将列表 name 中位置 index 的元素设置为 value 。
-
-        返回 True 表示成功设置元素的值。
-
-        如果 name 不存在或者索引超出范围，Redis 将返回错误。
+        在列表指定位置设置值。
+        :param name:
+        :param index:
+        :param value:
+        :return: 返回 True 表示成功设置元素的值。如果 name 不存在或者索引超出范围，将触发异常。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -879,13 +965,13 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def ltrim(self, name: str, start: int, end: int) -> bool:
         """
-        修剪列表“name”，删除不在“start”和“end”之间的所有值。
+        修剪列表，删除不在指定范围之间的所有值。
 
-        “start”和“end”可以是负数。
-
-        返回 True 表示成功修剪列表。
-
-        如果键不存在，列表将被创建为空列表。
+        start 和 end 可以是负数。
+        :param name:
+        :param start:
+        :param end:
+        :return: 返回 True 表示成功修剪列表。如果键不存在，列表将被创建为空列表。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -908,11 +994,10 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def rpop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
         """
-        移除并返回列表 name 的最后元素。
-
-        默认情况下，命令从列表的末尾弹出一个元素。
-
-        当提供可选的 count 参数时，将根据列表的长度返回最多count个元素。
+        移除并返回列表的最后元素。
+        :param name:
+        :param count: 要移除的个数，不指定时只移除一个。
+        :return:
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -930,13 +1015,12 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def rpush(self, name: str, *values: StringableT) -> int:
         """
-        将 values 添加到列表 name 的尾部。
+        将一系列值添加到列表的尾部。
 
-        返回插入后列表的长度。
-
-        如果指定的键不存在，RPUSH 会创建一个新的列表。
-
-        如果键的值不是列表类型，Redis 将返回错误。
+        如果指定的键不存在，会创建一个新的列表。
+        :param name:
+        :param values:
+        :return: 插入后列表的长度。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -953,9 +1037,10 @@ class ListType(BaseLitedis):
     @collect_command_to_aof
     def rpushx(self, name: str, *values: StringableT) -> int:
         """
-        如果 name 存在，则将 value 添加到列表 name 的尾部。
-
-        返回插入后列表的长度。如果指定的列表不存在，则返回 0。
+        如果列表存在，则将值添加到列表的尾部。
+        :param name:
+        :param values:
+        :return: 返回插入后列表的长度。如果指定的列表不存在，则返回 0。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -975,15 +1060,10 @@ class ListType(BaseLitedis):
             desc: bool = False
     ) -> List[StringableT]:
         """
-        对列表 name 进行排序并返回。
-
-        key 自定义排序
-
-        desc 是否反转排序
-
-        返回排序后的元素列表。
-
-        如果指定的键不存在，返回空列表。
+        对列表 name 进行排序。
+        :param name:
+        :param desc: 是否反转排序
+        :return: 返回排序后的元素列表。如果指定的键不存在，返回空列表。
         """
         with self.db_lock:
             list_ = self.data.get(name, None)
@@ -998,6 +1078,7 @@ class ListType(BaseLitedis):
 
 
 class SetType(BaseLitedis):
+    """集合类型 Mixin 类"""
 
     def _check_set_type(self, name):
         if self.data_types[name] != DataType.SET:
@@ -1006,11 +1087,12 @@ class SetType(BaseLitedis):
     @collect_command_to_aof
     def sadd(self, name: str, *values: StringableT) -> int:
         """
-        添加 ``value(s)`` 到 ``name`` 集合
+        将一系列值添加到集合
 
         如果集合不存在，则会创建一个新的集合。
-
-        该命令返回添加到集合中的新成员的数量，不包括已经存在于集合中的成员。
+        :param name:
+        :param values:
+        :return: 返回添加到集合中的新成员的数量，不包括已经存在于集合中的成员。
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1028,9 +1110,9 @@ class SetType(BaseLitedis):
 
     def scard(self, name: str) -> int:
         """
-        返回集合``name``中的元素数量
-
-        如果集合不存在，返回值将是 0
+        获取集合中的元素数量。
+        :param name:
+        :return: 如果集合不存在，返回 0
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1043,7 +1125,10 @@ class SetType(BaseLitedis):
 
     def sdiff(self, keys: List[str], *args: str) -> Set[StringableT]:
         """
-        返回指定的``keys``的集合的差集
+        获取指定集合之间的差集
+        :param keys:
+        :param args:
+        :return:
         """
         with self.db_lock:
             args = list_or_args(keys, args)
@@ -1058,7 +1143,10 @@ class SetType(BaseLitedis):
 
     def sinter(self, keys: List[str], *args: str) -> Set[StringableT]:
         """
-        返回指定的``keys``的集合的交集
+        获取指定集合之间的交集
+        :param keys:
+        :param args:
+        :return:
         """
         with self.db_lock:
             args = list_or_args(keys, args)
@@ -1073,10 +1161,10 @@ class SetType(BaseLitedis):
 
     def sismember(self, name: str, value: StringableT) -> bool:
         """
-        返回``value``是否是集合``name``的成员：
-
-        - 如果``value``是集合的成员，则返回 True。
-        - 如果``value``不是集合的成员，或者键不存在，则返回 False。
+        判断指定值是否是集合的成员。
+        :param name:
+        :param value: 如果是集合的成员返回 True。不是集合的成员，或者键不存在，则返回 False。
+        :return:
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1089,9 +1177,9 @@ class SetType(BaseLitedis):
 
     def smembers(self, name: str) -> Set:
         """
-        返回集合``name``的所有成员
-
-        如果集合不存在，SMEMBERS 将返回一个空的列表。
+        获取集合的所有成员
+        :param name:
+        :return: 如果集合不存在，将返回一个空的列表。
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1104,12 +1192,11 @@ class SetType(BaseLitedis):
 
     def smismember(self, name: str, values: List[StringableT], *args: str) -> List[bool]:
         """
-        判断每个在``values``中的值是否是集合``name``的成员，以``values``的顺序返回一个列表
-
-        - 如果值是集合的成员，则返回 True。
-        - 如果值不是集合的成员，或者键不存在，则返回 False。
-
-        如果集合``name``不存在，返回一个空数组。
+        判断一系列值是否是集合的成员。
+        :param name:
+        :param values:
+        :param args:
+        :return: 返回一个列表，相应的值根据是否是集合的成员变成相应的布尔值。如果集合不存在，返回空数组。
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1124,15 +1211,13 @@ class SetType(BaseLitedis):
     @collect_command_to_aof
     def smove(self, src: str, dst: str, value: StringableT) -> bool:
         """
-        原子地将``value``从集合``src``移动到集合``dst``。
+        将指定值从指定集合移动到目标集合。
 
-        如果 value 成功地从 source 集合中移除并添加到 destination 集合中，命令返回 True。
-
-        如果 source 集合不存在，返回 False。
-
-        如果 value 不在 source 集合中，命令返回 False。
-
-        如果 destination 集合不存在，自动创建它。
+        如果目标集合不存在，自动创建它。
+        :param src: 源集合
+        :param dst: 目标集合
+        :param value:
+        :return: 成功移动返回 True。如果源集合不存在或指定值不存在源集合中，返回 False。
         """
         with self.db_lock:
             set_src = self.data.get(src, None)
@@ -1159,9 +1244,10 @@ class SetType(BaseLitedis):
     @collect_command_to_aof
     def spop(self, name: str, count: Optional[int] = None) -> Union[StringableT, List, None]:
         """
-        从集合``name``中移除并返回一个随机成员
-
-        集合``name``不存在或为空，返回 None
+        从集合中随机移除成员。
+        :param name:
+        :param count: 移除的数量。为 None 时移除 1 个。
+        :return: 返回移除的值或值列表。集合不存在或为空，返回 None。
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1181,13 +1267,10 @@ class SetType(BaseLitedis):
 
     def srandmember(self, name: str, number: Optional[int] = None) -> Union[StringableT, List, None]:
         """
-        如果``number``为 None，则返回集合``name``的一个随机成员。
-
-        如果``number``不为 None，则返回集合``name``的``number``个随机成员的列表。
-
-        如果 number 是正数，返回指定数量的随机不同元素；如果是负数，则返回指定数量的随机元素，可以重复。
-
-        如果集合不存在或为空，返回 None
+        从集合中随机获取成员。
+        :param name:
+        :param number: 要获取的成员数量，为 None 获取 1 个。为正数时，获取的成员不重复；为负数时，可以重复。
+        :return: 如果集合不存在或为空，返回 None。
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1212,9 +1295,10 @@ class SetType(BaseLitedis):
     @collect_command_to_aof
     def srem(self, name: str, *values: StringableT) -> int:
         """
-        从集合``name``中移除``values``
-
-        返回被成功移除的成员数量。如果指定的成员在集合中不存在，返回值仍然是成功移除的成员数量。
+        从集合中移除一系列值。
+        :param name:
+        :param values:
+        :return: 返回被成功移除的成员数量。如果集合不存在或者成员不在集合中，返回 0。
         """
         with self.db_lock:
             set_ = self.data.get(name, None)
@@ -1233,7 +1317,10 @@ class SetType(BaseLitedis):
 
     def sunion(self, keys: List[StringableT], *args: StringableT) -> Set[StringableT]:
         """
-        返回指定的``keys``的集合的并集
+        获取指定集合的并集
+        :param keys:
+        :param args:
+        :return:
         """
         with self.db_lock:
             args = list_or_args(keys, args)
@@ -1248,6 +1335,7 @@ class SetType(BaseLitedis):
 
 
 class SortedSetType(BaseLitedis):
+    """有序集合类型 Mixin 类"""
 
     def _check_sortedset_type(self, name):
         if self.data_types[name] != DataType.SortedSet:
@@ -1264,23 +1352,18 @@ class SortedSetType(BaseLitedis):
             lt: bool = False,
     ) -> int:
         """
-        将任意数量的元素-名称、分数对设置到键``name``。对是指定为元素名称键到分数值的字典。
-
-        ``nx`` 强制ZADD只创建新元素，而不更新已存在元素的分数。
-
-        ``xx`` 强制ZADD只更新已存在元素的分数。新元素不会被添加。
-
-        ``LT`` 仅在新分数小于当前分数时更新现有元素。此标志不会阻止添加新元素。
-
-        ``GT`` 仅在新分数大于当前分数时更新现有元素。此标志不会阻止添加新元素。
-
-        ZADD的返回值根据指定的模式而变化。没有选项时，ZADD返回添加到有序集合的新元素数量。
-
-        ``NX``、``LT``和``GT``是互斥的选项。
+        将任意数量的元素 成员-分数对 添加到有序集合。
+        :param name:
+        :param mapping:
+        :param nx: 强制ZADD只创建新元素，而不更新已存在元素的分数。
+        :param xx: 强制只更新已存在元素的分数。新元素不会被添加。
+        :param gt: 仅在新分数大于当前分数时更新现有元素。此标志不会阻止添加新元素。
+        :param lt: 仅在新分数小于当前分数时更新现有元素。此标志不会阻止添加新元素。
+        :return: 添加到有序集合的新元素数量。
         """
         with self.db_lock:
             if not mapping:
-                raise ValueError("ZADD需要至少一个元素/分数对")
+                raise ValueError("ZADD需要至少一个成员/分数对")
 
             if nx and xx:
                 raise ValueError("ZADD只允许'nx'或'xx'，不能同时使用")
@@ -1319,9 +1402,9 @@ class SortedSetType(BaseLitedis):
 
     def zcard(self, name: str) -> int:
         """
-        返回有序集合``name``中的元素数量
-
-        如果该有序集合不存在，返回值将是 0
+        获取有序集合的元素数量。
+        :param name:
+        :return: 如果该有序集合不存在，返回 0。
         """
         with self.db_lock:
             zset = self.data.get(name, None)
@@ -1335,7 +1418,11 @@ class SortedSetType(BaseLitedis):
 
     def zcount(self, name: str, min_: Number, max_: Number) -> int:
         """
-        返回键``name``中分数在``min``和``max``之间的元素数量。
+        获取有序集合中分数在 min 和 max 之间的元素数量。
+        :param name:
+        :param min_:
+        :param max_:
+        :return:
         """
         with self.db_lock:
             zset = self.data.get(name, None)
@@ -1349,7 +1436,10 @@ class SortedSetType(BaseLitedis):
 
     def zdiff(self, keys: List[str], withscores: bool = False) -> List:
         """
-        返回在``keys``中提供的第一个和所有后续输入有序集合之间的差异。
+        获取一系列有序集合的差集。
+        :param keys:
+        :param withscores: 返回值是否带分数
+        :return:
         """
         with self.db_lock:
             return self._sortedset_reduce_openration(
@@ -1360,11 +1450,13 @@ class SortedSetType(BaseLitedis):
     @collect_command_to_aof
     def zincrby(self, name: str, amount: Number, value: str) -> Number:
         """
-        将有序集合``name``中的``value``的分数增加``amount``
+        将有序集合中指定成员的分数增加给定的值。
 
-        如果成员在有序集合中存在，返回成员的新分数。
-
-        如果成员在有序集合中不存在，ZINCRBY 会将该成员添加到集合中，并将其分数设置为增量值（即 increment 的值）。
+        如果成员在有序集合中不存在，则将用增加的值作为分数值初始化成员。
+        :param name:
+        :param amount: 递增的分数值
+        :param value:
+        :return: 返回成员的新分数
         """
         with self.db_lock:
             zset = self.data.get(name, None)
@@ -1379,7 +1471,10 @@ class SortedSetType(BaseLitedis):
 
     def zinter(self, keys: List[str], withscores: bool = False) -> List:
         """
-        返回由``keys``指定的多个有序集合的交集。
+        获取一系列有序集合的交集。
+        :param keys:
+        :param withscores: 返回值是否带分数
+        :return:
         """
         with self.db_lock:
             return self._sortedset_reduce_openration(
@@ -1387,13 +1482,12 @@ class SortedSetType(BaseLitedis):
                 keys=keys,
                 withscores=withscores)
 
-    def zintercard(self, numkeys: int, keys: List[str], limit: int = 0) -> int:
+    def zintercard(self, keys: List[str], limit: int = 0) -> int:
         """
         返回由``keys``指定的多个有序集合的交集的基数。
-
-        numkeys: 要计算交集的有序集合个数
-
-        limit: 可选参数，限制要计算的元素数量
+        :param keys:
+        :param limit: 可选参数，限制要计算的元素数量
+        :return:
         """
         with self.db_lock:
             for name in keys:
@@ -1403,9 +1497,8 @@ class SortedSetType(BaseLitedis):
             zsets = [self.data.get(n, SortedSet()) for n in keys]
 
             # 计算交集
-            numkeys = min(numkeys, len(keys))
             inter = zsets[0]
-            for num in range(1, numkeys):
+            for num in range(1, len(keys)):
                 inter = inter & zsets[num]
                 if limit != 0 and len(inter) >= limit:
                     return limit
@@ -1438,13 +1531,10 @@ class SortedSetType(BaseLitedis):
     @collect_command_to_aof
     def zpopmax(self, name: str, count: int = 1) -> List:
         """
-        从有序集合``name``中删除并返回分数最高的成员
-
-        count: 可选参数，指定要返回的成员数量，默认为1
-
-        返回被删除的成员和它们的分数。如果键不存在，返回空数组。
-
-        返回格式为: member1 score1 [member2 score2 ...]
+        从有序集合中移除分数最高的成员。
+        :param name:
+        :param count: 指定要返回的成员数量，默认为 1
+        :return: 返回移除的分数最高的成员；如果键不存在，返回空数组；返回格式为: member1 score1 [member2 score2 ...]
         """
         with self.db_lock:
             return self._zpopmaxmin(type_="max", name=name, count=count)
@@ -1452,27 +1542,21 @@ class SortedSetType(BaseLitedis):
     @collect_command_to_aof
     def zpopmin(self, name: str, count: int = 1) -> List:
         """
-        移除并返回有序集合``name``中分数最低的成员
-
-        count: 可选参数，指定要返回的成员数量，默认为1
-
-        返回被删除的成员和它们的分数。如果键不存在，返回空数组。
-
-        返回格式为: member1 score1 [member2 score2 ...]
+        从有序集合移除分数最低的成员。
+        :param name:
+        :param count: 指定要返回的成员数量，默认为 1
+        :return: 返回移除分数最低的成员；如果键不存在，返回空数组；返回格式为: member1 score1 [member2 score2 ...]
         """
         with self.db_lock:
             return self._zpopmaxmin(type_="min", name=name, count=count)
 
     def zrandmember(self, key: str, count: int = 1, withscores: bool = False) -> Union[List, StringableT, None]:
         """
-        从有序集合中随机返回一个或多个成员。该命令在 Redis 6.2.0 版本中新增。
-
-        count: 可选参数，指定要返回的成员数量
-            正数: 返回不重复的成员
-
-            负数: 返回可能重复的成员
-
-            不指定: 默认返回1个成员
+        从有序集合中随机返回一个或多个成员。
+        :param key:
+        :param count: 指定要返回的成员数量；默认为 1；为正数表示获取不重复的成员，为负数表示获取重复的成员。
+        :param withscores:
+        :return:
         """
 
         with self.db_lock:
@@ -1505,10 +1589,11 @@ class SortedSetType(BaseLitedis):
     ) -> List:
         """
         从第一个非空有序集合上弹出并返回分值最小或最大的成员。
-
-        返回一个数组,包含以下内容:
-            第一个元素是成功弹出元素的有序集合的键名
-            第二个元素是一个数组,包含弹出的成员和分值对
+        :param keys:
+        :param min_:
+        :param max_:
+        :param count: 默认 1，设置其他值表示获取多个分值最大或最小的成员
+        :return: 第一个元素是成功弹出元素的有序集合的键名，第二个元素是一个数组,包含弹出的成员和分值对。
         """
         if (min_ and max_) or (not min_ and not max_):
             raise ValueError(f"min_和 max_必须要有一个为真，但不能都为真")
@@ -1555,9 +1640,12 @@ class SortedSetType(BaseLitedis):
 
     def zrange(self, name: str, start: int, end: int, withscores: bool = False, ) -> List:
         """
-        获取有序集合(sorted set)中指定范围的成员。成员按照 score 值从小到大进行排序。
-
-        返回指定范围的成员列表。如果使用 WITHSCORES 参数，则会同时返回成员的分数。
+        获取有序集合中指定索引范围的成员。成员按照 score 值从小到大进行排序。
+        :param name:
+        :param start:
+        :param end:
+        :param withscores: 返回值是否带分数。
+        :return: 返回指定范围的成员列表。
         """
         with self.db_lock:
             return self._zrange(name=name,
@@ -1567,9 +1655,12 @@ class SortedSetType(BaseLitedis):
 
     def zrevrange(self, name: str, start: int, end: int, withscores: bool = False, ) -> List:
         """
-        获取有序集合(sorted set)中指定范围的成员。成员按照 score 值从大到小进行排序。
-
-        返回指定范围的成员列表。如果使用 WITHSCORES 参数，则会同时返回成员的分数。
+        获取有序集合中指定索引范围的成员。成员按照 score 值从大到小进行排序。
+        :param name:
+        :param start:
+        :param end:
+        :param withscores: 返回值是否带分数。
+        :return: 返回指定范围的成员列表。
         """
         with self.db_lock:
             return self._zrange(name=name,
@@ -1589,10 +1680,13 @@ class SortedSetType(BaseLitedis):
     ) -> List:
         """
         获取有序集合中指定分数区间内的成员。返回的成员是按照分数从小到大排序的。
-
-        返回一个列表，包含指定分数范围的成员
-        如果使用 WITHSCORES，则返回的列表中交替包含成员和分数
-        如果 name 不存在或没有匹配的成员，返回空列表
+        :param name:
+        :param min_:
+        :param max_:
+        :param start:
+        :param num:
+        :param withscores: 返回值是否带分数。
+        :return: 返回一个列表，如果有序集合不存在或没有匹配的成员，返回空列表。
         """
         with self.db_lock:
             if start is None:
@@ -1618,10 +1712,13 @@ class SortedSetType(BaseLitedis):
     ) -> List:
         """
         获取有序集合中指定分数区间内的成员。返回的成员是按照分数从大到小排序的。
-
-        返回一个列表，包含指定分数范围的成员
-        如果使用 WITHSCORES，则返回的列表中交替包含成员和分数
-        如果 name 不存在或没有匹配的成员，返回空列表
+        :param name:
+        :param min_:
+        :param max_:
+        :param start:
+        :param num:
+        :param withscores: 返回值是否带分数。
+        :return: 返回一个列表，如果有序集合不存在或没有匹配的成员，返回空列表。
         """
         with self.db_lock:
             if start is None:
@@ -1638,10 +1735,10 @@ class SortedSetType(BaseLitedis):
 
     def zrank(self, name: str, value: StringableT) -> Optional[int]:
         """
-        获取有序集合中成员的排名,按分数值从小到大排序。排名从0开始计算。
-
-        如果成员存在于有序集合中,返回其排名(从0开始的整数)
-        如果成员不存在或key不存在,返回 None
+        获取有序集合中成员的排名,按分数值从小到大排序。
+        :param name:
+        :param value:
+        :return: 返回成员排名(从0开始的整数)，如果有序集合不存在或成员不存在,返回 None
         """
         with self.db_lock:
             zset = self.data.get(name, None)
@@ -1656,10 +1753,10 @@ class SortedSetType(BaseLitedis):
     @collect_command_to_aof
     def zrem(self, name: str, *values: StringableT) -> int:
         """
-        从有序集合(sorted set)中删除一个或多个成员。
-
-        返回整数值，表示成功删除的成员数量。
-        如果 key 不存在，返回 0。
+        从有序集合中删除一个或多个成员。
+        :param name:
+        :param values:
+        :return: 成功删除的成员数量。如果有序集合不存在，返回 0。
         """
         with self.db_lock:
 
@@ -1680,9 +1777,11 @@ class SortedSetType(BaseLitedis):
     @collect_command_to_aof
     def zremrangebyscore(self, name: str, min_: Number, max_: Number) -> int:
         """
-        移除有序集合``name``中分数在``min``和``max``之间的所有元素。
-
-        返回被移除的元素数量。
+        移除有序集合中分数在指定范围之间的所有元素。
+        :param name:
+        :param min_:
+        :param max_:
+        :return: 返回被移除的元素数量。
         """
         with self.db_lock:
             list_ = self._zrange(name=name, start=0, end=-1, min_=min_, max_=max_)
@@ -1699,10 +1798,10 @@ class SortedSetType(BaseLitedis):
 
     def zrevrank(self, name: str, value: StringableT) -> Optional[int]:
         """
-        获取有序集合中成员的排名,按分数值从大到小排序。排名从0开始计算。
-
-        如果成员存在于有序集合中,返回其排名(从0开始的整数)
-        如果成员不存在或key不存在,返回 None
+        获取有序集合中成员的排名,按分数值从大到小排序。
+        :param name:
+        :param value:
+        :return: 返回成员排名(从0开始的整数)，如果有序集合不存在或成员不存在，返回 None
         """
         with self.db_lock:
             zset = self.data.get(name, None)
@@ -1717,7 +1816,6 @@ class SortedSetType(BaseLitedis):
     def zscan(self, name: str, cursor: int = 0, count: int = 0):
         """
         遍历有序集合。
-
         :param name:
         :param cursor:
         :param count: 每次扫描的个数，为 0 时表示扫描到结尾
@@ -1743,9 +1841,10 @@ class SortedSetType(BaseLitedis):
 
     def zscore(self, name: str, value: StringableT) -> Optional[float]:
         """
-        获取有序集合中指定成员的分数
-
-        如果指定的键不存在或成员不存在，返回 None。
+        获取有序集合中指定成员的分数。
+        :param name:
+        :param value:
+        :return: 如果指定的键不存在或成员不存在，返回 None。
         """
         with self.db_lock:
             zset = self.data.get(name, None)
@@ -1783,7 +1882,10 @@ class SortedSetType(BaseLitedis):
 
     def zunion(self, keys: List[str], withscores: bool = False, ) -> List:
         """
-        返回由``keys``指定的多个有序集合的并集。
+        获取指定的多个有序集合的并集。
+        :param keys:
+        :param withscores: 返回值是否带分数。
+        :return:
         """
         with self.db_lock:
             return self._sortedset_reduce_openration(
@@ -1793,11 +1895,10 @@ class SortedSetType(BaseLitedis):
 
     def zmscore(self, key: str, members: List[str]) -> List[Optional[float]]:
         """
-        返回存储在key的有序集合中与指定成员关联的分数。
-
-        返回分数列表([9.0, None])
-            如果指定的成员存在于有序集合中，返回该成员的分数。
-            如果指定的成员不存在，对应位置的分数为 None。
+        获取有序集合中与指定成员关联的分数。
+        :param key:
+        :param members:
+        :return: 返回分数列表([9.0, None])，如果成员存在于集合中，返回该成员的分数；如果不存在，对应位置的分数为 None。
         """
         with self.db_lock:
             zset = self.data.get(key, None)
@@ -1810,6 +1911,7 @@ class SortedSetType(BaseLitedis):
 
 
 class HashType(BaseLitedis):
+    """哈希类型 Mixin 类"""
 
     def _check_hash_type(self, name):
         if self.data_types[name] != DataType.HASH:
@@ -1818,9 +1920,10 @@ class HashType(BaseLitedis):
     @collect_command_to_aof
     def hdel(self, name: str, *keys: str) -> int:
         """
-        从哈希 name 中删除一个或多个字段
-
-        返回被成功删除的字段数量。如果指定的哈希表或字段不存在，则返回 0。
+        从哈希中删除一个或多个字段。
+        :param name:
+        :param keys:
+        :return: 被成功删除的字段数量。如果指定的哈希表或字段不存在，则返回 0。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -1840,8 +1943,9 @@ class HashType(BaseLitedis):
     def hexists(self, name: str, key: str) -> bool:
         """
         检查给定的哈希表中是否存在指定的字段。
-
-        如果哈希表或字段不存在，返回 False。
+        :param name:
+        :param key:
+        :return: 如果哈希表或字段不存在，返回 False。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -1855,8 +1959,9 @@ class HashType(BaseLitedis):
     def hget(self, name: str, key: str) -> Optional[StringableT]:
         """
         获取哈希表中指定字段的值。
-
-        如果哈希表或字段不存在，返回 None
+        :param name:
+        :param key:
+        :return: 如果哈希表或字段不存在，返回 None。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -1869,9 +1974,9 @@ class HashType(BaseLitedis):
 
     def hgetall(self, name: str) -> Dict:
         """
-        获取哈希表中所有字段及其对应值
-
-        如果指定的 key 不存在，返回空字典。
+        获取哈希表中所有字段及其对应值。
+        :param name:
+        :return: 如果指定的 key 不存在，返回空字典。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -1903,6 +2008,10 @@ class HashType(BaseLitedis):
         对哈希表中指定字段的整数值进行增量操作
 
         如果哈希表或字段不存在，会先初始化为 0 再增量
+        :param name:
+        :param key:
+        :param amount:
+        :return: 增量后的整数值
         """
         with self.db_lock:
             return self._hincrby(name, key, amount)
@@ -1912,17 +2021,20 @@ class HashType(BaseLitedis):
         """
         对哈希表中指定字段的整数值进行增量操作。
 
-        如果哈希表或字段不存在，会先初始化为 0 再增量
+        如果哈希表或字段不存在，会先初始化为 0 再增量。
+        :param name:
+        :param key:
+        :param amount:
+        :return: 增量后的浮点值。
         """
         with self.db_lock:
             return self._hincrby(name, key, amount)
 
     def hkeys(self, name: str) -> List:
         """
-        获取 哈希表中所有字段的名称
-
-        返回一个包含哈希表中所有字段名称的数组。
-        如果指定的键不存在，返回一个空数组。
+        获取 哈希表中所有字段的名称。
+        :param name:
+        :return: 返回一个包含哈希表中所有字段名称的数组。如果指定的键不存在，返回一个空数组。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -1935,9 +2047,9 @@ class HashType(BaseLitedis):
 
     def hlen(self, name: str) -> int:
         """
-        获取哈希表中字段数量
-
-        返回哈希表中字段的数量。如果指定的 key 不存在，返回值为 0。
+        获取哈希表中字段数量。
+        :param name:
+        :return: 返回哈希表中字段的数量。如果指定的 key 不存在，返回值为 0。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -1958,10 +2070,15 @@ class HashType(BaseLitedis):
             items: Optional[list] = None,
     ) -> int:
         """
-        将一个或多个字段及其值设置到哈希表中。如果哈希表不存在，则会创建一个新的哈希表。
+        将一个或多个字段及其值设置到哈希表中。
 
-        返回值为设置成功的字段数量。
-        如果字段已经存在，则会更新其值，但不会增加计数。
+        如果哈希表不存在，则会创建一个新的哈希表。
+        :param name:
+        :param key:
+        :param value:
+        :param mapping: 以映射方式设置时填写此参数。
+        :param items: 以元组方式设置时填写此参数。
+        :return: 返回值为设置成功的字段数量。如果字段已经存在，则会更新其值，但不会增加计数。
         """
         if key is None and not mapping and not items:
             raise ValueError("没有给出要设置的键值对")
@@ -1993,7 +2110,11 @@ class HashType(BaseLitedis):
     @collect_command_to_aof
     def hsetnx(self, name: str, key: str, value: str) -> bool:
         """
-        指定的字段不存在时，设置该哈希字段的值
+        指定的字段不存在时，设置该哈希字段的值。
+        :param name:
+        :param key:
+        :param value:
+        :return: 是否成功设置
         """
 
         with self.db_lock:
@@ -2010,17 +2131,12 @@ class HashType(BaseLitedis):
 
             return False
 
-    # def hmset(self, name: str, mapping: dict) -> str:
-    #     """
-    #     从 Redis 4.0 开始，HMSET 被标记为过时，建议使用 HSET 命令来替代。
-    #     """
-
     def hmget(self, name: str, keys: List) -> List:
         """
-        从 Redis 哈希中获取一个或多个字段的值。
-
-        返回一个数组，包含请求的字段的值。如果某个字段不存在，则返回 None。
-        如果哈希不存在，返回一个空数组。
+        从哈希中获取一个或多个字段的值。
+        :param name:
+        :param keys:
+        :return: 返回一个数组，包含请求的字段的值；如果某个字段不存在，则返回 None；如果哈希不存在，返回一个空数组。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -2034,8 +2150,8 @@ class HashType(BaseLitedis):
     def hvals(self, name: str) -> List:
         """
         获取哈希表中所有字段的值。
-
-        如果指定的 key 不存在，返回空数组。
+        :param name:
+        :return: 如果指定的 key 不存在，返回空数组。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -2048,10 +2164,10 @@ class HashType(BaseLitedis):
 
     def hstrlen(self, name: str, key: str) -> int:
         """
-        获取哈希表中指定字段的字符串长度
-
-        如果字段不存在，返回 0。
-        如果哈希表不存在，返回 0。
+        获取哈希表中指定字段的字符串长度。
+        :param name:
+        :param key:
+        :return: 如果哈希表不存在或字段不存在，返回 0。
         """
         with self.db_lock:
             hash_ = self.data.get(name, None)
@@ -2068,11 +2184,9 @@ class HashType(BaseLitedis):
 
 class _SingletonMeta(type):
     """
-    单例元类，确保一个类只有一个实例
+    单例元类，给 Litedis 创建单例使用。
 
-    主要给 Litedis 创建单例使用
-
-    使用 '/path/db' 作为单一实例依据，即同一个数据库只能创建一个单例
+    使用 数据库链接 作为单一实例依据，即同一个数据库只能创建一个单例。
     """
     _instances = weakref.WeakValueDictionary()
     _lock: threading.Lock = threading.Lock()
@@ -2110,7 +2224,7 @@ class Litedis(
     BasicKey,
     metaclass=_SingletonMeta
 ):
-    """模仿 Redis 接口的类"""
+    """Litedis 主类"""
 
     def __init__(self,
                  connection_string: Optional[str] = None,
@@ -2121,17 +2235,16 @@ class Litedis(
                  ldb_save_frequency: int = 600,
                  compression: bool = True,
                  singleton=True):
-        """初始化数据库
-
-        Args:
-            connection_string: 数据库连接字符串，形式如: 'litedis:///path/db_name'(注意冒号后有三个连续'/')
-            db_name: 数据库名称
-            data_dir: 数据目录
-            persistence: 持久化类型
-            aof_fsync: AOF同步策略
-            ldb_save_frequency: LDB保存频率(秒)
-            compression: 是否压缩LDB文件
-            singleton: 是否创建单例，默认是，为 False 时否
+        """
+        初始化数据库。
+        :param connection_string: 数据库连接字符串，形式如: 'litedis:///path/db_name'(注意冒号后有三个连续'/')
+        :param db_name: 数据库名称
+        :param data_dir: 数据目录
+        :param persistence: 持久化类型
+        :param aof_fsync: AOF同步策略
+        :param ldb_save_frequency: LDB保存频率(秒)
+        :param compression: 是否压缩LDB文件
+        :param singleton: 是否创建单例，默认是，为 False 时否
         """
         self.data: Dict[str, Any] = {}
         self.data_types: Dict[str, str] = {}

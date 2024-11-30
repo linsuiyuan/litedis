@@ -74,6 +74,17 @@ def combine_database_url(
         path: str = "",
         db: str = "db",
 ) -> str:
+    """
+    组合数据库各部分为 url 形式
+    :param scheme:
+    :param username:
+    :param password:
+    :param host:
+    :param port:
+    :param path: 存放数据库文件的相对路径
+    :param db: 数据库名称
+    :return:
+    """
     if username and password:
         auth = f"{username}:{password}"
     elif username:
@@ -104,6 +115,11 @@ def combine_database_url(
 
 
 def parse_database_url(url: str) -> Dict:
+    """
+    解析 url 形式的数据库链接
+    :param url:
+    :return:
+    """
     result = parse.urlparse(url)
     path, db = result.path.rsplit("/", maxsplit=1)
     return {

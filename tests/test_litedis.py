@@ -163,7 +163,7 @@ class TestBasicKey:
     def test_type(self, db):
         db.set("string_key", "value")
         assert db.type("string_key") == "string"
-        assert db.type("nonexistent") == "none"
+        assert db.type("nonexistent") is None
 
 
 class TestListType:
