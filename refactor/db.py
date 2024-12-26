@@ -21,7 +21,8 @@ class LitedisObject(NamedTuple):
 
 
 class LitedisDb:
-    def __init__(self):
+    def __init__(self, id_):
+        self.id_ = id_
         self._data: Dict[KeyT, LitedisObject] = {}
         self._expirations: Dict[KeyT, int] = {}
 
