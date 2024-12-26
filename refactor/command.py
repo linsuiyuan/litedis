@@ -1,10 +1,10 @@
 import time
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import List, Union
+from typing import List
 
-from refactor.db import LitedisDb, LitedisObject
-from refactor.typing import StringLikeT, KeyT
+from refactor.db import LitedisDb
+from refactor.typing import StringLikeT, KeyT, LitedisObjectT
 
 class Command(ABC):
     def __init__(self, db: LitedisDb, name: str, args: List[StringLikeT]):
@@ -42,8 +42,6 @@ class SetCommand(Command):
         if self.expiration:
             self.db.set_expiration(self.key, self.expiration)
 
-
-
     def _lower_args_omit_first_two(self) -> List[StringLikeT]:
         return [s.lower() if isinstance(s, str) else s
                 for s in self.args[2:]]
@@ -53,8 +51,8 @@ class SetCommand(Command):
         return self.args[0]
 
     @property
-    def value(self) -> LitedisObject:
-        return LitedisObject(self.args[1])
+    def value(self) -> LitedisObjectT:
+        return self.args[1]
 
     @property
     def nx(self) -> bool:

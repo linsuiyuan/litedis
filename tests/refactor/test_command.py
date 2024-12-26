@@ -20,7 +20,7 @@ class TestSetCommand:
         strcmd = "set key1 value1"
         command = self._parse_strcmd(strcmd)
         assert command.key == "key1"
-        assert command.value.value == "value1"
+        assert command.value == "value1"
 
     @pytest.mark.parametrize("strcmd, expected", [
         ("set key1 value1 nx", (True, False)),
@@ -44,4 +44,4 @@ class TestSetCommand:
         strcmd = "set key1 value1 ex 60"
         command = self._parse_strcmd(strcmd)
         command.execute()
-        assert self.db.get("key1").value == "value1"
+        assert self.db.get("key1") == "value1"

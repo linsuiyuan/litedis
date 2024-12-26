@@ -1,41 +1,25 @@
-from typing import NamedTuple, Dict, Optional, List, Set
+from typing import Dict, Optional
 
-from refactor.typing import KeyT, LitedisObjectT, StringLikeT
-
-
-class LitedisObject(NamedTuple):
-    value: LitedisObjectT
-
-    @property
-    def type(self):
-        if isinstance(self.value, StringLikeT):
-            return "string"
-        elif isinstance(self.value, List):
-            return "list"
-        elif isinstance(self.value, Dict):
-            return "dict"
-        elif isinstance(self.value, Set):
-            return "set"
-        else:
-            raise TypeError("不支持的类型")
-
+from refactor.typing import KeyT, LitedisObjectT
 
 class LitedisDb:
     def __init__(self, id_):
         self.id_ = id_
-        self._data: Dict[KeyT, LitedisObject] = {}
+        self._data: Dict[KeyT, LitedisObjectT] = {}
         self._expirations: Dict[KeyT, int] = {}
 
-    def set(self, key: KeyT, value: LitedisObject):
+    def set(self, key: KeyT, value: LitedisObjectT):
         self._check_value_type_consistency(key, value)
         self._data[key] = value
 
-    def _check_value_type_consistency(self, key: KeyT, value: LitedisObject):
+    def _check_value_type_consistency(self, key: KeyT, value: LitedisObjectT):
         if key in self._data:
-            if self._data[key].type != value.type:
+            if not isinstance(value, LitedisObjectT):
+                raise TypeError(f"not supported type {type(value)}")
+            if type(self._data[key]) != type(value):
                 raise TypeError("值类型和目标值类型不一致")
 
-    def get(self, key: KeyT) -> Optional[LitedisObject]:
+    def get(self, key: KeyT) -> Optional[LitedisObjectT]:
         return self._data.get(key)
 
     def exists(self, item: KeyT) -> bool:

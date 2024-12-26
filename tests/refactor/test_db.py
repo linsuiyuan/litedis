@@ -1,12 +1,12 @@
 import pytest
 
-from refactor.db import LitedisDb, LitedisObject
+from refactor.db import LitedisDb
 
 
 class TestLitedisDb:
     def setup_method(self):
         self.db = LitedisDb("data/db")
-        self.string_obj = LitedisObject("bar")
+        self.string_obj = "bar"
 
     def test_set(self):
         assert not self.db.exists('foo')
@@ -16,7 +16,7 @@ class TestLitedisDb:
     def test_check_value_type_consistency_on_set(self):
         self.db.set('foo', self.string_obj)
         with pytest.raises(TypeError):
-            obj = LitedisObject(["bar"])
+            obj = ["bar"]
             self.db.set('foo', obj)
 
     def test_get(self):
