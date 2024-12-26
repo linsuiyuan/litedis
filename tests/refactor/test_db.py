@@ -42,6 +42,13 @@ class TestLitedisDb:
         self.db.set_expiration('foo', 666)
         assert self.db.get_expiration('foo') == 666
 
+    def test_delete_expiration(self):
+        self.db.set('foo', self.string_obj)
+        self.db.set_expiration('foo', 666)
+        assert self.db.get_expiration('foo') == 666
+        self.db.delete_expiration('foo')
+        assert self.db.get_expiration('foo') is None
+
     def test_get_expirations(self):
         self.db.set('foo', self.string_obj)
         self.db.set_expiration('foo', 666)

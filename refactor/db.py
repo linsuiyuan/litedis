@@ -41,7 +41,8 @@ class LitedisDb:
     def exists(self, item: KeyT) -> bool:
         return item in self._data
 
-    __contains__ = exists
+    def __contains__(self, item: KeyT) -> bool:
+        return item in self._data
 
     def delete(self, key: KeyT) -> int:
         if key not in self._data:
@@ -65,6 +66,12 @@ class LitedisDb:
 
     def get_expiration(self, key: KeyT):
         return self._expirations.get(key)
+
+    def delete_expiration(self, key: KeyT) -> int:
+        if key not in self._expirations:
+            return 0
+        del self._expirations[key]
+        return 1
 
     def get_expirations(self) -> Dict[KeyT, int]:
         return self._expirations
