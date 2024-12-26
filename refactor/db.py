@@ -1,12 +1,10 @@
-from typing import Dict, Optional
-
 from refactor.typing import KeyT, LitedisObjectT
 
 class LitedisDb:
     def __init__(self, id_):
         self.id_ = id_
-        self._data: Dict[KeyT, LitedisObjectT] = {}
-        self._expirations: Dict[KeyT, int] = {}
+        self._data: dict[KeyT, LitedisObjectT] = {}
+        self._expirations: dict[KeyT, int] = {}
 
     def set(self, key: KeyT, value: LitedisObjectT):
         self._check_value_type_consistency(key, value)
@@ -19,7 +17,7 @@ class LitedisDb:
             if type(self._data[key]) != type(value):
                 raise TypeError("值类型和目标值类型不一致")
 
-    def get(self, key: KeyT) -> Optional[LitedisObjectT]:
+    def get(self, key: KeyT) -> LitedisObjectT | None:
         return self._data.get(key)
 
     def exists(self, item: KeyT) -> bool:
@@ -57,5 +55,5 @@ class LitedisDb:
         del self._expirations[key]
         return 1
 
-    def get_expirations(self) -> Dict[KeyT, int]:
+    def get_expirations(self) -> dict[KeyT, int]:
         return self._expirations

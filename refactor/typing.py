@@ -1,5 +1,3 @@
-from typing import Union, List, Set, Dict
-
-KeyT = Union[str, int]
-StringLikeT = Union[str, int]
-LitedisObjectT = Union[StringLikeT, List, Set, Dict]
+KeyT = str | int
+StringLikeT = str | int
+LitedisObjectT = StringLikeT | list | set | dict

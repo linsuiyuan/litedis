@@ -1,13 +1,12 @@
 import time
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import List
 
 from refactor.db import LitedisDb
 from refactor.typing import StringLikeT, KeyT, LitedisObjectT
 
 class Command(ABC):
-    def __init__(self, db: LitedisDb, name: str, args: List[StringLikeT]):
+    def __init__(self, db: LitedisDb, name: str, args: list[StringLikeT]):
         self.db = db
         self.name = name
         self.args = args
@@ -42,7 +41,7 @@ class SetCommand(Command):
         if self.expiration:
             self.db.set_expiration(self.key, self.expiration)
 
-    def _lower_args_omit_first_two(self) -> List[StringLikeT]:
+    def _lower_args_omit_first_two(self) -> list[StringLikeT]:
         return [s.lower() if isinstance(s, str) else s
                 for s in self.args[2:]]
 
@@ -101,3 +100,16 @@ class SetCommand(Command):
     def _get_pxat_milli_timestamp(self, args) -> int:
         index = args.index("pxat")
         return args[index + 1]
+
+class GetCommand(Command):
+
+    def _check_args_count(self):
+        if len(self.args) < 1:
+            raise ValueError(f"GetCommand requires at least 1 argument, {len(self.args)} given")
+
+    def execute(self):
+        return self.db.get(self.key)
+
+    @property
+    def key(self) -> KeyT:
+        return self.args[0]
