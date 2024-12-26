@@ -41,6 +41,8 @@ class SetCommand(Command):
         if self.expiration:
             self.db.set_expiration(self.key, self.expiration)
 
+        return "OK"
+
     def _lower_args_omit_first_two(self) -> list[StringLikeT]:
         return [s.lower() if isinstance(s, str) else s
                 for s in self.args[2:]]

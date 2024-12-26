@@ -15,7 +15,7 @@ class LitedisDb:
             if not isinstance(value, LitedisObjectT):
                 raise TypeError(f"not supported type {type(value)}")
             if type(self._data[key]) != type(value):
-                raise TypeError("值类型和目标值类型不一致")
+                raise TypeError("type of value does not match the type in database")
 
     def get(self, key: KeyT) -> LitedisObjectT | None:
         return self._data.get(key)
