@@ -1,3 +1,5 @@
+from .base import Command
+
 from .basiccmds import (
     AppendCommand,
     CopyCommand,
