@@ -2,7 +2,7 @@ import time
 from abc import ABC, abstractmethod
 from functools import lru_cache
 
-from refactor.db import LitedisDb
+from refactor.server.db import LitedisDb
 from refactor.typing import StringLikeT, KeyT, LitedisObjectT
 
 

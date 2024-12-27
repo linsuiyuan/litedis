@@ -1,6 +1,6 @@
 from threading import Lock
 
-from refactor.db import LitedisDb
+from refactor.server.db import LitedisDb
 from refactor.utils import thread_safe_singleton
 
 _dbs = {}

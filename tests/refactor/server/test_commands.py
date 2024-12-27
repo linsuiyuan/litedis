@@ -2,11 +2,34 @@ import time
 
 import pytest
 
-from refactor.command import SetCommand, GetCommand, AppendCommand, DecrbyCommand, DeleteCommand, ExistsCommand, \
-    CopyCommand, ExpireCommand, ExpireatCommand, ExpireTimeCommand, IncrbyCommand, IncrbyfloatCommand, KeysCommand, \
-    MgetCommand, MsetCommand, MsetnxCommand, PersistCommand, RandomKeyCommand, RenameCommand, RenamenxCommand, \
-    StrlenCommand, SubstrCommand, TTLCommand, TypeCommand
-from refactor.db import LitedisDb
+from refactor.server.commands import (
+    AppendCommand,
+    CopyCommand,
+    DecrbyCommand,
+    DeleteCommand,
+    ExistsCommand,
+    ExpireCommand,
+    ExpireTimeCommand,
+    ExpireatCommand,
+    GetCommand,
+    IncrbyCommand,
+    IncrbyfloatCommand,
+    KeysCommand,
+    MgetCommand,
+    MsetCommand,
+    MsetnxCommand,
+    PersistCommand,
+    RandomKeyCommand,
+    RenameCommand,
+    RenamenxCommand,
+    SetCommand,
+    StrlenCommand,
+    SubstrCommand,
+    TTLCommand,
+    TypeCommand,
+)
+
+from refactor.server.db import LitedisDb
 from refactor.utils import parse_string_command
 
 

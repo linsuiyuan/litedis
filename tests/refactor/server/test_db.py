@@ -1,6 +1,6 @@
 import pytest
 
-from refactor.db import LitedisDb
+from refactor.server.db import LitedisDb
 
 
 class TestLitedisDb:
