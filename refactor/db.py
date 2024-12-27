@@ -1,4 +1,5 @@
-from refactor.typing import KeyT, LitedisObjectT
+from refactor.typing import KeyT, LitedisObjectT, StringLikeT
+
 
 class LitedisDb:
     def __init__(self, id_):
@@ -7,13 +8,13 @@ class LitedisDb:
         self._expirations: dict[KeyT, int] = {}
 
     def set(self, key: KeyT, value: LitedisObjectT):
-        self._check_value_type_consistency(key, value)
+        self._check_value_type(key, value)
         self._data[key] = value
 
-    def _check_value_type_consistency(self, key: KeyT, value: LitedisObjectT):
+    def _check_value_type(self, key: KeyT, value: LitedisObjectT):
+        if not isinstance(value, LitedisObjectT):
+            raise TypeError(f"not supported type {type(value)}")
         if key in self._data:
-            if not isinstance(value, LitedisObjectT):
-                raise TypeError(f"not supported type {type(value)}")
             if type(self._data[key]) != type(value):
                 raise TypeError("type of value does not match the type in database")
 
@@ -30,6 +31,7 @@ class LitedisDb:
         if key not in self._data:
             return 0
         del self._data[key]
+        self.delete_expiration(key)
         return 1
 
     def keys(self):
@@ -49,6 +51,9 @@ class LitedisDb:
     def get_expiration(self, key: KeyT):
         return self._expirations.get(key)
 
+    def exists_expiration(self, key: KeyT) -> bool:
+        return key in self._expirations
+
     def delete_expiration(self, key: KeyT) -> int:
         if key not in self._expirations:
             return 0
@@ -57,3 +62,19 @@ class LitedisDb:
 
     def get_expirations(self) -> dict[KeyT, int]:
         return self._expirations
+
+    def get_type(self, key: KeyT) -> str | None:
+        if key not in self._data:
+            return "none"
+
+        value = self._data[key]
+        if isinstance(value, StringLikeT):
+            return "string"
+        elif isinstance(value, list):
+            return "list"
+        elif isinstance(value, dict):
+            return "hash"
+        elif isinstance(value, set):
+            return "set"
+        else:
+            return "unknown"

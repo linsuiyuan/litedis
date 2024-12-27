@@ -25,9 +25,18 @@ class TestLitedisDb:
         assert self.db.get('foo') == self.string_obj
 
     def test_delete(self):
-        assert self.db.exists('foo') == 0
+        assert 'foo' not in self.db
         self.db.set('foo', self.string_obj)
         assert self.db.delete('foo') == 1
+
+    def test_delete_and_check_delete_expiration(self):
+        assert 'foo' not in self.db
+        self.db.set('foo', self.string_obj)
+        self.db.set_expiration('foo', 60)
+        assert self.db.get_expiration('foo') == 60
+
+        assert self.db.delete('foo') == 1
+        assert self.db.get_expiration('foo') is None
 
     def test_keys(self):
         self.db.set('foo', self.string_obj)
@@ -49,7 +58,22 @@ class TestLitedisDb:
         self.db.delete_expiration('foo')
         assert self.db.get_expiration('foo') is None
 
-    def test_get_expirations(self):
+    def test_exists_expirations(self):
         self.db.set('foo', self.string_obj)
         self.db.set_expiration('foo', 666)
-        assert self.db.get_expirations() == {'foo': 666}
+        assert self.db.exists_expiration('foo') is True
+
+    def test_get_type(self):
+        assert self.db.get_type("no exist") is "none"
+
+        self.db.set('string', "value")
+        assert self.db.get_type('string') == 'string'
+
+        self.db.set('list', ["value"])
+        assert self.db.get_type('list') == 'list'
+
+        self.db.set('hash', {"key": "value"})
+        assert self.db.get_type('hash') == 'hash'
+
+        self.db.set('set', {"value1", "value2"})
+        assert self.db.get_type('set') == 'set'
