@@ -1,5 +1,5 @@
 from refactor.client.commands import BasicCmds
-from refactor.server import LitedisDb
+from refactor.server import LitedisDb, LitedisServer
 
 
 class TestBasicKeyCmds:
@@ -9,7 +9,10 @@ class TestBasicKeyCmds:
         db = LitedisDb("path/to")
         db.set("key", "value")
 
+        server = LitedisServer()
+
         self.client.db = db
+        self.client.server = server
 
     def test_append(self):
         result = self.client.append("key", "1")

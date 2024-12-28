@@ -1,5 +1,4 @@
 from refactor.client import BaseClient
-from refactor.server import CommandFactory
 from refactor.typing import StringLikeT, KeyT
 
 
@@ -12,9 +11,8 @@ class BasicCmds(BaseClient):
         :return: 追加后的字符串的长度
         """
         strcmd = f'append "{key}" "{value}"'
-        cmd = CommandFactory.create_cmd_from_str(self.db, strcmd)
 
-        return cmd.execute()
+        return self.process_command(strcmd)
 
     def copy(self, source: KeyT, destination: KeyT, replace: bool = False) -> bool:
         """
@@ -26,9 +24,8 @@ class BasicCmds(BaseClient):
         strcmd = f'copy "{source}" "{destination}"'
         if replace:
             strcmd += 'replace'
-        cmd = CommandFactory.create_cmd_from_str(self.db, strcmd)
 
-        result = cmd.execute()
+        result = self.process_command(strcmd)
 
         return result == 1
 
