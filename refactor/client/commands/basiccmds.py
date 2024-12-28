@@ -31,3 +31,5 @@ class BasicCmds(BaseClient):
         result = cmd.execute()
 
         return result == 1
+
+

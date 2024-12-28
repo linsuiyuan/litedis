@@ -1,7 +1,7 @@
 from abc import ABC
 
 from refactor.server import LitedisDb
-from refactor.server.commands import Command, AppendCommand, CopyCommand
+from refactor.server.commands import Command, COMMAND_CLASSES
 from refactor.utils import parse_string_command
 
 
@@ -10,10 +10,8 @@ class CommandFactory(ABC):
     def create_cmd_from_str(db: LitedisDb, strcmd: str) -> Command:
 
         cmd_name, args = parse_string_command(strcmd)
+        command = COMMAND_CLASSES.get(cmd_name)
+        if command is None:
+            raise ValueError(f'Unknown command "{cmd_name}"')
 
-        match cmd_name:
-            case "append":
-                return AppendCommand(db, cmd_name, args)
-
-            case "copy":
-                return CopyCommand(db, cmd_name, args)
+        return command(db, cmd_name, args)

@@ -1,3 +1,6 @@
+import inspect
+import sys
+
 from .base import Command
 
 from .basiccmds import (
@@ -26,3 +29,6 @@ from .basiccmds import (
     TTLCommand,
     TypeCommand,
 )
+
+COMMAND_CLASSES = {name.lower()[:-7]: cls
+                   for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)}
