@@ -2,8 +2,8 @@ from refactor.typing import KeyT, LitedisObjectT, StringLikeT
 
 
 class LitedisDb:
-    def __init__(self, id_):
-        self.id_ = id_
+    def __init__(self, dbname):
+        self.dbname = dbname
         self._data: dict[KeyT, LitedisObjectT] = {}
         self._expirations: dict[KeyT, int] = {}
 

@@ -30,5 +30,6 @@ from .basiccmds import (
     TypeCommand,
 )
 
+# todo 在命令类中添加 name类属性，然后键为 name
 COMMAND_CLASSES = {name.lower()[:-7]: cls
                    for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)}

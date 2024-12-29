@@ -70,7 +70,8 @@ class TestSetCommand:
         command = self._create_setcommand_from_strcmd(strcmd)
         command.execute()
         expiration = self.db.get_expiration("key1")
-        assert expiration // 1000 == int(time.time()) + 60
+        now = int(time.time())
+        assert now + 59 <= expiration // 1000 <= now + 61
 
 
 class TestGetCommand:

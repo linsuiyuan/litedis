@@ -1,8 +1,14 @@
-class Litedis:
+from refactor.client.commands import BasicCmds
+from refactor.server import LitedisServer
 
-    def __init__(self, db_dir: str = "lddata", db_name: str = "litedis"):
-        self.db_dir = db_dir
+
+class Litedis(BasicCmds):
+
+    def __init__(self, data_path: str = "ldbdata", db_name: str = "litedis"):
+        self.data_path = data_path
         self.db_name = db_name
-        self.db_id = f"{db_dir}/{db_name}"
+
+        self.server = LitedisServer(self.data_path)
+        self.db = self.server.get_or_create_db(self.db_name)
 
 

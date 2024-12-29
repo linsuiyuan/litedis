@@ -272,8 +272,11 @@ class BasicKey(BaseLitedis):
         :return: 追加后的字符串的长度
         """
         with self.db_lock:
+            old_value = self.data.get(key)
+            if old_value is None:
+                old_value = ""
             self._set_string_value(key,
-                                   str(self.data[key]) + str(value))
+                                   str(old_value) + str(value))
 
             return len(self.data[key])
 
