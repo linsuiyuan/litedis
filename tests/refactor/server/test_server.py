@@ -1,9 +1,12 @@
+import pytest
+
 from refactor.server import LitedisServer
 
 
 class TestLitedisServer:
-    def setup_method(self):
-        self.server = LitedisServer()
+    @pytest.fixture(autouse=True)
+    def setup_method(self, request, tmp_path):
+        self.server = LitedisServer(tmp_path)
 
     def test_get_db_is_same_db_by_id(self):
         id_ = "path/to"

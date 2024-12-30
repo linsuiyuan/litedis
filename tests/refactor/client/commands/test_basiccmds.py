@@ -1,15 +1,18 @@
+import pytest
+
 from refactor.client.commands import BasicCmds
 from refactor.server import LitedisDb, LitedisServer
 
 
 class TestBasicKeyCmds:
-    def setup_method(self):
+    @pytest.fixture(autouse=True)
+    def setup_method(self, request, tmp_path):
         self.client = BasicCmds()
 
         db = LitedisDb("path/to")
         db.set("key", "value")
 
-        server = LitedisServer()
+        server = LitedisServer(tmp_path)
 
         self.client.db = db
         self.client.server = server
