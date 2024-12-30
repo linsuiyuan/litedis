@@ -2,32 +2,24 @@ import time
 
 import pytest
 
-from refactor.server import LitedisServer
+from refactor.server import LitedisServer, AOF, LitedisDb
+from refactor.server.commands import create_command_from_strcmd
 
 
 class TestAOF:
     @pytest.fixture(autouse=True)
     def setup_method(self, request, tmp_path):
-        self.server = LitedisServer(data_path=tmp_path)
-        self.aof = self.server.aof
+        self.aof = AOF(tmp_path)
+        self.db = LitedisDb("dbname")
 
     def test_append_command(self):
-        aof = self.aof
-        aof.append_command("db", "get key")
-        assert aof.buffer.get() == "db/get key"
+        cmd = create_command_from_strcmd(self.db, "get key")
+        self.aof.append_command(cmd)
+        assert self.aof.buffer.get() == f"{self.db.dbname}/get key"
 
-    def test_start_persistence_thread(self):
-        aof = self.aof
-        if not aof.is_persistence_thread_running is True:
-            aof.start_persistence_thread()
-        aof.append_command("db", "get key")
-        time.sleep(.05)
-        assert aof.buffer.empty() is True
-
-    def test_stop_persistence_thread(self):
-        aof = self.aof
-        if not aof.is_persistence_thread_running is True:
-            aof.start_persistence_thread()
-        aof.stop_persistence_thread()
-        time.sleep(.05)
-        assert aof.is_persistence_thread_running is False
+    def test_start_and_stop(self):
+        self.aof.start()
+        cmd = create_command_from_strcmd(self.db, "get key")
+        self.aof.append_command(cmd)
+        self.aof.stop()
+        assert self.aof.buffer.empty() is True

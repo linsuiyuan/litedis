@@ -1,1 +1,0 @@
-path/to/append "key" "1"path/to/append "not exists" "1"path/to/copy "key" "key1"db/get keypath/to/append "key" "1"path/to/append "not exists" "1"path/to/copy "key" "key1"db/get keypath/to/append "key" "1"path/to/append "not exists" "1"path/to/copy "key" "key1"db/get keypath/to/append "key" "1"path/to/append "not exists" "1"path/to/copy "key" "key1"db/get key

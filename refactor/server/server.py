@@ -1,7 +1,7 @@
 from pathlib import Path
 from threading import Lock
 
-from refactor.server.commands import COMMAND_CLASSES
+from refactor.server.commands import COMMAND_CLASSES, create_command_from_strcmd
 from refactor.server import LitedisDb, AOF
 from refactor.typing import PersistenceType
 from refactor.utils import parse_string_command, thread_safe_singleton
@@ -28,8 +28,8 @@ class LitedisServer:
 
     def _init_aof(self):
         if self._is_aof_persistence_needed():
-            self.aof = AOF(self)
-            self.aof.start_persistence_thread()
+            self.aof = AOF(self.data_path)
+            self.aof.start()
 
     def _is_aof_persistence_needed(self):
         return self.persistence == "aof" or self.persistence == "mixed"
@@ -53,19 +53,12 @@ class LitedisServer:
                 del _dbs[dbname]
 
     def process_command(self, db: LitedisDb, strcmd: str):
-        command = self._create_command_from_strcmd(db, strcmd)
+        command = create_command_from_strcmd(db, strcmd)
         result = command.execute()
 
         if self.aof:
             # todo 这里需要添加 command “读/写”标志，然后只记录写命令
-            self.aof.append_command(db.dbname, strcmd)
+            self.aof.append_command(command)
 
         return result
 
-    def _create_command_from_strcmd(self, db, strcmd):
-        cmd_name, args = parse_string_command(strcmd)
-        cmd_class = COMMAND_CLASSES.get(cmd_name)
-        if cmd_class is None:
-            raise ValueError(f'Unknown command "{cmd_name}"')
-        command = cmd_class(db, cmd_name, args)
-        return command

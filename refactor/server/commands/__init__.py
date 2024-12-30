@@ -30,6 +30,16 @@ from .basiccmds import (
     TypeCommand,
 )
 
-# todo 在命令类中添加 name类属性，然后键为 name
-COMMAND_CLASSES = {name.lower()[:-7]: cls
+from ...utils import parse_string_command
+
+COMMAND_CLASSES = {cls.__dict__['name']: cls
                    for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)}
+
+
+def create_command_from_strcmd(db, strcmd) -> Command:
+    name, args = parse_string_command(strcmd)
+    cmd_class = COMMAND_CLASSES.get(name)
+    if cmd_class is None:
+        raise ValueError(f'Unknown command "{name}"')
+    command = cmd_class(db, name, args, strcmd)
+    return command

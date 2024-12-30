@@ -3,11 +3,15 @@ from abc import ABC, abstractmethod
 from refactor.server import LitedisDb
 from refactor.typing import StringLikeT, LitedisObjectT
 
+
 class Command(ABC):
-    def __init__(self, db: LitedisDb, name: str, args: list[StringLikeT]):
+    name = None
+
+    def __init__(self, db: LitedisDb, name: str, args: list[StringLikeT], raw_cmd: str):
         self.db = db
         self.name = name
         self.args = args
+        self.raw_cmd = raw_cmd
 
         self._check_args_count()
 

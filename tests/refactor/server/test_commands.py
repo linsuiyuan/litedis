@@ -2,35 +2,9 @@ import time
 
 import pytest
 
-from refactor.server.commands import (
-    AppendCommand,
-    CopyCommand,
-    DecrbyCommand,
-    DeleteCommand,
-    ExistsCommand,
-    ExpireCommand,
-    ExpireTimeCommand,
-    ExpireatCommand,
-    GetCommand,
-    IncrbyCommand,
-    IncrbyfloatCommand,
-    KeysCommand,
-    MgetCommand,
-    MsetCommand,
-    MsetnxCommand,
-    PersistCommand,
-    RandomKeyCommand,
-    RenameCommand,
-    RenamenxCommand,
-    SetCommand,
-    StrlenCommand,
-    SubstrCommand,
-    TTLCommand,
-    TypeCommand,
-)
+from refactor.server.commands import create_command_from_strcmd
 
 from refactor.server.db import LitedisDb
-from refactor.utils import parse_string_command
 
 
 class TestSetCommand:
@@ -38,10 +12,7 @@ class TestSetCommand:
         self.db = LitedisDb("path/to")
 
     def _create_setcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return SetCommand(db=self.db,
-                          name=name,
-                          args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_key_value(self):
         strcmd = "set key1 value1"
@@ -78,12 +49,11 @@ class TestGetCommand:
     def setup_method(self):
         self.db = LitedisDb("path/to")
         # set a key-value for testing
-        set_command = SetCommand(db=self.db, name="set", args=["key1", "value1"])
+        set_command = create_command_from_strcmd(self.db, "set key1 value1")
         set_command.execute()
 
     def _create_getcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return GetCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         strcmd = "get key1"
@@ -103,8 +73,7 @@ class TestAppendCommand:
         self.db = LitedisDb("path/to")
 
     def _create_appendcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return AppendCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         self.db.set("key1", "Hello")
@@ -130,8 +99,7 @@ class TestDecrbyCommand:
         self.db = LitedisDb("path/to")
 
     def _create_decrbycommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return DecrbyCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         self.db.set("key1", "10")
@@ -167,8 +135,7 @@ class TestDeleteCommand:
         self.db.set("key2", "value2")
 
     def _create_deletecommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return DeleteCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_keys(self):
         strcmd = "del key1 key2"
@@ -194,8 +161,7 @@ class TestExistsCommand:
         self.db.set("key2", "value2")
 
     def _create_existscommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return ExistsCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_keys(self):
         strcmd = "exists key1 key2"
@@ -225,8 +191,7 @@ class TestCopyCommand:
         self.db.set("source", "value1")
 
     def _create_copycommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return CopyCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_basic_copy(self):
         strcmd = "copy source dest"
@@ -272,8 +237,7 @@ class TestExpireCommand:
         self.db.set("key1", "value1")
 
     def _create_expirecommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return ExpireCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         strcmd = "expire key1 60"
@@ -298,8 +262,7 @@ class TestExpireatCommand:
         self.db.set("key1", "value1")
 
     def _create_expireatcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return ExpireatCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         future_time = int(time.time()) + 60
@@ -328,8 +291,7 @@ class TestExpireTimeCommand:
         self.db.set_expiration("key1", self.future_time * 1000)
 
     def _create_expiretimecommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return ExpireTimeCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key_and_expiration(self):
         strcmd = "expiretime key1"
@@ -359,8 +321,7 @@ class TestIncrbyCommand:
         self.db = LitedisDb("path/to")
 
     def _create_incrbycommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return IncrbyCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         self.db.set("key1", "10")
@@ -393,8 +354,7 @@ class TestIncrbyfloatCommand:
         self.db = LitedisDb("path/to")
 
     def _create_incrbyfloatcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return IncrbyfloatCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         self.db.set("key1", "10.5")
@@ -431,8 +391,7 @@ class TestKeysCommand:
         self.db.set("test2", "value4")
 
     def _create_keyscommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return KeysCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_exact_match(self):
         strcmd = "keys key1"
@@ -470,8 +429,7 @@ class TestMgetCommand:
         self.db.set("key2", "value2")
 
     def _create_mgetcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return MgetCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_all_existing_keys(self):
         strcmd = "mget key1 key2"
@@ -500,8 +458,7 @@ class TestMsetCommand:
         self.db = LitedisDb("path/to")
 
     def _create_msetcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return MsetCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_basic_mset(self):
         strcmd = "mset key1 value1 key2 value2"
@@ -527,8 +484,7 @@ class TestMsetnxCommand:
         self.db = LitedisDb("path/to")
 
     def _create_msetnxcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return MsetnxCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_no_existing_keys(self):
         strcmd = "msetnx key1 value1 key2 value2"
@@ -558,8 +514,7 @@ class TestPersistCommand:
         self.db.set_expiration("key1", expiration)
 
     def _create_persistcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return PersistCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_expiration(self):
         strcmd = "persist key1"
@@ -583,8 +538,7 @@ class TestRandomKeyCommand:
         self.db = LitedisDb("path/to")
 
     def _create_randomkeycommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return RandomKeyCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_empty_db(self):
         strcmd = "randomkey"
@@ -609,8 +563,7 @@ class TestRenameCommand:
         self.db.set("source", "value1")
 
     def _create_renamecommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return RenameCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_basic_rename(self):
         strcmd = "rename source dest"
@@ -643,8 +596,7 @@ class TestRenamenxCommand:
         self.db.set("source", "value1")
 
     def _create_renamenxcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return RenamenxCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_non_existing_dest(self):
         strcmd = "renamenx source dest"
@@ -671,8 +623,7 @@ class TestStrlenCommand:
         self.db = LitedisDb("path/to")
 
     def _create_strlencommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return StrlenCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_key(self):
         self.db.set("key1", "Hello")
@@ -696,8 +647,7 @@ class TestSubstrCommand:
         self.db.set("key1", "Hello World")
 
     def _create_substrcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return SubstrCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_positive_indices(self):
         strcmd = "substr key1 0 4"
@@ -729,8 +679,7 @@ class TestTTLCommand:
         self.db.set_expiration("key1", self.expiration)
 
     def _create_ttlcommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return TTLCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_existing_expiration(self):
         strcmd = "ttl key1"
@@ -760,8 +709,7 @@ class TestTypeCommand:
         self.db = LitedisDb("path/to")
 
     def _create_typecommand_from_strcmd(self, cmd):
-        name, args = parse_string_command(cmd)
-        return TypeCommand(db=self.db, name=name, args=args)
+        return create_command_from_strcmd(self.db, cmd)
 
     def test_execute_with_string(self):
         self.db.set("key1", "Hello")

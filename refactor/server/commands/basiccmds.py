@@ -5,6 +5,7 @@ from refactor.server.commands import Command
 from refactor.typing import StringLikeT, KeyT, LitedisObjectT
 
 class SetCommand(Command):
+    name = 'set'
 
     def _check_args_count(self):
         if len(self.args) < 2:
@@ -103,6 +104,7 @@ class SetCommand(Command):
 
 
 class GetCommand(Command):
+    name = 'get'
 
     def _check_args_count(self):
         if len(self.args) < 1:
@@ -117,6 +119,8 @@ class GetCommand(Command):
 
 
 class AppendCommand(Command):
+    name = 'append'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"AppendCommand requires 2 arguments, {len(self.args)} given")
@@ -144,6 +148,8 @@ class AppendCommand(Command):
 
 
 class DecrbyCommand(Command):
+    name = 'decrby'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"DecrbyCommand requires 2 arguments, {len(self.args)} given")
@@ -174,6 +180,8 @@ class DecrbyCommand(Command):
 
 
 class DeleteCommand(Command):
+    name = 'del'
+
     def _check_args_count(self):
         if len(self.args) < 1:
             raise ValueError(f"DeleteCommand requires at least 1 argument, {len(self.args)} given")
@@ -192,6 +200,8 @@ class DeleteCommand(Command):
 
 
 class ExistsCommand(Command):
+    name = 'exists'
+
     def _check_args_count(self):
         if len(self.args) < 1:
             raise ValueError(f"ExistsCommand requires at least 1 argument, {len(self.args)} given")
@@ -209,6 +219,8 @@ class ExistsCommand(Command):
 
 
 class CopyCommand(Command):
+    name = 'copy'
+
     def _check_args_count(self):
         if len(self.args) < 2:
             raise ValueError(f"CopyCommand requires at least 2 arguments, {len(self.args)} given")
@@ -252,6 +264,8 @@ class CopyCommand(Command):
 
 
 class ExpireCommand(Command):
+    name = 'expire'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"ExpireCommand requires 2 arguments, {len(self.args)} given")
@@ -277,6 +291,8 @@ class ExpireCommand(Command):
 
 
 class ExpireatCommand(Command):
+    name = 'expireat'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"ExpireatCommand requires 2 arguments, {len(self.args)} given")
@@ -302,6 +318,8 @@ class ExpireatCommand(Command):
 
 
 class ExpireTimeCommand(Command):
+    name = 'expiretime'
+
     def _check_args_count(self):
         if len(self.args) != 1:
             raise ValueError(f"ExpireTimeCommand requires 1 argument, {len(self.args)} given")
@@ -325,6 +343,8 @@ class ExpireTimeCommand(Command):
 
 
 class IncrbyCommand(Command):
+    name = 'incrby'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"IncrbyCommand requires 2 arguments, {len(self.args)} given")
@@ -355,6 +375,8 @@ class IncrbyCommand(Command):
 
 
 class IncrbyfloatCommand(Command):
+    name = 'incrbyfloat'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"IncrbyfloatCommand requires 2 arguments, {len(self.args)} given")
@@ -387,6 +409,8 @@ class IncrbyfloatCommand(Command):
 
 
 class KeysCommand(Command):
+    name = 'keys'
+
     def _check_args_count(self):
         if len(self.args) != 1:
             raise ValueError(f"KeysCommand requires 1 argument, {len(self.args)} given")
@@ -415,6 +439,8 @@ class KeysCommand(Command):
 
 
 class MgetCommand(Command):
+    name = 'mget'
+
     def _check_args_count(self):
         if len(self.args) < 1:
             raise ValueError(f"MgetCommand requires at least 1 argument, {len(self.args)} given")
@@ -428,6 +454,8 @@ class MgetCommand(Command):
 
 
 class MsetCommand(Command):
+    name = 'mset'
+
     def _check_args_count(self):
         if len(self.args) < 2 or len(self.args) % 2 != 0:
             raise ValueError(f"MsetCommand requires even number of arguments, {len(self.args)} given")
@@ -449,6 +477,8 @@ class MsetCommand(Command):
 
 
 class MsetnxCommand(Command):
+    name = 'msetnx'
+
     def _check_args_count(self):
         if len(self.args) < 2 or len(self.args) % 2 != 0:
             raise ValueError(f"MsetnxCommand requires even number of arguments, {len(self.args)} given")
@@ -476,6 +506,8 @@ class MsetnxCommand(Command):
 
 
 class PersistCommand(Command):
+    name = 'persist'
+
     def _check_args_count(self):
         if len(self.args) != 1:
             raise ValueError(f"PersistCommand requires 1 argument, {len(self.args)} given")
@@ -493,6 +525,8 @@ class PersistCommand(Command):
 
 
 class RandomKeyCommand(Command):
+    name = 'randomkey'
+
     def _check_args_count(self):
         if len(self.args) != 0:
             raise ValueError(f"RandomKeyCommand takes no arguments, {len(self.args)} given")
@@ -509,6 +543,8 @@ class RandomKeyCommand(Command):
 
 
 class RenameCommand(Command):
+    name = 'rename'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"RenameCommand requires 2 arguments, {len(self.args)} given")
@@ -548,6 +584,8 @@ class RenameCommand(Command):
 
 
 class RenamenxCommand(Command):
+    name = 'renamenx'
+
     def _check_args_count(self):
         if len(self.args) != 2:
             raise ValueError(f"RenamenxCommand requires 2 arguments, {len(self.args)} given")
@@ -592,6 +630,8 @@ class RenamenxCommand(Command):
 
 
 class StrlenCommand(Command):
+    name = 'strlen'
+
     def _check_args_count(self):
         if len(self.args) != 1:
             raise ValueError(f"StrlenCommand requires 1 argument, {len(self.args)} given")
@@ -607,6 +647,8 @@ class StrlenCommand(Command):
 
 
 class SubstrCommand(Command):
+    name = 'substr'
+
     def _check_args_count(self):
         if len(self.args) != 3:
             raise ValueError(f"SubstrCommand requires 3 arguments, {len(self.args)} given")
@@ -647,6 +689,8 @@ class SubstrCommand(Command):
 
 
 class TTLCommand(Command):
+    name = 'ttl'
+
     def _check_args_count(self):
         if len(self.args) != 1:
             raise ValueError(f"TTLCommand requires 1 argument, {len(self.args)} given")
@@ -673,6 +717,8 @@ class TTLCommand(Command):
 
 
 class TypeCommand(Command):
+    name = 'type'
+
     def _check_args_count(self):
         if len(self.args) != 1:
             raise ValueError(f"TypeCommand requires 1 argument, {len(self.args)} given")
