@@ -14,12 +14,12 @@ def thread_safe_singleton(cls):
     return get_instance
 
 
-def parse_string_command(command_str):
+def parse_command_line(cmdline):
     parts = []
     current_part = ''
     in_quotes = False
 
-    for char in command_str:
+    for char in cmdline:
         if char == '"' and not in_quotes:
             in_quotes = True
             continue
