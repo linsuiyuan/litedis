@@ -8,7 +8,7 @@ class CommandExecutionMode(Enum):
     REPLAY = "replay"
 
 
-class CommandExecutionContext:
+class CommandContext:
 
     def __init__(self, mode: CommandExecutionMode, db: LitedisDB, attrs: dict = None):
         self.db = db

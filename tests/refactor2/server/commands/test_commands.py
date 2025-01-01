@@ -1,7 +1,7 @@
 import pytest
 
 from refactor2.server.commands.commands import SetCommand
-from refactor2.server.commands import CommandExecutionContext, CommandExecutionMode
+from refactor2.server.commands import CommandContext, CommandExecutionMode
 
 
 class TestSetCommand:
@@ -14,7 +14,7 @@ class TestSetCommand:
 
     @pytest.fixture
     def ctx(self, mock_db):
-        return CommandExecutionContext(CommandExecutionMode.NORMAL, mock_db)
+        return CommandContext(CommandExecutionMode.NORMAL, mock_db)
 
     def test_basic_set_without_options(self, ctx):
         command = SetCommand("key", "value")

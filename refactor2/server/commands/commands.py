@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from refactor2.server.commands import CommandExecutionContext
+from refactor2.server.commands import CommandContext
 from refactor2.server.persistence import LitedisDB
 
 
@@ -8,7 +8,7 @@ class Command(ABC):
     name = None
 
     @abstractmethod
-    def execute(self, ctx: CommandExecutionContext):...
+    def execute(self, ctx: CommandContext):...
 
 
 class SetCommand(Command):
@@ -20,7 +20,7 @@ class SetCommand(Command):
         self.options = {} if options is None else options
 
 
-    def execute(self, ctx: CommandExecutionContext):
+    def execute(self, ctx: CommandContext):
         self._check_that_nx_and_xx_cannot_both_be_set()
 
         db = ctx.db
