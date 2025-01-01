@@ -49,11 +49,17 @@ class TestAOF:
 
         assert loaded_commands == commands
 
-    def test_close_file(self, aof):
+    def test_load_commands_with_file_not_exists(self, aof):
+
+        loaded_commands = list(aof.load_commands())
+
+        assert loaded_commands == []
+
+    def test_close(self, aof):
         file = aof.get_or_create_file()
         assert not file.closed
 
-        aof._close_file()
+        aof.close()
 
         assert file.closed
 
