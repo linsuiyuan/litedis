@@ -6,7 +6,7 @@ from refactor2.typing import PersistenceType
 from refactor2.utils import SingletonMeta
 
 
-class LitedisServer(metaclass=SingletonMeta, CommandProcessor):
+class LitedisServer(CommandProcessor, metaclass=SingletonMeta):
 
     def __init__(self,
                  dbmanager: DBManager,
@@ -15,12 +15,13 @@ class LitedisServer(metaclass=SingletonMeta, CommandProcessor):
         self.persistence_type = persistence_type
 
         self.dbmanager = dbmanager
-        self.command_logger: CommandLogger = self.dbmanager
+        self.command_logger: CommandLogger = self.dbmanager.aof
 
     def process_command(self, dbname: str, cmdline: str):
         result = self._execute_command_line(dbname, cmdline)
 
-        self.command_logger.log_command(dbname, cmdline)
+        if self.command_logger:
+            self.command_logger.log_command(dbname, cmdline)
 
         return result
 

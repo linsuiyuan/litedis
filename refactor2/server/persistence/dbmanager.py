@@ -2,9 +2,9 @@ import warnings
 from pathlib import Path
 from threading import Lock
 
-from refactor2.server.interfaces import CommandLogger, CommandProcessor
-from refactor2.server.persistence import LitedisDB
+from refactor2.server.interfaces import CommandProcessor
 from refactor2.server.persistence import AOF
+from refactor2.server.persistence import LitedisDB
 from refactor2.typing import PersistenceType
 from refactor2.utils import SingletonMeta
 
@@ -12,7 +12,7 @@ _dbs = {}
 _dbs_lock = Lock()
 
 
-class DBManager(CommandLogger, metaclass=SingletonMeta):
+class DBManager(metaclass=SingletonMeta):
     data_path: str | Path
     persistence_type = PersistenceType.MIXED
     aof: AOF | None = None
@@ -69,8 +69,3 @@ class DBManager(CommandLogger, metaclass=SingletonMeta):
             self.command_processor.replay_command(dbname, cmdline)
 
         return True
-
-
-    def log_command(self, dbname: str, cmdline: str):
-        if self.aof:
-            self.aof.log_command(dbname, cmdline)
