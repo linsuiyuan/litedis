@@ -15,7 +15,7 @@ def test_dbmanager_singleton(temp_dir):
     assert manager1 is manager2
 
 
-def test_get_or_create_db():
+def test_get_or_create_db(temp_dir):
     manager = DBManager(temp_dir)
 
     db1 = manager.get_or_create_db("test_db1")
@@ -26,7 +26,7 @@ def test_get_or_create_db():
     assert db1 is db2
 
 
-def test_concurrent_db_creation():
+def test_concurrent_db_creation(temp_dir):
     manager = DBManager(temp_dir)
     db_instances = []
 
