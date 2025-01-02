@@ -21,10 +21,8 @@ class DBManager(metaclass=SingletonMeta):
     command_processor: CommandProcessor | None = None
 
     def __init__(self, data_path: str | Path = "ldbdata"):
-
         self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)
         self.data_path.mkdir(parents=True, exist_ok=True)
-
         self._load_data()
 
     @property
