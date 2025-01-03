@@ -1,6 +1,7 @@
 import time
 from typing import Iterable
 
+from refactor2.commandline import combine_command_line
 from refactor2.server.commands import CommandContext
 from refactor2.server.commands.parsers import parse_command_line_to_object
 from refactor2.server.persistence import LitedisDB
@@ -33,7 +34,7 @@ class DBCommandLineConverter:
                 pieces.append('pxat')
                 pieces.append(f'{expiration}')
 
-        return ' '.join(pieces)
+        return combine_command_line(pieces)
 
     @classmethod
     def commands_to_dbs(cls, dbcmds: Iterable[DBCommandLine]) -> dict[str, LitedisDB]:
