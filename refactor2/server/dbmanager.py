@@ -1,4 +1,3 @@
-from copy import deepcopy
 from pathlib import Path
 from threading import Lock
 
@@ -54,47 +53,35 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
     def get_or_create_db(self, dbname):
         if dbname not in _dbs:
-            self._create_db(dbname)
+            with _dbs_lock:
+                if dbname not in _dbs:
+                    _dbs[dbname] = LitedisDB(dbname)
         return _dbs[dbname]
 
-    def _create_db(self, dbname):
-        with _dbs_lock:
-            if dbname not in _dbs:
-                _dbs[dbname] = LitedisDB(dbname)
-
     def process_command(self, dbcmd: DBCommandLine):
-        result = self._execute_command_line(dbcmd)
+        db = self.get_or_create_db(dbcmd.dbname)
+        ctx = CommandContext(db)
+        command = parse_command_line_to_object(dbcmd.cmdline)
+        result = command.execute(ctx)
 
+        # todo lock if needed
         if self.command_logger:
             self.command_logger.log_command(dbcmd)
 
         return result
 
-    def _execute_command_line(self, dbcmd: DBCommandLine):
-        db = self.get_or_create_db(dbcmd.dbname)
-        ctx = CommandContext(db)
-        command = parse_command_line_to_object(dbcmd.cmdline)
-        return command.execute(ctx)
-
     def _replay_aof_commands(self):
         if not self.aof.exists_file():
-            print("aof file does not exist")
             return False
 
-        dbcmds = self.aof.load_commands()
-        dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
         with _dbs_lock:
             global _dbs
-            _dbs = dbs
+            dbcmds = self.aof.load_commands()
+            _dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
 
         return True
 
     def _rewrite_aof_commands(self):
         with _dbs_lock:
-            dbs = deepcopy(_dbs)
-
-        dbcommands = DBCommandLineConverter.dbs_to_commands(dbs)
-        self.aof.rewrite_commands(dbcommands)
-
-
-
+            dbcommands = DBCommandLineConverter.dbs_to_commands(_dbs)
+            self.aof.rewrite_commands(dbcommands)
