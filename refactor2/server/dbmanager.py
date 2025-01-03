@@ -1,5 +1,6 @@
+import time
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 
 from refactor2.server.commands import CommandContext
 from refactor2.server.commands.parsers import parse_command_line_to_object
@@ -15,6 +16,8 @@ _dbs_lock = Lock()
 
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
     aof: AOF | None = None
+    # if less than or equal 0, means shouldn't rewrite
+    aof_rewrite_cycle = 666
     _ldb_filename = "litedis.ldb"
 
     command_logger: CommandLogger | None = None
@@ -23,20 +26,40 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
                  data_path: str | Path = "ldbdata"):
         self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)
         self.data_path.mkdir(parents=True, exist_ok=True)
-        self._load_data()
+
+        self._load_aof_data()
+        self._start_aof_rewrite_loop()
 
     @property
     def _ldb_filepath(self) -> Path:
         return self.data_path / self._ldb_filename
 
-    def _load_data(self):
+    def _load_aof_data(self):
         self.aof = AOF(self.data_path)
         self.command_logger = self.aof
 
-        result = self._replay_aof_commands()
+        self._replay_aof_commands()
 
-        if result:
-            self._rewrite_aof_commands()
+    def _start_aof_rewrite_loop(self):
+        if not self.aof:
+            return False
+
+        if not self.aof.exists_file():
+            return False
+
+        if self.aof_rewrite_cycle <= 0:
+            return False
+
+        self._rewrite_aof_commands()
+        self._rewrite_aof_loop()
+
+    def _rewrite_aof_loop(self):
+        def loop():
+            while True:
+                time.sleep(self.aof_rewrite_cycle)
+                self._rewrite_aof_commands()
+        thread = Thread(target=loop, daemon=True)
+        thread.start()
 
     def get_or_create_db(self, dbname):
         if dbname not in _dbs:
@@ -57,7 +80,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
         return result
 
-    def _replay_aof_commands(self):
+    def _replay_aof_commands(self) -> bool:
         if not self.aof.exists_file():
             return False
 
@@ -68,7 +91,10 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
         return True
 
-    def _rewrite_aof_commands(self):
+    def _rewrite_aof_commands(self) -> bool:
+
         with _dbs_lock:
             dbcommands = DBCommandLineConverter.dbs_to_commands(_dbs)
             self.aof.rewrite_commands(dbcommands)
+
+        return True
