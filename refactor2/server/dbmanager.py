@@ -15,24 +15,30 @@ _dbs_lock = Lock()
 
 
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
+    _data_path: str | Path = Path("ldbdata")
     aof: AOF | None = None
     # if less than or equal 0, means shouldn't rewrite
     aof_rewrite_cycle = 666
-    _ldb_filename = "litedis.ldb"
 
     command_logger: CommandLogger | None = None
 
-    def __init__(self,
-                 data_path: str | Path = "ldbdata"):
-        self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)
+    def __init__(self, persistence_on=True):
+        if not persistence_on:
+            return
+
+        self._persistence_on = persistence_on
         self.data_path.mkdir(parents=True, exist_ok=True)
 
         self._load_aof_data()
         self._start_aof_rewrite_loop()
 
     @property
-    def _ldb_filepath(self) -> Path:
-        return self.data_path / self._ldb_filename
+    def data_path(self):
+        return self._data_path
+
+    @data_path.setter
+    def data_path(self, value: str | Path):
+        self._data_path = value if isinstance(value, Path) else Path(value)
 
     def _load_aof_data(self):
         self.aof = AOF(self.data_path)
@@ -58,6 +64,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
             while True:
                 time.sleep(self.aof_rewrite_cycle)
                 self._rewrite_aof_commands()
+
         thread = Thread(target=loop, daemon=True)
         thread.start()
 
@@ -75,7 +82,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         result = command.execute(ctx)
 
         # todo lock if needed
-        if self.command_logger:
+        if self._persistence_on and self.command_logger:
             self.command_logger.log_command(dbcmd)
 
         return result
