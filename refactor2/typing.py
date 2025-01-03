@@ -8,9 +8,5 @@ class DBCommandLine(NamedTuple):
     cmdline: str
 
 
-class CommandLogger(Protocol):
-    def log_command(self, dbcmd: DBCommandLine): ...
-
-
 class CommandProcessor(Protocol):
     def process_command(self, dbcmd: DBCommandLine): ...

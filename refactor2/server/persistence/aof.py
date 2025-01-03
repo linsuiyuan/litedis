@@ -3,11 +3,10 @@ import tempfile
 from pathlib import Path
 from typing import TextIO
 
-from refactor2.typing import CommandLogger
 from refactor2.typing import DBCommandLine
 
 
-class AOF(CommandLogger):
+class AOF:
 
     def __init__(self, data_path: str | Path, filename="litedis.aof"):
         self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)

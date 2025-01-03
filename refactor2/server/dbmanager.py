@@ -7,7 +7,7 @@ from refactor2.server.commands.parsers import parse_command_line_to_object
 from refactor2.server.dbcommand import DBCommandLineConverter, DBCommandLine
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
-from refactor2.typing import CommandLogger, CommandProcessor
+from refactor2.typing import CommandProcessor
 from refactor2.utils import SingletonMeta
 
 _dbs: dict[str, LitedisDB] = {}
@@ -19,8 +19,6 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
     aof: AOF | None = None
     # if less than or equal 0, means shouldn't rewrite
     aof_rewrite_cycle = 666
-
-    command_logger: CommandLogger | None = None
 
     def __init__(self, persistence_on=True):
         if not persistence_on:
@@ -42,7 +40,6 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
     def _load_aof_data(self):
         self.aof = AOF(self.data_path)
-        self.command_logger = self.aof
 
         self._replay_aof_commands()
 
@@ -82,8 +79,8 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         result = command.execute(ctx)
 
         # todo lock if needed
-        if self._persistence_on and self.command_logger:
-            self.command_logger.log_command(dbcmd)
+        if self._persistence_on and self.aof:
+            self.aof.log_command(dbcmd)
 
         return result
 
