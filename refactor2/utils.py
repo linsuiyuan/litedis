@@ -1,5 +1,7 @@
+import importlib
 import threading
-from abc import ABCMeta
+
+typing = importlib.import_module('typing')
 
 
 def thread_safe_singleton(cls):
@@ -28,7 +30,8 @@ class _SingletonMeta(type):
         return cls._instances[cls]
 
 
-class SingletonMeta(_SingletonMeta, ABCMeta): ...
+class SingletonMeta(_SingletonMeta, typing._ProtocolMeta):  # noqa
+    pass
 
 
 def parse_command_line(cmdline):

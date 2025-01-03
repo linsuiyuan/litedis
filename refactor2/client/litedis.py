@@ -2,9 +2,8 @@ from pathlib import Path
 from typing import Any
 
 from refactor2.client.commands import BasicKeyCommand
-from refactor2.server.interfaces import CommandProcessor
 from refactor2.server.dbmanager import DBManager
-from refactor2.typing import PersistenceType
+from refactor2.typing import PersistenceType, CommandProcessor
 
 
 class Litedis(BasicKeyCommand):

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TextIO
 
-from refactor2.server.interfaces import CommandLogger
+from refactor2.typing import CommandLogger
 
 
 class AOF(CommandLogger):

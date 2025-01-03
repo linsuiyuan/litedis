@@ -3,10 +3,9 @@ from threading import Lock
 
 from refactor2.server.commands import CommandContext
 from refactor2.server.commands.parsers import parse_command_line_to_object
-from refactor2.server.interfaces import CommandProcessor, CommandLogger
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
-from refactor2.typing import PersistenceType
+from refactor2.typing import PersistenceType, CommandLogger, CommandProcessor
 from refactor2.utils import SingletonMeta
 
 _dbs = {}
