@@ -1,15 +1,16 @@
 import time
-from dataclasses import dataclass
-from typing import NamedTuple
+from typing import Iterable
 
+from refactor2.server.commands import CommandContext
+from refactor2.server.commands.parsers import parse_command_line_to_object
 from refactor2.server.persistence import LitedisDB
 from refactor2.typing import DBCommandLine
 
 
-class DbCommandLineConverter:
+class DBCommandLineConverter:
 
     @classmethod
-    def db_object_to_commands(cls, dbs: dict[str, LitedisDB]):
+    def dbs_to_commands(cls, dbs: dict[str, LitedisDB]):
         for dbname, db in dbs.items():
             for key in db.keys():
                 cmdline = cls._convert_db_object_to_cmdline(key, db)
@@ -33,3 +34,20 @@ class DbCommandLineConverter:
                 pieces.append(f'{expiration}')
 
         return ' '.join(pieces)
+
+    @classmethod
+    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandLine]) -> dict[str, LitedisDB]:
+        dbs = {}
+        for dbcmd in dbcmds:
+            dbname, cmdline = dbcmd
+            db = dbs.get(dbname)
+            if db is None:
+                db = LitedisDB(dbname)
+                dbs[dbname] = db
+
+            ctx = CommandContext(db)
+            command = parse_command_line_to_object(dbcmd.cmdline)
+            command.execute(ctx)
+
+        return dbs
+
