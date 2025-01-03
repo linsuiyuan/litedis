@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Protocol
+from typing import Protocol, NamedTuple
 
 LitedisObjectT = dict | list | set | str
 
@@ -10,12 +10,15 @@ class PersistenceType(Enum):
     LDB = "ldb"
     MIXED = "mixed"
 
+class DBCommandLine(NamedTuple):
+    dbname: str
+    cmdline: str
 
 class CommandLogger(Protocol):
-    def log_command(self, dbname: str, cmdline: str): ...
+    def log_command(self, dbcmd: DBCommandLine): ...
 
 
 class CommandProcessor(Protocol):
-    def process_command(self, dbname: str, cmdline: str): ...
+    def process_command(self, dbcmd: DBCommandLine): ...
 
-    def replay_command(self, dbname: str, cmdline: str): ...
+    def replay_command(self, dbcmd: DBCommandLine): ...

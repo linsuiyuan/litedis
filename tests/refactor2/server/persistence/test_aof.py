@@ -1,6 +1,7 @@
 import pytest
 
 from refactor2.server.persistence.aof import AOF
+from refactor2.typing import DBCommandLine
 
 
 class TestAOF:
@@ -27,7 +28,7 @@ class TestAOF:
         dbname = "db0"
         cmdline = "set key value"
 
-        aof.log_command(dbname, cmdline)
+        aof.log_command(DBCommandLine(dbname, cmdline))
 
         with open(self.tmp_path / self.filename, "r") as f:
             content = f.read()
@@ -67,7 +68,7 @@ class TestAOF:
         dbname = "db0"
         cmdline = "set key value"
 
-        aof.log_command(dbname, cmdline)
+        aof.log_command(DBCommandLine(dbname, cmdline))
 
         # Can read immediately after write
         with open(self.tmp_path / self.filename, "r") as f:

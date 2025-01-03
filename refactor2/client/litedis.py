@@ -3,7 +3,7 @@ from typing import Any
 
 from refactor2.client.commands import BasicKeyCommand
 from refactor2.server.dbmanager import DBManager
-from refactor2.typing import PersistenceType, CommandProcessor
+from refactor2.typing import PersistenceType, CommandProcessor, DBCommandLine
 
 
 class Litedis(BasicKeyCommand):
@@ -22,7 +22,7 @@ class Litedis(BasicKeyCommand):
 
     def execute_command(self, *args) -> Any:
         command_line = self._combine_command_args(*args)
-        result = self.executor.process_command(self.dbname, command_line)
+        result = self.executor.process_command(DBCommandLine(self.dbname, command_line))
         return result
 
     def _combine_command_args(self, *args):

@@ -5,6 +5,7 @@ import pytest
 
 from refactor2.server.dbmanager import DBManager, PersistenceType, _dbs  # noqa
 from refactor2.server.persistence.ldb import LitedisDB
+from refactor2.typing import DBCommandLine
 
 
 @pytest.fixture
@@ -83,8 +84,8 @@ def test_load_aof_data(temp_dir):
         mock_aof_instance = mock_aof.return_value
         mock_aof_instance.exists_file.return_value = True
         mock_aof_instance.load_commands.return_value = [
-            ("db0", "SET key1 value1"),
-            ("db1", "SET key2 value2")
+            DBCommandLine("db0", "SET key1 value1"),
+            DBCommandLine("db1", "SET key2 value2")
         ]
 
         manager = DBManager(temp_dir)

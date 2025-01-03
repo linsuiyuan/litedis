@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 from typing import TextIO
 
+from refactor2.typing import DBCommandLine
 from refactor2.typing import CommandLogger
 
 
@@ -36,9 +37,9 @@ class AOF(CommandLogger):
     def exists_file(self):
         return self.file_path.exists()
 
-    def log_command(self, dbname: str, cmdline: str):
+    def log_command(self, dbcmd: DBCommandLine):
         file = self.get_or_create_file()
-        file.write(f"{dbname}/{cmdline}\n")
+        file.write(f"{dbcmd.dbname}/{dbcmd.cmdline}\n")
         file.flush()
 
     def load_commands(self):
@@ -50,9 +51,9 @@ class AOF(CommandLogger):
         with open(self.file_path, "r") as f:
             for line in f:
                 dbname, cmdline = line.strip().split(sep="/", maxsplit=1)
-                yield dbname, cmdline
+                yield DBCommandLine(dbname, cmdline)
 
-    def rewrite_commands(self, commands):
+    def rewrite_commands(self, commands: DBCommandLine):
 
         temp_fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(self.file_path))
 

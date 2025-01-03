@@ -1,6 +1,9 @@
 import time
+from dataclasses import dataclass
+from typing import NamedTuple
 
 from refactor2.server.persistence import LitedisDB
+from refactor2.typing import DBCommandLine
 
 
 class DbCommandLineConverter:
@@ -10,7 +13,7 @@ class DbCommandLineConverter:
         for dbname, db in dbs.items():
             for key in db.keys():
                 cmdline = cls._convert_db_object_to_cmdline(key, db)
-                yield dbname, cmdline
+                yield DBCommandLine(dbname, cmdline)
 
     @classmethod
     def _convert_db_object_to_cmdline(cls, key: str, db: LitedisDB):

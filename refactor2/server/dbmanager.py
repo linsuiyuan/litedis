@@ -5,7 +5,7 @@ from threading import Lock
 
 from refactor2.server.commands import CommandContext
 from refactor2.server.commands.parsers import parse_command_line_to_object
-from refactor2.server.dbconvertor import DbCommandLineConverter
+from refactor2.server.dbcommand import DbCommandLineConverter, DBCommandLine
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
 from refactor2.typing import PersistenceType, CommandLogger, CommandProcessor
@@ -58,8 +58,8 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
             print("aof file does not exist")
             return False
 
-        for dbname, cmdline in self.aof.load_commands():
-            self.replay_command(dbname, cmdline)
+        for dbcmd in self.aof.load_commands():
+            self.replay_command(dbcmd)
 
         return True
 
@@ -73,21 +73,21 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
             if dbname not in _dbs:
                 _dbs[dbname] = LitedisDB(dbname)
 
-    def process_command(self, dbname: str, cmdline: str):
-        result = self._execute_command_line(dbname, cmdline)
+    def process_command(self, dbcmd: DBCommandLine):
+        result = self._execute_command_line(dbcmd)
 
         if self.command_logger:
-            self.command_logger.log_command(dbname, cmdline)
+            self.command_logger.log_command(dbcmd)
 
         return result
 
-    def replay_command(self, dbname: str, cmdline: str):
-        self._execute_command_line(dbname, cmdline)
+    def replay_command(self, dbcmd: DBCommandLine):
+        self._execute_command_line(dbcmd)
 
-    def _execute_command_line(self, dbname: str, cmdline: str):
-        db = self.get_or_create_db(dbname)
+    def _execute_command_line(self, dbcmd: DBCommandLine):
+        db = self.get_or_create_db(dbcmd.dbname)
         ctx = CommandContext(db)
-        command = parse_command_line_to_object(cmdline)
+        command = parse_command_line_to_object(dbcmd.cmdline)
         return command.execute(ctx)
 
     def _rewrite_aof_commands(self):
