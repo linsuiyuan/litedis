@@ -1,14 +1,17 @@
+import time
+from copy import deepcopy
 from pathlib import Path
 from threading import Lock
 
 from refactor2.server.commands import CommandContext
 from refactor2.server.commands.parsers import parse_command_line_to_object
+from refactor2.server.dbconvertor import DbCommandLineConverter
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
 from refactor2.typing import PersistenceType, CommandLogger, CommandProcessor
 from refactor2.utils import SingletonMeta
 
-_dbs = {}
+_dbs: dict[str, LitedisDB] = {}
 _dbs_lock = Lock()
 
 
@@ -44,17 +47,11 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         if self._need_aof_persistence:
             self.aof = AOF(self.data_path)
             self.command_logger = self.aof
-            self._load_aof_data()
 
-    def get_or_create_db(self, dbname):
-        if dbname not in _dbs:
-            self._create_db(dbname)
-        return _dbs[dbname]
+            result = self._load_aof_data()
 
-    def _create_db(self, dbname):
-        with _dbs_lock:
-            if dbname not in _dbs:
-                _dbs[dbname] = LitedisDB(dbname)
+            if result:
+                self._rewrite_aof_commands()
 
     def _load_aof_data(self) -> bool:
         if not self.aof.exists_file():
@@ -65,6 +62,16 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
             self.replay_command(dbname, cmdline)
 
         return True
+
+    def get_or_create_db(self, dbname):
+        if dbname not in _dbs:
+            self._create_db(dbname)
+        return _dbs[dbname]
+
+    def _create_db(self, dbname):
+        with _dbs_lock:
+            if dbname not in _dbs:
+                _dbs[dbname] = LitedisDB(dbname)
 
     def process_command(self, dbname: str, cmdline: str):
         result = self._execute_command_line(dbname, cmdline)
@@ -82,3 +89,13 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         ctx = CommandContext(db)
         command = parse_command_line_to_object(cmdline)
         return command.execute(ctx)
+
+    def _rewrite_aof_commands(self):
+        with _dbs_lock:
+            dbs = deepcopy(_dbs)
+
+        dbcommands = DbCommandLineConverter.db_object_to_commands(dbs)
+        self.aof.rewrite_commands(dbcommands)
+
+
+

@@ -60,7 +60,7 @@ class LitedisDB:
     def get_expirations(self) -> dict[str, int]:
         return self._expirations
 
-    def get_type(self, key: str) -> str | None:
+    def get_type(self, key: str) -> str:
         if key not in self._data:
             return "none"
 

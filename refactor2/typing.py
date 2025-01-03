@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Protocol
 
-LitedisObjectT = dict | int | list | set | str
+LitedisObjectT = dict | list | set | str
 
 
 class PersistenceType(Enum):
