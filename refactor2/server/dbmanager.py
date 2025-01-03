@@ -15,42 +15,38 @@ _dbs_lock = Lock()
 
 
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
-    _data_path: str | Path = Path("ldbdata")
-    aof: AOF | None = None
-    # if less than or equal 0, means shouldn't rewrite
-    aof_rewrite_cycle = 666
 
-    def __init__(self, persistence_on=True):
+    def __init__(self,
+                 persistence_on=True,
+                 data_path: str | Path = Path("ldbdata"),
+                 aof_rewrite_cycle = 666):
         if not persistence_on:
             return
-
         self._persistence_on = persistence_on
-        self.data_path.mkdir(parents=True, exist_ok=True)
+
+        self._data_path = data_path if isinstance(data_path, Path) else Path(data_path)
+        self._data_path.mkdir(parents=True, exist_ok=True)
+
+        self._aof_rewrite_cycle = aof_rewrite_cycle
+
+        self._aof: AOF | None = None
 
         self._load_aof_data()
         self._start_aof_rewrite_loop()
 
-    @property
-    def data_path(self):
-        return self._data_path
-
-    @data_path.setter
-    def data_path(self, value: str | Path):
-        self._data_path = value if isinstance(value, Path) else Path(value)
-
     def _load_aof_data(self):
-        self.aof = AOF(self.data_path)
+        self._aof = AOF(self._data_path)
 
         self._replay_aof_commands()
 
     def _start_aof_rewrite_loop(self):
-        if not self.aof:
+        if not self._aof:
             return False
 
-        if not self.aof.exists_file():
+        if not self._aof.exists_file():
             return False
 
-        if self.aof_rewrite_cycle <= 0:
+        if self._aof_rewrite_cycle <= 0:
             return False
 
         self._rewrite_aof_commands()
@@ -59,7 +55,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
     def _rewrite_aof_loop(self):
         def loop():
             while True:
-                time.sleep(self.aof_rewrite_cycle)
+                time.sleep(self._aof_rewrite_cycle)
                 self._rewrite_aof_commands()
 
         thread = Thread(target=loop, daemon=True)
@@ -79,18 +75,18 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         result = command.execute(ctx)
 
         # todo lock if needed
-        if self._persistence_on and self.aof:
-            self.aof.log_command(dbcmd)
+        if self._persistence_on and self._aof:
+            self._aof.log_command(dbcmd)
 
         return result
 
     def _replay_aof_commands(self) -> bool:
-        if not self.aof.exists_file():
+        if not self._aof.exists_file():
             return False
 
         with _dbs_lock:
             global _dbs
-            dbcmds = self.aof.load_commands()
+            dbcmds = self._aof.load_commands()
             _dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
 
         return True
@@ -99,6 +95,6 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
         with _dbs_lock:
             dbcommands = DBCommandLineConverter.dbs_to_commands(_dbs)
-            self.aof.rewrite_commands(dbcommands)
+            self._aof.rewrite_commands(dbcommands)
 
         return True
