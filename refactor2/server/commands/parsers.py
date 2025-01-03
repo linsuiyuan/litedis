@@ -3,7 +3,7 @@ import sys
 import time
 from abc import ABC, abstractmethod
 
-from refactor2.server.commands.commands import SetCommand, Command
+from refactor2.server.commands.commands import SetCommand, Command, GetCommand
 from refactor2.utils import parse_command_line
 
 
@@ -54,6 +54,17 @@ class SetCommandParser(CommandParser):
         return SetCommand(key, value, options)
 
 
+class GetCommandParser(CommandParser):
+    name = 'get'
+
+    def parse(self, command_line: str) -> Command:
+        tokens = parse_command_line(command_line)
+        if len(tokens) < 2:
+            raise ValueError('get command requires key')
+        key = tokens[1]
+        return GetCommand(key)
+
+
 _parsers = {cls.__dict__["name"]: cls
             for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
             if issubclass(cls, CommandParser)}
@@ -61,6 +72,7 @@ _parsers = {cls.__dict__["name"]: cls
 
 def parse_command_line_to_object(command_line: str) -> Command:
     name, _ = command_line.split(maxsplit=1)
+    name = name.lower()
     if name not in _parsers:
         raise ValueError(f"unknown command line: {command_line}")
     return _parsers[name]().parse(command_line)

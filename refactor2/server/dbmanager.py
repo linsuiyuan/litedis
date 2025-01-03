@@ -1,8 +1,9 @@
-import warnings
 from pathlib import Path
 from threading import Lock
 
-from refactor2.server.interfaces import CommandProcessor
+from refactor2.server.commands import CommandContext
+from refactor2.server.commands.parsers import parse_command_line_to_object
+from refactor2.server.interfaces import CommandProcessor, CommandLogger
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
 from refactor2.typing import PersistenceType
@@ -12,15 +13,16 @@ _dbs = {}
 _dbs_lock = Lock()
 
 
-class DBManager(metaclass=SingletonMeta):
-    data_path: str | Path
-    persistence_type = PersistenceType.MIXED
+class DBManager(CommandProcessor, metaclass=SingletonMeta):
     aof: AOF | None = None
     _ldb_filename = "litedis.ldb"
 
-    command_processor: CommandProcessor | None = None
+    command_logger: CommandLogger | None = None
 
-    def __init__(self, data_path: str | Path = "ldbdata"):
+    def __init__(self,
+                 data_path: str | Path = "ldbdata",
+                 persistence_type=PersistenceType.MIXED):
+        self.persistence_type = persistence_type
         self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)
         self.data_path.mkdir(parents=True, exist_ok=True)
         self._load_data()
@@ -42,6 +44,7 @@ class DBManager(metaclass=SingletonMeta):
     def _load_data(self):
         if self._need_aof_persistence:
             self.aof = AOF(self.data_path)
+            self.command_logger = self.aof
             self._load_aof_data()
 
     def get_or_create_db(self, dbname):
@@ -59,11 +62,24 @@ class DBManager(metaclass=SingletonMeta):
             print("aof file does not exist")
             return False
 
-        if not self.command_processor:
-            warnings.warn("command_processor not set")
-            return False
-
         for dbname, cmdline in self.aof.load_commands():
-            self.command_processor.replay_command(dbname, cmdline)
+            self.replay_command(dbname, cmdline)
 
         return True
+
+    def process_command(self, dbname: str, cmdline: str):
+        result = self._execute_command_line(dbname, cmdline)
+
+        if self.command_logger:
+            self.command_logger.log_command(dbname, cmdline)
+
+        return result
+
+    def replay_command(self, dbname: str, cmdline: str):
+        self._execute_command_line(dbname, cmdline)
+
+    def _execute_command_line(self, dbname: str, cmdline: str):
+        db = self.get_or_create_db(dbname)
+        ctx = CommandContext(db)
+        command = parse_command_line_to_object(cmdline)
+        return command.execute(ctx)

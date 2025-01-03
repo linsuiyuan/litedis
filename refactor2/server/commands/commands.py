@@ -60,4 +60,11 @@ class SetCommand(Command):
             return True
 
 
+class GetCommand(Command):
+    name = 'get'
+    def __init__(self, key):
+        self.key = key
+    def execute(self, ctx: CommandContext):
+        return ctx.db.get(self.key)
+
 
