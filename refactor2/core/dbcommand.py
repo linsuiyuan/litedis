@@ -24,7 +24,7 @@ class DBCommandLineConverter:
             raise KeyError(f"'{key}' doesn't exist")
         match value:
             case str():
-                pieces = ['set', f'"{key}"', f'"{value}"']
+                pieces = ['set', key, value]
             case _:
                 raise TypeError(f"the value type the key({key}) is not supported")
 
@@ -41,6 +41,7 @@ class DBCommandLineConverter:
         dbs = {}
         for dbcmd in dbcmds:
             dbname, cmdline = dbcmd
+
             db = dbs.get(dbname)
             if db is None:
                 db = LitedisDB(dbname)
