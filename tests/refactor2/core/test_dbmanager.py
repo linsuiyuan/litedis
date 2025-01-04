@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -118,16 +118,17 @@ class TestDBManager:
         db = new_manager.get_or_create_db("test_db")
         assert db.get("key1") == "value1"
 
-    def test_replay_aof_commands(self, temp_dir):
+    @patch('refactor2.core.dbmanager.AOF')
+    def test_replay_aof_commands(self, mock_aof_class, temp_dir):
         mock_aof = Mock()
         mock_aof.exists_file.return_value = True
         mock_aof.load_commands.return_value = [
             DBCommandLine("test_db", "set key1 value1"),
             DBCommandLine("test_db", "set key2 value2")
         ]
+        mock_aof_class.return_value = mock_aof
 
         manager = DBManager(persistence_on=True, data_path=temp_dir)
-        manager._aof = mock_aof
         assert manager._replay_aof_commands() is True
 
         # Verify in global _dbs
