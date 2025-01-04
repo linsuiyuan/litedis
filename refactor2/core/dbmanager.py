@@ -19,8 +19,8 @@ _db_locks = defaultdict(Lock)
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
     def __init__(self,
-                 persistence_on=True,
                  data_path: str | Path = Path("ldbdata"),
+                 persistence_on=True,
                  aof_rewrite_cycle = 666):
         if not persistence_on:
             return

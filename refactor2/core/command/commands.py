@@ -23,11 +23,13 @@ class Command(ABC):
 
 
 class ReadCommand(Command, ABC):
+    @property
     def rwtype(self) -> ReadWriteType:
         return ReadWriteType.Read
 
 
 class WriteCommand(Command, ABC):
+    @property
     def rwtype(self) -> ReadWriteType:
         return ReadWriteType.Write
 
