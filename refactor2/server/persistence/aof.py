@@ -1,7 +1,7 @@
 import os
 import tempfile
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, Iterable
 
 from refactor2.typing import DBCommandLine
 
@@ -50,7 +50,7 @@ class AOF:
                 dbname, cmdline = line.strip().split(sep="/", maxsplit=1)
                 yield DBCommandLine(dbname, cmdline)
 
-    def rewrite_commands(self, commands: DBCommandLine):
+    def rewrite_commands(self, commands: Iterable[DBCommandLine]):
 
         temp_fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(self._file_path))
 

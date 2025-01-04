@@ -1,76 +1,122 @@
+import os
+from pathlib import Path
+
 import pytest
 
 from refactor2.server.persistence.aof import AOF
 from refactor2.typing import DBCommandLine
 
 
+@pytest.fixture
+def temp_dir(tmp_path):
+    # Create a temporary directory for testing
+    return tmp_path
+
+
+@pytest.fixture
+def aof_file(temp_dir):
+    # Create an AOF instance for testing
+    aof = AOF(temp_dir, "test.aof")
+    yield aof
+    aof.close()
+
+
 class TestAOF:
+    def test_init(self, temp_dir):
+        aof = AOF(temp_dir, "test.aof")
+        assert aof._filename == "test.aof"
+        assert isinstance(aof.data_path, Path)
+        assert aof._file is None
 
-    @pytest.fixture(autouse=True)
-    def setup_method(self, tmp_path):
-        self.filename = "litedis.aof"
-        self.tmp_path = tmp_path
+    def test_init_with_string_path(self, temp_dir):
+        aof = AOF(str(temp_dir), "test.aof")
+        assert isinstance(aof.data_path, Path)
+        assert aof.data_path == temp_dir
 
-    @pytest.fixture
-    def aof(self):
-        aof_instance = AOF(self.tmp_path)
-        yield aof_instance
-        del aof_instance
-
-    def test_get_or_create_file(self, aof):
-        file = aof.get_or_create_file()
-
-        assert file is not None
+    def test_get_or_create_file(self, aof_file):
+        # Test file creation and retrieval
+        file = aof_file.get_or_create_file()
         assert not file.closed
-        assert (self.tmp_path / self.filename).exists()
+        assert file.mode == "a"
 
-    def test_log_command(self, aof):
-        dbname = "db0"
-        cmdline = "set key value"
+        # Test file is reused
+        file2 = aof_file.get_or_create_file()
+        assert file is file2
 
-        aof.log_command(DBCommandLine(dbname, cmdline))
+    def test_exists_file(self, aof_file):
+        assert not aof_file.exists_file()
+        aof_file.get_or_create_file()
+        assert aof_file.exists_file()
 
-        with open(self.tmp_path / self.filename, "r") as f:
+    def test_log_command(self, aof_file):
+        cmd = DBCommandLine("test_db", "SET key value")
+        aof_file.log_command(cmd)
+
+        # Verify file content
+        with open(aof_file._file_path, "r") as f:
             content = f.read()
-            assert content == f"{dbname}/{cmdline}\n"
+            assert content == "test_db/SET key value\n"
 
-    def test_load_commands(self, aof):
+    def test_load_commands(self, aof_file):
         commands = [
-            ("db0", "set key1 value1"),
-            ("db1", "set key2 value2"),
-            ("db0", "del key1")
+            DBCommandLine("db1", "SET key1 value1"),
+            DBCommandLine("db2", "SET key2 value2"),
         ]
 
-        # Write test data
-        with open(self.tmp_path / self.filename, "w") as f:
-            for dbname, cmd in commands:
-                f.write(f"{dbname}/{cmd}\n")
+        # Write test commands
+        for cmd in commands:
+            aof_file.log_command(cmd)
 
-        loaded_commands = list(aof.load_commands())
+        # Read and verify commands
+        loaded_commands = list(aof_file.load_commands())
+        assert len(loaded_commands) == 2
 
-        assert loaded_commands == commands
+        for original, loaded in zip(commands, loaded_commands):
+            assert loaded.dbname == original.dbname
+            assert loaded.cmdline == original.cmdline
 
-    def test_load_commands_with_file_not_exists(self, aof):
+    def test_load_commands_nonexistent_file(self, aof_file):
+        commands = list(aof_file.load_commands())
+        assert len(commands) == 0
 
-        loaded_commands = list(aof.load_commands())
+    def test_rewrite_commands(self, aof_file):
+        # Test rewriting commands
+        original_commands = [
+            DBCommandLine("db1", "SET key1 value1"),
+            DBCommandLine("db2", "SET key2 value2")
+        ]
 
-        assert loaded_commands == []
+        # Rewrite commands
+        aof_file.rewrite_commands(original_commands)
 
-    def test_close(self, aof):
+        # Verify rewritten content
+        loaded_commands = list(aof_file.load_commands())
+        assert len(loaded_commands) == 2
+
+        for i, cmd in enumerate(loaded_commands):
+            assert cmd.dbname == original_commands[i].dbname
+            assert cmd.cmdline == original_commands[i].cmdline
+
+    def test_rewrite_commands_error_handling(self, aof_file, monkeypatch):
+        def mock_replace(*args):  # noqa
+            raise OSError("Mock error")
+
+        monkeypatch.setattr(os, "replace", mock_replace)
+
+        with pytest.raises(Exception, match="Failed to rewrite.*"):
+            aof_file.rewrite_commands([DBCommandLine("db1", "SET key1 value1")])
+
+    def test_close(self, aof_file):
+        file = aof_file.get_or_create_file()
+        assert not file.closed
+
+        aof_file.close()
+        assert file.closed
+
+    def test_auto_close_on_del(self, temp_dir):
+        aof = AOF(temp_dir, "test.aof")
         file = aof.get_or_create_file()
         assert not file.closed
 
-        aof.close()
-
+        del aof
         assert file.closed
-
-    def test_file_is_flushed_after_write(self, aof):
-        dbname = "db0"
-        cmdline = "set key value"
-
-        aof.log_command(DBCommandLine(dbname, cmdline))
-
-        # Can read immediately after write
-        with open(self.tmp_path / self.filename, "r") as f:
-            content = f.read()
-            assert content == f"{dbname}/{cmdline}\n"
