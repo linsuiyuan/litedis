@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import Mock
 
-from refactor2.server.commands.commands import SetCommand, GetCommand
-from refactor2.server.commands import CommandContext
-from refactor2.server.persistence import LitedisDB
+import pytest
+
+from refactor2.core.commands.commands import SetCommand, GetCommand
+from refactor2.core.commands.context import CommandContext
+from refactor2.core.persistence import LitedisDB
 
 
 @pytest.fixture

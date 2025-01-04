@@ -1,4 +1,4 @@
-from refactor2.server.persistence import LitedisDB
+from refactor2.core.persistence import LitedisDB
 
 
 class CommandContext:

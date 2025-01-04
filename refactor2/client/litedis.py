@@ -3,7 +3,7 @@ from typing import Any
 
 from refactor2.client.commands import BasicKeyCommand
 from refactor2.commandline import combine_command_line
-from refactor2.server.dbmanager import DBManager
+from refactor2.core.dbmanager import DBManager
 from refactor2.typing import CommandProcessor, DBCommandLine
 
 

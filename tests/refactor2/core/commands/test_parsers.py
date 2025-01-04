@@ -1,12 +1,14 @@
-import pytest
 import time
-from refactor2.server.commands.parsers import (
+
+import pytest
+
+from refactor2.core.commands.commands import (
+    SetCommand,
+    GetCommand, Command)
+from refactor2.core.commands.parsers import (
     SetCommandParser,
     GetCommandParser,
     parse_command_line_to_command)
-from refactor2.server.commands.commands import (
-    SetCommand,
-    GetCommand, Command)
 
 
 class TestSetCommandParser:

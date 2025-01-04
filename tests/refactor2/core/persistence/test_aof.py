@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from refactor2.server.persistence.aof import AOF
+from refactor2.core.persistence import AOF
 from refactor2.typing import DBCommandLine
 
 

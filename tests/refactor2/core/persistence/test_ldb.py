@@ -1,5 +1,6 @@
 import pytest
-from refactor2.server.persistence.ldb import LitedisDB
+
+from refactor2.core.persistence import LitedisDB
 
 
 @pytest.fixture

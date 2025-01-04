@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pytest
 
-from refactor2.server.dbmanager import DBManager, _dbs  # noqa
-from refactor2.server.persistence.ldb import LitedisDB
+from refactor2.core.dbmanager import DBManager, _dbs  # noqa
+from refactor2.core.persistence import LitedisDB
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def reset_singleton():
 
 @pytest.fixture
 def mock_aof():
-    with patch('refactor2.server.persistence.AOF') as mock:
+    with patch('refactor2.core.persistence.AOF') as mock:
         yield mock
 
 

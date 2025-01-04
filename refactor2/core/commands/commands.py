@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from refactor2.server.commands import CommandContext
-from refactor2.server.persistence import LitedisDB
+from refactor2.core.commands.context import CommandContext
+from refactor2.core.persistence import LitedisDB
 from refactor2.typing import ReadWriteType
 
 
