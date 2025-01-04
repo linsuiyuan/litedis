@@ -91,9 +91,11 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
             return False
 
         with _dbs_lock:
-            global _dbs
             dbcmds = self._aof.load_commands()
-            _dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
+            dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
+            _dbs.clear()
+            for k, v in dbs.items():
+                _dbs[k] = v
 
         return True
 
