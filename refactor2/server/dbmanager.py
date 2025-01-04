@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Lock, Thread
 
 from refactor2.server.commands import CommandContext
-from refactor2.server.commands.parsers import parse_command_line_to_object
+from refactor2.server.commands.parsers import parse_command_line_to_command
 from refactor2.server.dbcommand import DBCommandLineConverter, DBCommandLine
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
@@ -74,7 +74,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
     def process_command(self, dbcmd: DBCommandLine):
         db = self.get_or_create_db(dbcmd.dbname)
         ctx = CommandContext(db)
-        command = parse_command_line_to_object(dbcmd.cmdline)
+        command = parse_command_line_to_command(dbcmd.cmdline)
 
         with _db_locks[dbcmd.dbname]:
             result = command.execute(ctx)

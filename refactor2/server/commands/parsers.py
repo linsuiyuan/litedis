@@ -70,7 +70,7 @@ _parsers = {cls.__dict__["name"]: cls
             if issubclass(cls, CommandParser)}
 
 
-def parse_command_line_to_object(command_line: str) -> Command:
+def parse_command_line_to_command(command_line: str) -> Command:
     name, _ = command_line.split(maxsplit=1)
     name = name.lower()
     if name not in _parsers:
