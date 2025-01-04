@@ -7,7 +7,7 @@ from refactor2.server.commands.parsers import parse_command_line_to_object
 from refactor2.server.dbcommand import DBCommandLineConverter, DBCommandLine
 from refactor2.server.persistence import AOF
 from refactor2.server.persistence import LitedisDB
-from refactor2.typing import CommandProcessor
+from refactor2.typing import CommandProcessor, ReadWriteType
 from refactor2.utils import SingletonMeta
 
 _dbs: dict[str, LitedisDB] = {}
@@ -72,11 +72,13 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         db = self.get_or_create_db(dbcmd.dbname)
         ctx = CommandContext(db)
         command = parse_command_line_to_object(dbcmd.cmdline)
-        result = command.execute(ctx)
 
         # todo lock if needed
+        result = command.execute(ctx)
+
         if self._persistence_on and self._aof:
-            self._aof.log_command(dbcmd)
+            if command.rwtype == ReadWriteType.Write:
+                self._aof.log_command(dbcmd)
 
         return result
 

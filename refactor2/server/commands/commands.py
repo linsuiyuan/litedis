@@ -2,23 +2,37 @@ from abc import ABC, abstractmethod
 
 from refactor2.server.commands import CommandContext
 from refactor2.server.persistence import LitedisDB
+from refactor2.typing import ReadWriteType
 
 
 class Command(ABC):
     name = None
 
+    @property
     @abstractmethod
-    def execute(self, ctx: CommandContext):...
+    def rwtype(self) -> ReadWriteType: ...
+
+    @abstractmethod
+    def execute(self, ctx: CommandContext): ...
 
 
-class SetCommand(Command):
+class ReadCommand(Command, ABC):
+    def rwtype(self) -> ReadWriteType:
+        return ReadWriteType.Read
+
+
+class WriteCommand(Command, ABC):
+    def rwtype(self) -> ReadWriteType:
+        return ReadWriteType.Write
+
+
+class SetCommand(WriteCommand):
     name = 'set'
 
     def __init__(self, key, value, options=None):
         self.key = key
         self.value = value
         self.options = {} if options is None else options
-
 
     def execute(self, ctx: CommandContext):
         self._check_that_nx_and_xx_cannot_both_be_set()
@@ -46,7 +60,6 @@ class SetCommand(Command):
 
         return "OK"
 
-
     def _check_that_nx_and_xx_cannot_both_be_set(self):
         if self.options.get('nx') and self.options.get('xx'):
             raise ValueError("nx and xx are mutually exclusive")
@@ -60,11 +73,11 @@ class SetCommand(Command):
             return True
 
 
-class GetCommand(Command):
+class GetCommand(ReadCommand):
     name = 'get'
+
     def __init__(self, key):
         self.key = key
+
     def execute(self, ctx: CommandContext):
         return ctx.db.get(self.key)
-
-
