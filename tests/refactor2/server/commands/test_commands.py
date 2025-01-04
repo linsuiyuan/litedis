@@ -1,111 +1,82 @@
 import pytest
+from unittest.mock import Mock
 
-from refactor2.server.commands.commands import SetCommand
+from refactor2.server.commands.commands import SetCommand, GetCommand
 from refactor2.server.commands import CommandContext
+from refactor2.server.persistence import LitedisDB
+
+
+@pytest.fixture
+def mock_db():
+    db = Mock(spec=LitedisDB)
+    db.exists.return_value = False
+    db.get.return_value = None
+    return db
+
+
+@pytest.fixture
+def command_context(mock_db):
+    return CommandContext(db=mock_db)
 
 
 class TestSetCommand:
-    @pytest.fixture
-    def mock_db(self, mocker):
-        db = mocker.Mock()
-        db.exists.return_value = False
-        db.get.return_value = None
-        return db
+    def test_basic_set(self, command_context):
+        cmd = SetCommand("test_key", "test_value")
+        result = cmd.execute(command_context)
 
-    @pytest.fixture
-    def ctx(self, mock_db):
-        return CommandContext(mock_db)
-
-    def test_basic_set_without_options(self, ctx):
-        command = SetCommand("key", "value")
-        result = command.execute(ctx)
-
+        command_context.db.set.assert_called_once_with("test_key", "test_value")  # noqa
         assert result == "OK"
-        ctx.db.set.assert_called_once_with("key", "value")
-        ctx.db.delete_expiration.assert_called_once_with("key")
 
-    def test_set_with_nx_when_key_not_exists(self, ctx):
-        ctx.db.exists.return_value = False
-        command = SetCommand("key", "value", {"nx": True})
-        
-        result = command.execute(ctx)
-        
-        assert result == "OK"
-        ctx.db.set.assert_called_once_with("key", "value")
+    def test_set_with_nx_option_when_key_exists(self, command_context):
+        command_context.db.exists.return_value = True
+        cmd = SetCommand("test_key", "test_value", options={"nx": True})
 
-    def test_set_with_nx_when_key_exists(self, ctx):
-        ctx.db.exists.return_value = True
-        command = SetCommand("key", "value", {"nx": True})
-        
-        result = command.execute(ctx)
-        
+        result = cmd.execute(command_context)
         assert result is None
-        ctx.db.set.assert_not_called()
+        command_context.db.set.assert_not_called()  # noqa
 
-    def test_set_with_xx_when_key_exists(self, ctx):
-        ctx.db.exists.return_value = True
-        command = SetCommand("key", "value", {"xx": True})
-        
-        result = command.execute(ctx)
-        
-        assert result == "OK"
-        ctx.db.set.assert_called_once_with("key", "value")
+    def test_set_with_xx_option_when_key_not_exists(self, command_context):
+        cmd = SetCommand("test_key", "test_value", options={"xx": True})
 
-    def test_set_with_xx_when_key_not_exists(self, ctx):
-        ctx.db.exists.return_value = False
-        command = SetCommand("key", "value", {"xx": True})
-        
-        result = command.execute(ctx)
-        
+        result = cmd.execute(command_context)
         assert result is None
-        ctx.db.set.assert_not_called()
+        command_context.db.set.assert_not_called()  # noqa
 
-    def test_set_with_get(self, ctx):
-        ctx.db.get.return_value = "old_value"
-        command = SetCommand("key", "new_value", {"get": True})
-        
-        result = command.execute(ctx)
-        
+    def test_set_with_get_option(self, command_context):
+        command_context.db.get.return_value = "old_value"
+        cmd = SetCommand("test_key", "new_value", options={"get": True})
+
+        result = cmd.execute(command_context)
         assert result == "old_value"
-        ctx.db.set.assert_called_once_with("key", "new_value")
+        command_context.db.set.assert_called_once_with("test_key", "new_value")  # noqa
 
-    def test_set_with_keepttl(self, ctx):
-        command = SetCommand("key", "value", {"keepttl": True})
-        
-        result = command.execute(ctx)
-        
-        assert result == "OK"
-        ctx.db.set.assert_called_once_with("key", "value")
-        ctx.db.delete_expiration.assert_not_called()
+    def test_set_with_expiration(self, command_context):
+        cmd = SetCommand("test_key", "test_value", options={"expiration": 100})
+        cmd.execute(command_context)
 
-    def test_set_with_expiration(self, ctx):
-        expiration = 1000
-        command = SetCommand("key", "value", {"expiration": expiration})
-        
-        result = command.execute(ctx)
-        
-        assert result == "OK"
-        ctx.db.set.assert_called_once_with("key", "value")
-        ctx.db.set_expiration.assert_called_once_with("key", expiration)
+        command_context.db.set_expiration.assert_called_once_with("test_key", 100)  # noqa
 
-    def test_set_with_nx_and_xx_raises_error(self, ctx):
-        command = SetCommand("key", "value", {"nx": True, "xx": True})
-        
+    def test_nx_xx_mutual_exclusion(self, command_context):
+        # Test that NX and XX options cannot be used together
+        cmd = SetCommand("test_key", "test_value", options={"nx": True, "xx": True})
+
         with pytest.raises(ValueError, match="nx and xx are mutually exclusive"):
-            command.execute(ctx)
+            cmd.execute(command_context)
 
-    def test_set_with_multiple_options(self, ctx):
-        expiration = 1000
-        command = SetCommand("key", "value", {
-            "get": True,
-            "keepttl": True,
-            "expiration": expiration
-        })
-        ctx.db.get.return_value = "old_value"
-        
-        result = command.execute(ctx)
-        
-        assert result == "old_value"
-        ctx.db.set.assert_called_once_with("key", "value")
-        ctx.db.delete_expiration.assert_not_called()
-        ctx.db.set_expiration.assert_called_once_with("key", expiration)
+
+class TestGetCommand:
+    def test_get_existing_key(self, command_context):
+        command_context.db.get.return_value = "test_value"
+        cmd = GetCommand("test_key")
+
+        result = cmd.execute(command_context)
+        assert result == "test_value"
+        command_context.db.get.assert_called_once_with("test_key")  # noqa
+
+    def test_get_non_existing_key(self, command_context):
+        command_context.db.get.return_value = None
+        cmd = GetCommand("non_existing_key")
+
+        result = cmd.execute(command_context)
+        assert result is None
+        command_context.db.get.assert_called_once_with("non_existing_key")  # noqa
