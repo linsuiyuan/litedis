@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 from pathlib import Path
 from threading import Lock, Thread
 
@@ -12,6 +13,7 @@ from refactor2.utils import SingletonMeta
 
 _dbs: dict[str, LitedisDB] = {}
 _dbs_lock = Lock()
+_db_locks = defaultdict(Lock)
 
 
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
@@ -30,6 +32,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         self._aof_rewrite_cycle = aof_rewrite_cycle
 
         self._aof: AOF | None = None
+        self._aof_lock = Lock()
 
         self._load_aof_data()
         self._start_aof_rewrite_loop()
@@ -73,12 +76,13 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         ctx = CommandContext(db)
         command = parse_command_line_to_object(dbcmd.cmdline)
 
-        # todo lock if needed
-        result = command.execute(ctx)
+        with _db_locks[dbcmd.dbname]:
+            result = command.execute(ctx)
 
         if self._persistence_on and self._aof:
             if command.rwtype == ReadWriteType.Write:
-                self._aof.log_command(dbcmd)
+                with self._aof_lock:
+                    self._aof.log_command(dbcmd)
 
         return result
 
