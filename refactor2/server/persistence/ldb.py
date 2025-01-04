@@ -45,8 +45,9 @@ class LitedisDB:
         self._expirations[key] = expiration
         return 1
 
-    def get_expiration(self, key: str):
-        return self._expirations.get(key)
+    def get_expiration(self, key: str) -> int:
+        ex = self._expirations.get(key)
+        return ex if ex else 0
 
     def exists_expiration(self, key: str) -> bool:
         return key in self._expirations
