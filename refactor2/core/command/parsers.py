@@ -4,7 +4,7 @@ import time
 from abc import ABC, abstractmethod
 
 from refactor2.commandline import parse_command_line
-from refactor2.core.commands.commands import SetCommand, Command, GetCommand
+from refactor2.core.command.commands import SetCommand, Command, GetCommand
 
 
 class CommandParser(ABC):

@@ -2,8 +2,8 @@ import time
 from typing import Iterable
 
 from refactor2.commandline import combine_command_line
-from refactor2.core.commands.commands import CommandContext
-from refactor2.core.commands.parsers import parse_command_line_to_command
+from refactor2.core.command.commands import CommandContext
+from refactor2.core.command.parsers import parse_command_line_to_command
 from refactor2.core.persistence import LitedisDB
 from refactor2.typing import DBCommandLine
 

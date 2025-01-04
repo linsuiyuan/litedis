@@ -2,10 +2,10 @@ import time
 
 import pytest
 
-from refactor2.core.commands.commands import (
+from refactor2.core.command.commands import (
     SetCommand,
     GetCommand, Command)
-from refactor2.core.commands.parsers import (
+from refactor2.core.command.parsers import (
     SetCommandParser,
     GetCommandParser,
     parse_command_line_to_command)

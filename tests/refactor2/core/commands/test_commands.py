@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from refactor2.core.commands.commands import SetCommand, GetCommand, CommandContext
+from refactor2.core.command.commands import SetCommand, GetCommand, CommandContext
 from refactor2.core.persistence import LitedisDB
 
 
