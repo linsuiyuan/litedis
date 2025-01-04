@@ -3,7 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 from threading import Lock, Thread
 
-from refactor2.core.commands.context import CommandContext
+from refactor2.core.commands.commands import CommandContext
 from refactor2.core.commands.parsers import parse_command_line_to_command
 from refactor2.core.dbcommand import DBCommandLineConverter, DBCommandLine
 from refactor2.core.persistence import AOF
