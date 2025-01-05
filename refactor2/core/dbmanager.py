@@ -11,13 +11,11 @@ from refactor2.core.persistence import LitedisDB
 from refactor2.typing import CommandProcessor, ReadWriteType
 from refactor2.utils import SingletonMeta
 
-# todo Since the DBManager is a singleton, the _dbs can be moved into the class
-_dbs: dict[str, LitedisDB] = {}
-_dbs_lock = Lock()
-_db_locks = defaultdict(Lock)
-
 
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
+    _dbs: dict[str, LitedisDB] = {}
+    _dbs_lock = Lock()
+    _db_locks = defaultdict(Lock)
 
     def __init__(self,
                  data_path: str | Path = Path("ldbdata"),
@@ -66,18 +64,18 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         thread.start()
 
     def get_or_create_db(self, dbname):
-        if dbname not in _dbs:
-            with _dbs_lock:
-                if dbname not in _dbs:
-                    _dbs[dbname] = LitedisDB(dbname)
-        return _dbs[dbname]
+        if dbname not in self._dbs:
+            with self._dbs_lock:
+                if dbname not in self._dbs:
+                    self._dbs[dbname] = LitedisDB(dbname)
+        return self._dbs[dbname]
 
     def process_command(self, dbcmd: DBCommandLine):
         db = self.get_or_create_db(dbcmd.dbname)
         ctx = CommandContext(db)
         command = parse_command_line_to_command(dbcmd.cmdline)
 
-        with _db_locks[dbcmd.dbname]:
+        with self._db_locks[dbcmd.dbname]:
             result = command.execute(ctx)
 
         if self._persistence_on and self._aof:
@@ -91,20 +89,20 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         if not self._aof.exists_file():
             return False
 
-        with _dbs_lock:
+        with self._dbs_lock:
             dbcmds = self._aof.load_commands()
             dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
             # todo use dict.update
-            _dbs.clear()
+            self._dbs.clear()
             for k, v in dbs.items():
-                _dbs[k] = v
+                self._dbs[k] = v
 
         return True
 
     def _rewrite_aof_commands(self) -> bool:
 
-        with _dbs_lock:
-            dbcommands = DBCommandLineConverter.dbs_to_commands(_dbs)
+        with self._dbs_lock:
+            dbcommands = DBCommandLineConverter.dbs_to_commands(self._dbs)
             self._aof.rewrite_commands(dbcommands)
 
         return True

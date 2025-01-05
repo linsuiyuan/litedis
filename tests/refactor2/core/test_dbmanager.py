@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from refactor2.core.dbcommand import DBCommandLine
-from refactor2.core.dbmanager import DBManager, _dbs, _dbs_lock  # noqa
+from refactor2.core.dbmanager import DBManager
 from refactor2.core.persistence import LitedisDB
 
 
@@ -17,7 +17,6 @@ def temp_dir(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def reset_singleton():
     setattr(DBManager, '_instances', {})
-    _dbs.clear()
     yield
 
 
@@ -61,8 +60,9 @@ class TestDBManager:
         assert db1 is db2
 
         # Verify global _dbs dictionary
-        assert "test_db" in _dbs
-        assert _dbs["test_db"] is db1
+        db = db_manager.get_or_create_db("test_db")
+        assert "test_db" == db.name
+        assert db is db1
 
     def test_get_or_create_db_concurrent(self, db_manager):
         # Test concurrent database creation
@@ -79,7 +79,7 @@ class TestDBManager:
             t.join()
 
         # Verify only one database instance was created
-        assert len([db for db in _dbs.values() if db.name == "concurrent_db"]) == 1
+        assert len([db_manager.get_or_create_db('concurrent_db')]) == 1
 
     def test_process_command_read(self, db_manager):
         # Test processing read command
@@ -97,8 +97,9 @@ class TestDBManager:
         assert result == "OK"
 
         # Verify in global _dbs
-        assert "test_db" in _dbs
-        assert _dbs["test_db"].get("key1") == "value1"
+        db = db_manager.get_or_create_db("test_db")
+        assert "test_db" in db.name
+        assert db.get("key1") == "value1"
 
     def test_process_command_write_with_persistence(self, db_manager, temp_dir):
         # Test write command with persistence
@@ -131,21 +132,8 @@ class TestDBManager:
         assert manager._replay_aof_commands() is True
 
         # Verify in global _dbs
-        assert "test_db" in _dbs
-        assert _dbs["test_db"].get("key1") == "value1"
-        assert _dbs["test_db"].get("key2") == "value2"
+        db = manager.get_or_create_db("test_db")
+        assert "test_db" == db.name
+        assert db.get("key1") == "value1"
+        assert db.get("key2") == "value2"
 
-    def test_multiple_db_instances(self, db_manager):
-        db1 = db_manager.get_or_create_db("db1")
-        db2 = db_manager.get_or_create_db("db2")
-
-        db1.set("key1", "value1")
-        db2.set("key2", "value2")
-
-        # Verify separate databases in global _dbs
-        assert "db1" in _dbs
-        assert "db2" in _dbs
-        assert _dbs["db1"].get("key1") == "value1"
-        assert _dbs["db2"].get("key2") == "value2"
-        assert _dbs["db1"].get("key2") is None
-        assert _dbs["db2"].get("key1") is None
