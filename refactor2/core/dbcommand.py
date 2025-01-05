@@ -3,7 +3,7 @@ from typing import Iterable
 
 from refactor2.commandline import combine_command_line
 from refactor2.core.command.base import CommandContext
-from refactor2.core.command.parsers import parse_command_line_to_command
+from refactor2.core.command.factory import CommandFactory
 from refactor2.core.persistence import LitedisDB
 from refactor2.typing import DBCommandLine
 
@@ -48,7 +48,7 @@ class DBCommandLineConverter:
                 dbs[dbname] = db
 
             ctx = CommandContext(db)
-            command = parse_command_line_to_command(dbcmd.cmdline)
+            command = CommandFactory.create(dbcmd.cmdline)
             command.execute(ctx)
 
         return dbs

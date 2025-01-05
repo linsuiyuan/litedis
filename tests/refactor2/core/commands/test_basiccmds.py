@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from refactor2.core.command.base import CommandContext
-from refactor2.core.command.commands import SetCommand, GetCommand
+from refactor2.core.command.basiccmds import SetCommand, GetCommand
 from refactor2.core.persistence import LitedisDB
 
 
@@ -22,7 +22,7 @@ def command_context(mock_db):
 
 class TestSetCommand:
     def test_basic_set(self, command_context):
-        cmd = SetCommand("test_key", "test_value")
+        cmd = SetCommand("set test_key test_value")
         result = cmd.execute(command_context)
 
         command_context.db.set.assert_called_once_with("test_key", "test_value")  # noqa
@@ -30,14 +30,14 @@ class TestSetCommand:
 
     def test_set_with_nx_option_when_key_exists(self, command_context):
         command_context.db.exists.return_value = True
-        cmd = SetCommand("test_key", "test_value", options={"nx": True})
+        cmd = SetCommand("set test_key test_value nx")
 
         result = cmd.execute(command_context)
         assert result is None
         command_context.db.set.assert_not_called()  # noqa
 
     def test_set_with_xx_option_when_key_not_exists(self, command_context):
-        cmd = SetCommand("test_key", "test_value", options={"xx": True})
+        cmd = SetCommand("set test_key test_value xx")
 
         result = cmd.execute(command_context)
         assert result is None
@@ -45,21 +45,21 @@ class TestSetCommand:
 
     def test_set_with_get_option(self, command_context):
         command_context.db.get.return_value = "old_value"
-        cmd = SetCommand("test_key", "new_value", options={"get": True})
+        cmd = SetCommand("set test_key new_value get")
 
         result = cmd.execute(command_context)
         assert result == "old_value"
         command_context.db.set.assert_called_once_with("test_key", "new_value")  # noqa
 
     def test_set_with_expiration(self, command_context):
-        cmd = SetCommand("test_key", "test_value", options={"expiration": 100})
+        cmd = SetCommand("set test_key test_value pxat 100")
         cmd.execute(command_context)
 
         command_context.db.set_expiration.assert_called_once_with("test_key", 100)  # noqa
 
     def test_nx_xx_mutual_exclusion(self, command_context):
         # Test that NX and XX options cannot be used together
-        cmd = SetCommand("test_key", "test_value", options={"nx": True, "xx": True})
+        cmd = SetCommand("set test_key test_value nx xx")
 
         with pytest.raises(ValueError, match="nx and xx are mutually exclusive"):
             cmd.execute(command_context)
@@ -68,7 +68,7 @@ class TestSetCommand:
 class TestGetCommand:
     def test_get_existing_key(self, command_context):
         command_context.db.get.return_value = "test_value"
-        cmd = GetCommand("test_key")
+        cmd = GetCommand("get test_key")
 
         result = cmd.execute(command_context)
         assert result == "test_value"
@@ -76,7 +76,7 @@ class TestGetCommand:
 
     def test_get_non_existing_key(self, command_context):
         command_context.db.get.return_value = None
-        cmd = GetCommand("non_existing_key")
+        cmd = GetCommand("get non_existing_key")
 
         result = cmd.execute(command_context)
         assert result is None
