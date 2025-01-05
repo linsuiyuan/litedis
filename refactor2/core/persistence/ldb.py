@@ -19,6 +19,7 @@ class LitedisDB:
                 raise TypeError("type of value does not match the type in database")
 
     def get(self, key: str) -> LitedisObjectT | None:
+        # todo add expiration check, if the key is expired, raise Exception
         return self._data.get(key)
 
     def exists(self, item: str) -> bool:
@@ -40,12 +41,14 @@ class LitedisDB:
             yield value
 
     def set_expiration(self, key: str, expiration: int) -> int:
+        # todo raise key not exists exception
         if key not in self._data:
             return 0
         self._expirations[key] = expiration
         return 1
 
     def get_expiration(self, key: str) -> int:
+        # todo raise key not exists exception
         ex = self._expirations.get(key)
         return ex if ex else 0
 

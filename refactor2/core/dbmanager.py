@@ -11,6 +11,7 @@ from refactor2.core.persistence import LitedisDB
 from refactor2.typing import CommandProcessor, ReadWriteType
 from refactor2.utils import SingletonMeta
 
+# todo Since the DBManager is a singleton, the _dbs can be moved into the class
 _dbs: dict[str, LitedisDB] = {}
 _dbs_lock = Lock()
 _db_locks = defaultdict(Lock)
@@ -93,6 +94,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         with _dbs_lock:
             dbcmds = self._aof.load_commands()
             dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
+            # todo use dict.update
             _dbs.clear()
             for k, v in dbs.items():
                 _dbs[k] = v

@@ -1,3 +1,4 @@
+# todo create unit test
 def parse_command_line(cmdline):
     parts = []
     current_part = ''
