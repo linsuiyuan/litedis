@@ -77,17 +77,6 @@ def test_expiration(db):
     assert db.exists_expiration("key1") is False
 
 
-def test_get_expirations(db):
-    db.set("key1", "value1")
-    db.set("key2", "value2")
-
-    db.set_expiration("key1", 100)
-    db.set_expiration("key2", 200)
-
-    expirations = db.get_expirations()
-    assert expirations == {"key1": 100, "key2": 200}
-
-
 def test_get_type(db):
     type_tests = {
         "string_key": ("string_value", "string"),

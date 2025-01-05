@@ -61,9 +61,6 @@ class LitedisDB:
         del self._expirations[key]
         return 1
 
-    def get_expirations(self) -> dict[str, int]:
-        return self._expirations
-
     def get_type(self, key: str) -> str:
         if key not in self._data:
             return "none"
