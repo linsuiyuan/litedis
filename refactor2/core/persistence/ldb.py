@@ -1,3 +1,5 @@
+import time
+
 from refactor2.typing import LitedisObjectT
 
 
@@ -19,8 +21,24 @@ class LitedisDB:
                 raise TypeError("type of value does not match the type in database")
 
     def get(self, key: str) -> LitedisObjectT | None:
-        # todo add expiration check, if the key is expired, raise Exception
+        if self._delete_expired(key):
+            return None
         return self._data.get(key)
+
+    def _delete_expired(self, key: str):
+        if key not in self._data:
+            return False
+
+        if key not in self._expirations:
+            return False
+
+        expiration = self._expirations[key]
+        if expiration >= int(time.time() * 1000):
+            return False
+
+        del self._data[key]
+        del self._expirations[key]
+        return True
 
     def exists(self, item: str) -> bool:
         return item in self._data

@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from refactor2.core.persistence import LitedisDB
@@ -27,6 +29,33 @@ def test_set_type_checking(db):
     # Test unsupported type
     with pytest.raises(TypeError):
         db.set("invalid", 42)
+
+
+def test_get(db):
+    # Test basic get operation
+    db.set("key1", "value1")
+    assert db.get("key1") == "value1"
+
+    # Test non-existent key
+    assert db.get("nonexistent") is None
+
+
+def test_get_with_expiration(db):
+    # Test get with future expiration
+    db.set("future_key", "value")
+    future_time = int(time.time() * 1000) + 10000  # 10 se
+    db.set_expiration("future_key", future_time)
+    assert db.get("future_key") == "value"
+
+    # Test get with expired key
+    db.set("expired_key", "value")
+    past_time = int(time.time() * 1000) - 1000  # 1 second ago
+    db.set_expiration("expired_key", past_time)
+    assert db.get("expired_key") is None
+
+    # Verify expired key is deleted
+    assert not db.exists("expired_key")
+    assert "expired_key" not in db._expirations
 
 
 def test_exists(db):
