@@ -20,7 +20,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
     def __init__(self,
                  data_path: str | Path = Path("ldbdata"),
                  persistence_on=True,
-                 aof_rewrite_cycle = 666):
+                 aof_rewrite_cycle=666):
         if not persistence_on:
             return
         self._persistence_on = persistence_on

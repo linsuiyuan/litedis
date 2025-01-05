@@ -3,9 +3,11 @@ from typing import Protocol, NamedTuple
 
 LitedisObjectT = dict | list | set | str
 
+
 class ReadWriteType(Enum):
     Read = "read"
     Write = "write"
+
 
 class DBCommandLine(NamedTuple):
     dbname: str

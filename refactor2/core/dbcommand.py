@@ -52,4 +52,3 @@ class DBCommandLineConverter:
             command.execute(ctx)
 
         return dbs
-
