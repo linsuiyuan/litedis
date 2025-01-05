@@ -92,10 +92,8 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         with self._dbs_lock:
             dbcmds = self._aof.load_commands()
             dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
-            # todo use dict.update
             self._dbs.clear()
-            for k, v in dbs.items():
-                self._dbs[k] = v
+            self._dbs.update(dbs)
 
         return True
 
