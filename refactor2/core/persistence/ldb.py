@@ -41,16 +41,17 @@ class LitedisDB:
             yield value
 
     def set_expiration(self, key: str, expiration: int) -> int:
-        # todo raise key not exists exception
         if key not in self._data:
             return 0
         self._expirations[key] = expiration
         return 1
 
     def get_expiration(self, key: str) -> int:
-        # todo raise key not exists exception
-        ex = self._expirations.get(key)
-        return ex if ex else 0
+        if key not in self._data:
+            return -2
+        if key not in self._expirations:
+            return -1
+        return self._expirations.get(key)
 
     def exists_expiration(self, key: str) -> bool:
         return key in self._expirations

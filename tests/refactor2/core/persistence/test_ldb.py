@@ -56,22 +56,33 @@ def test_keys_and_values(db):
     assert list(db.values()) == list(test_data.values())
 
 
-def test_expiration(db):
+def test_set_expiration(db):
     db.set("key1", "value1")
-
-    # Test setting expiration
     assert db.set_expiration("key1", 100) == 1
     assert db.set_expiration("nonexistent", 100) == 0
 
-    # Test getting expiration
-    assert db.get_expiration("key1") == 100
-    assert db.get_expiration("nonexistent") == 0
+def test_get_expiration(db):
+    # Set key-value and expiration
+    db.set("key1", "value1")
+    db.set_expiration("key1", 1000)
+    assert db.get_expiration("key1") == 1000
 
-    # Test exists_expiration
+    # Test non-existent key
+    assert db.get_expiration("nonexistent") == -2
+
+    # Test key exists but without expiration
+    db.set("key2", "value2")
+    assert db.get_expiration("key2") == -1
+
+def test_exists_expiration(db):
+    db.set("key1", "value1")
+    db.set_expiration("key1", 100)
     assert db.exists_expiration("key1") is True
     assert db.exists_expiration("nonexistent") is False
 
-    # Test delete_expiration
+def test_delete_expiration(db):
+    db.set("key1", "value1")
+    db.set_expiration("key1", 100)
     assert db.delete_expiration("key1") == 1
     assert db.delete_expiration("nonexistent") == 0
     assert db.exists_expiration("key1") is False
