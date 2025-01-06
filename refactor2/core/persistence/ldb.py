@@ -42,6 +42,8 @@ class LitedisDB:
         return True
 
     def exists(self, item: str) -> bool:
+        if self._delete_expired(item):
+            return False
         return item in self._data
 
     def delete(self, key: str) -> int:

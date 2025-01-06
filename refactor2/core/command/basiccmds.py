@@ -137,10 +137,11 @@ class GetCommand(ReadCommand):
         db = ctx.db
 
         value = db.get(self.key)
-        if not isinstance(value, str):
+        if value is not None and not isinstance(value, str):
             raise TypeError('value is not a string')
 
         return value
+
 
 class AppendCommand(WriteCommand):
     name = 'append'
@@ -300,6 +301,8 @@ class ExpireCommand(WriteCommand):
             self.seconds = int(tokens[2])
         except ValueError:
             raise ValueError('seconds must be an integer')
+        if self.seconds < 0:
+            raise ValueError('seconds must be >= 0')
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
@@ -352,9 +355,10 @@ class ExpireTimeCommand(ReadCommand):
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
-        expiration = db.get_expiration(self.key)
-        if expiration == -2:  # Key does not exist
+
+        if not db.exists(self.key):  # Key does not exist
             return -2
+        expiration = db.get_expiration(self.key)
         if expiration == -1:  # Key exists but has no expiration
             return -1
         # Convert milliseconds to seconds
@@ -741,9 +745,9 @@ class TTLCommand(ReadCommand):
     def execute(self, ctx: CommandContext):
         db = ctx.db
 
-        expiration = db.get_expiration(self.key)
-        if expiration == -2:
+        if not db.exists(self.key):
             return -2  # Key does not exist
+        expiration = db.get_expiration(self.key)
         if expiration == -1:
             return -1  # Key exists but has no associated expire
 
@@ -769,9 +773,9 @@ class PTTLCommand(ReadCommand):
     def execute(self, ctx: CommandContext):
         db = ctx.db
 
-        expiration = db.get_expiration(self.key)
-        if expiration == -2:
+        if not db.exists(self.key):
             return -2  # Key does not exist
+        expiration = db.get_expiration(self.key)
         if expiration == -1:
             return -1  # Key exists but has no associated expire
 
@@ -818,4 +822,3 @@ class UnlinkCommand(WriteCommand):
         for key in self.keys:
             deleted += ctx.db.delete(key)
         return deleted
-
