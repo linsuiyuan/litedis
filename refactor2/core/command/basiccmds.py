@@ -3,7 +3,6 @@ import re
 import time
 
 from refactor2.core.command.base import CommandContext, ReadCommand, WriteCommand
-from refactor2.core.persistence import LitedisDB
 
 
 class SetCommand(WriteCommand):
@@ -12,84 +11,112 @@ class SetCommand(WriteCommand):
     def __init__(self, command_tokens: list[str]):
         self.key: str
         self.value: str
-        self.options: dict
-
+        self.ex: int | None = None  # Expire time in seconds
+        self.px: int | None = None  # Expire time in milliseconds
+        self.exat: int | None = None  # Expire timestamp in seconds
+        self.pxat: int | None = None  # Expire timestamp in milliseconds
+        # Existence options
+        self.nx: bool = False  # Only set if key does not exist
+        self.xx: bool = False  # Only set if key exists
+        # Other options
+        self.keepttl: bool = False  # Retain the TTL associated with the key
+        self.get: bool = False  # Return the old value stored at key
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
-
         if len(tokens) < 3:
             raise ValueError('set command requires key and value')
 
-        key = tokens[1]
-        value = tokens[2]
-        options = {}
+        self.key = tokens[1]
+        self.value = tokens[2]
 
-        lower_tokens = [t.lower() for t in tokens[3:]]
-        for i, token in enumerate(lower_tokens):
-            match token:
-                case "nx":
-                    options["nx"] = True
-                case "xx":
-                    options["xx"] = True
-                case "get":
-                    options["get"] = True
-                case "keepttl":
-                    options["keepttl"] = True
-                case "ex":
-                    now = int(time.time() * 1000)
-                    seconds = int(lower_tokens[i + 1])
-                    options["expiration"] = now + seconds * 1000
-                case "px":
-                    now = int(time.time() * 1000)
-                    milliseconds = int(lower_tokens[i + 1])
-                    options["expiration"] = now + milliseconds
-                case "exat":
-                    options["expiration"] = int(lower_tokens[i + 1]) * 1000
-                case "pxat":
-                    options["expiration"] = int(lower_tokens[i + 1])
+        i = 3
+        while i < len(tokens):
+            opt = tokens[i].upper()
 
-        self.key = key
-        self.value = value
-        self.options = options
+            # Handle options without values
+            if opt in ['NX', 'XX', 'KEEPTTL', 'GET']:
+                if opt == 'NX':
+                    if self.xx:
+                        raise ValueError('NX and XX options are mutually exclusive')
+                    self.nx = True
+                elif opt == 'XX':
+                    if self.nx:
+                        raise ValueError('NX and XX options are mutually exclusive')
+                    self.xx = True
+                elif opt == 'KEEPTTL':
+                    self.keepttl = True
+                elif opt == 'GET':
+                    self.get = True
+                i += 1
+                continue
+
+            # Handle options with values
+            if i + 1 >= len(tokens):
+                raise ValueError(f'option {opt.lower()} requires a value')
+
+            try:
+                val = int(tokens[i + 1])
+                if val <= 0:
+                    raise ValueError('expiration time must be positive')
+
+                # Handle expiration options
+                if opt == 'EX':
+                    self.ex = val
+                elif opt == 'PX':
+                    self.px = val
+                elif opt == 'EXAT':
+                    self.exat = val
+                elif opt == 'PXAT':
+                    self.pxat = val
+                else:
+                    raise ValueError(f'invalid option: {opt.lower()}')
+
+            except ValueError as e:
+                if 'invalid literal for int()' in str(e):
+                    raise ValueError('invalid expiration time')
+                raise
+
+            i += 2
 
     def execute(self, ctx: CommandContext):
-        self._check_that_nx_and_xx_cannot_both_be_set()
-
+        """Execute the SET command"""
         db = ctx.db
 
-        if self._is_nx_set_and_key_exists(db):
+        # Check existence conditions
+        key_exists = db.exists(self.key)
+        if self.nx and key_exists:
+            return None
+        if self.xx and not key_exists:
             return None
 
-        if self._is_xx_set_and_key_not_exists(db):
-            return None
+        # Get old value if requested
+        old_value = None
+        if self.get:
+            if key_exists:
+                old_value = db.get(self.key)
+                if not isinstance(old_value, str):
+                    raise TypeError('value is not a string')
 
-        old_value = db.get(self.key)
-
+        # Set the new value
         db.set(self.key, self.value)
 
-        if not self.options.get('keepttl'):
-            db.delete_expiration(self.key)
+        # Handle expiration
+        if not self.keepttl:
+            ctx.db.delete_expiration(self.key)
 
-        if expiration := self.options.get('expiration'):
-            db.set_expiration(self.key, expiration)
+        if self.ex is not None:
+            ex = (time.time() + self.ex) * 1000
+            db.set_expiration(self.key, int(ex))
+        elif self.px is not None:
+            px = time.time() * 1000 + self.px
+            db.set_expiration(self.key, int(px))
+        elif self.exat is not None:
+            db.set_expiration(self.key, self.exat * 1000)
+        elif self.pxat is not None:
+            db.set_expiration(self.key, self.pxat)
 
-        if self.options.get("get"):
-            return old_value
-
-        return "OK"
-
-    def _check_that_nx_and_xx_cannot_both_be_set(self):
-        if self.options.get('nx') and self.options.get('xx'):
-            raise ValueError("nx and xx are mutually exclusive")
-
-    def _is_nx_set_and_key_exists(self, db: LitedisDB):
-        if self.options.get('nx') and db.exists(self.key):
-            return True
-
-    def _is_xx_set_and_key_not_exists(self, db: LitedisDB):
-        if self.options.get('xx') and not db.exists(self.key):
-            return True
+        return old_value if self.get else 'OK'
 
 
 class GetCommand(ReadCommand):
@@ -97,18 +124,23 @@ class GetCommand(ReadCommand):
 
     def __init__(self, command_tokens: list[str]):
         self.key: str
-
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
+        """Parse command arguments"""
         if len(tokens) < 2:
             raise ValueError('get command requires key')
-
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
-        return ctx.db.get(self.key)
+        """Execute the GET command"""
+        db = ctx.db
 
+        value = db.get(self.key)
+        if not isinstance(value, str):
+            raise TypeError('value is not a string')
+
+        return value
 
 class AppendCommand(WriteCommand):
     name = 'append'
