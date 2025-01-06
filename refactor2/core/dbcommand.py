@@ -1,24 +1,23 @@
 import time
 from typing import Iterable
 
-from refactor2.commandline import combine_command_line
 from refactor2.core.command.base import CommandContext
 from refactor2.core.command.factory import CommandFactory
 from refactor2.core.persistence import LitedisDB
 from refactor2.typing import DBCommandTokens
 
 
-class DBCommandLineConverter:
+class DBCommandTokensConverter:
 
     @classmethod
     def dbs_to_commands(cls, dbs: dict[str, LitedisDB]):
         for dbname, db in dbs.items():
             for key in db.keys():
-                cmdline = cls._convert_db_object_to_cmdline(key, db)
-                yield DBCommandTokens(dbname, cmdline)
+                cmdtokens = cls._convert_db_object_to_cmdtokens(key, db)
+                yield DBCommandTokens(dbname, cmdtokens)
 
     @classmethod
-    def _convert_db_object_to_cmdline(cls, key: str, db: LitedisDB):
+    def _convert_db_object_to_cmdtokens(cls, key: str, db: LitedisDB):
         value = db.get(key)
         if value is None:
             raise KeyError(f"'{key}' doesn't exist")
@@ -34,13 +33,13 @@ class DBCommandLineConverter:
                 pieces.append('pxat')
                 pieces.append(f'{expiration}')
 
-        return combine_command_line(pieces)
+        return pieces
 
     @classmethod
     def commands_to_dbs(cls, dbcmds: Iterable[DBCommandTokens]) -> dict[str, LitedisDB]:
         dbs = {}
         for dbcmd in dbcmds:
-            dbname, cmdline = dbcmd
+            dbname, cmdtokens = dbcmd
 
             db = dbs.get(dbname)
             if db is None:
@@ -48,7 +47,7 @@ class DBCommandLineConverter:
                 dbs[dbname] = db
 
             ctx = CommandContext(db)
-            command = CommandFactory.create(dbcmd.cmdtokens)
+            command = CommandFactory.create(cmdtokens)
             command.execute(ctx)
 
         return dbs

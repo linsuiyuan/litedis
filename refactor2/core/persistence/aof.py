@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 from typing import TextIO, Iterable
 
-from refactor2.typing import DBCommandTokens
+from refactor2.typing import DBCommandTokens, DB_COMMAND_SEPARATOR
 
 
 class AOF:
@@ -36,7 +36,7 @@ class AOF:
 
     def log_command(self, dbcmd: DBCommandTokens):
         file = self.get_or_create_file()
-        file.write(f"{dbcmd.dbname}/{dbcmd.cmdtokens}\n")
+        file.write(f"{dbcmd.dbname}{DB_COMMAND_SEPARATOR}{dbcmd.cmdtokens}\n")
         file.flush()
 
     def load_commands(self):
@@ -47,8 +47,8 @@ class AOF:
         self._close_file()
         with open(self._file_path, "r") as f:
             for line in f:
-                dbname, cmdline = line.strip().split(sep="/", maxsplit=1)
-                yield DBCommandTokens(dbname, cmdline)
+                dbname, cmdtokens = line.strip().split(sep=DB_COMMAND_SEPARATOR, maxsplit=1)
+                yield DBCommandTokens(dbname, eval(cmdtokens))
 
     def rewrite_commands(self, commands: Iterable[DBCommandTokens]):
 
@@ -56,8 +56,8 @@ class AOF:
 
         try:
             with os.fdopen(temp_fd, 'w') as f:
-                for dbname, cmdline in commands:
-                    f.write(f"{dbname}/{cmdline}\n")
+                for dbname, cmdtokens in commands:
+                    f.write(f"{dbname}{DB_COMMAND_SEPARATOR}{cmdtokens}\n")
 
             os.replace(temp_path, self._file_path)
         except:

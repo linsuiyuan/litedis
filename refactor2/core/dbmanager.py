@@ -5,10 +5,10 @@ from threading import Lock, Thread
 
 from refactor2.core.command.base import CommandContext
 from refactor2.core.command.factory import CommandFactory
-from refactor2.core.dbcommand import DBCommandLineConverter, DBCommandTokens
+from refactor2.core.dbcommand import DBCommandTokensConverter, DBCommandTokens
 from refactor2.core.persistence import AOF
 from refactor2.core.persistence import LitedisDB
-from refactor2.typing import CommandProcessor, ReadWriteType
+from refactor2.typing import CommandProcessor, ReadWriteType, DB_COMMAND_SEPARATOR
 from refactor2.utils import SingletonMeta
 
 
@@ -67,6 +67,8 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         if dbname not in self._dbs:
             with self._dbs_lock:
                 if dbname not in self._dbs:
+                    if DB_COMMAND_SEPARATOR in dbname:
+                        raise ValueError("dbname can not contain '='")
                     self._dbs[dbname] = LitedisDB(dbname)
         return self._dbs[dbname]
 
@@ -91,7 +93,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
         with self._dbs_lock:
             dbcmds = self._aof.load_commands()
-            dbs = DBCommandLineConverter.commands_to_dbs(dbcmds)
+            dbs = DBCommandTokensConverter.commands_to_dbs(dbcmds)
             self._dbs.clear()
             self._dbs.update(dbs)
 
@@ -100,7 +102,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
     def _rewrite_aof_commands(self) -> bool:
 
         with self._dbs_lock:
-            dbcommands = DBCommandLineConverter.dbs_to_commands(self._dbs)
+            dbcommands = DBCommandTokensConverter.dbs_to_commands(self._dbs)
             self._aof.rewrite_commands(dbcommands)
 
         return True

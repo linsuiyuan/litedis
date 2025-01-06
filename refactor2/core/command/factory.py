@@ -18,10 +18,9 @@ _parsers.update(_import_class(basiccmds.__name__))
 class CommandFactory:
 
     @staticmethod
-    def create(command_line: str) -> Command:
-        name, _ = command_line.split(maxsplit=1)
-        name = name.lower()
+    def create(command_tokens: list[str]) -> Command:
+        name = command_tokens[0].lower()
         if name not in _parsers:
-            raise ValueError(f"unknown command line: {command_line}")
+            raise ValueError(f"unknown command tokens: {command_tokens}")
 
-        return _parsers[name](command_line)
+        return _parsers[name](command_tokens)

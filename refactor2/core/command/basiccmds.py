@@ -1,6 +1,5 @@
 import time
 
-from refactor2.commandline import parse_command_line
 from refactor2.core.command.base import CommandContext, ReadCommand, WriteCommand
 from refactor2.core.persistence import LitedisDB
 
@@ -8,15 +7,14 @@ from refactor2.core.persistence import LitedisDB
 class SetCommand(WriteCommand):
     name = 'set'
 
-    def __init__(self, command_line: str):
+    def __init__(self, command_tokens: list[str]):
         self.key: str
         self.value: str
         self.options: dict
 
-        self._parse(command_line)
+        self._parse(command_tokens)
 
-    def _parse(self, command_line: str):
-        tokens = parse_command_line(command_line)
+    def _parse(self, tokens: list[str]):
 
         if len(tokens) < 3:
             raise ValueError('set command requires key and value')
@@ -95,13 +93,12 @@ class SetCommand(WriteCommand):
 class GetCommand(ReadCommand):
     name = 'get'
 
-    def __init__(self, command_line: str):
+    def __init__(self, command_tokens: list[str]):
         self.key: str
 
-        self._parse(command_line)
+        self._parse(command_tokens)
 
-    def _parse(self, command_line: str):
-        tokens = parse_command_line(command_line)
+    def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
             raise ValueError('get command requires key')
         key = tokens[1]
