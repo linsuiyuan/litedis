@@ -460,24 +460,49 @@ class KeysCommand(ReadCommand):
         [] - matches any character within the brackets
         \\x - escape character x
         """
-        # Handle escaped characters first
         i = 0
         result = []
         while i < len(pattern):
             if pattern[i] == '\\' and i + 1 < len(pattern):
-                result.append(re.escape(pattern[i + 1]))
+                # Handle escaped characters - make them match literally
+                next_char = pattern[i + 1]
+                if next_char in '*?[]\\':
+                    result.append(re.escape(next_char))
+                else:
+                    # If not escaping a special char, keep the escape sequence
+                    result.extend(['\\', next_char])
                 i += 2
-            else:
-                result.append(pattern[i])
+            elif pattern[i] == '*':
+                result.append('.*')
                 i += 1
-        pattern = ''.join(result)
-
-        # Convert Redis wildcards to regex
-        pattern = pattern.replace('*', '.*')  # * -> .*
-        pattern = pattern.replace('?', '.')  # ? -> .
+            elif pattern[i] == '?':
+                result.append('.')
+                i += 1
+            elif pattern[i] == '[':
+                # Handle character classes [...]
+                bracket_content = []
+                i += 1
+                while i < len(pattern) and pattern[i] != ']':
+                    if pattern[i] == '\\' and i + 1 < len(pattern):
+                        bracket_content.append(re.escape(pattern[i + 1]))
+                        i += 2
+                    else:
+                        bracket_content.append(pattern[i])
+                        i += 1
+                if i < len(pattern) and pattern[i] == ']':
+                    result.append('[' + ''.join(bracket_content) + ']')
+                    i += 1
+                else:
+                    # If no matching ], treat [ as literal
+                    result.append('\\[')
+                    i = pattern.find('[') + 1
+            else:
+                # Escape other regex special chars
+                result.append(re.escape(pattern[i]))
+                i += 1
 
         # Add anchors to match entire string
-        return f'^{pattern}$'
+        return f'^{"".join(result)}$'
 
     def execute(self, ctx: CommandContext):
         try:

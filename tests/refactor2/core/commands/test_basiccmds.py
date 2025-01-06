@@ -1,5 +1,5 @@
 import time
-from unittest import SkipTest
+from unittest.mock import patch
 
 import pytest
 
@@ -46,6 +46,17 @@ def ctx(db):
     return CommandContext(db)
 
 
+MOCK_TIME_INITIAL_TIMESTAMP = 1000
+
+
+@pytest.fixture
+def mock_time():
+    """Fixture to mock time.time() for testing"""
+    with patch('time.time') as mock_time:
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP
+        yield mock_time
+
+
 class TestSetCommand:
     def test_basic_set(self, ctx):
         cmd = SetCommand(['set', 'key', 'value'])
@@ -53,18 +64,21 @@ class TestSetCommand:
         assert result == 'OK'
         assert ctx.db.get('key') == 'value'
 
-    def test_set_with_ex(self, ctx):
+    def test_set_with_ex(self, ctx, mock_time):
         cmd = SetCommand(['set', 'key', 'value', 'ex', '1'])
         cmd.execute(ctx)
         assert ctx.db.get('key') == 'value'
-        time.sleep(1.1)  # Wait for expiration
+
+        # time pass
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
         assert ctx.db.get('key') is None
 
-    def test_set_with_px(self, ctx):
+    def test_set_with_px(self, ctx, mock_time):
         cmd = SetCommand(['set', 'key', 'value', 'px', '100'])
         cmd.execute(ctx)
         assert ctx.db.get('key') == 'value'
-        time.sleep(0.11)  # Wait for expiration
+
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
         assert ctx.db.get('key') is None
 
     def test_set_nx(self, ctx):
@@ -280,13 +294,15 @@ class TestCopyCommand:
 
 
 class TestExpireCommand:
-    def test_expire_basic(self, ctx):
+    def test_expire_basic(self, ctx, mock_time):
         ctx.db.set('key', 'value')
         cmd = ExpireCommand(['expire', 'key', '1'])
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.exists_expiration('key')
-        time.sleep(1.1)
+
+        # Simulate the passage of time
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 6
         assert ctx.db.get('key') is None
 
     def test_expire_nonexistent_key(self, ctx):
@@ -299,29 +315,37 @@ class TestExpireCommand:
         with pytest.raises(ValueError):
             ExpireCommand(['expire', 'key', '-1'])
 
-    def test_expire_update_existing(self, ctx):
+    def test_expire_update_existing(self, ctx, mock_time):
         ctx.db.set('key', 'value')
-        # Set initial expiration to 5 seconds
+        # set initial expiration to 5s
         cmd1 = ExpireCommand(['expire', 'key', '5'])
         cmd1.execute(ctx)
 
-        # Update to 1 second
-        cmd2 = ExpireCommand(['expire', 'key', '1'])
+        # update to 10s
+        cmd2 = ExpireCommand(['expire', 'key', '10'])
         result = cmd2.execute(ctx)
         assert result == 1
-        time.sleep(1.1)
+
+        # check that key exists after 8s
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 8
+        assert ctx.db.get('key') == 'value'
+
+        # check that key not exists after 12s
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 12
         assert ctx.db.get('key') is None
 
 
 class TestExpireatCommand:
-    def test_expireat_basic(self, ctx):
+    def test_expireat_basic(self, ctx, mock_time):
         ctx.db.set('key', 'value')
         future_timestamp = int(time.time()) + 1
         cmd = ExpireatCommand(['expireat', 'key', str(future_timestamp)])
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.exists_expiration('key')
-        time.sleep(1.1)
+
+        # time pass
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
         assert ctx.db.get('key') is None
 
     def test_expireat_past_timestamp(self, ctx):
@@ -364,13 +388,14 @@ class TestExpireTimeCommand:
         result = cmd.execute(ctx)
         assert result == -2
 
-    def test_expiretime_after_expire(self, ctx):
+    def test_expiretime_after_expire(self, ctx, mock_time):
         ctx.db.set('key', 'value')
         # Set expiration to 1 second from now
         future_timestamp = int(time.time()) + 1
         ctx.db.set_expiration('key', future_timestamp * 1000)
 
-        time.sleep(1.1)
+        # time pass
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
         cmd = ExpireTimeCommand(['expiretime', 'key'])
         result = cmd.execute(ctx)
         assert result == -2  # Key should be expired and deleted
@@ -480,8 +505,6 @@ class TestKeysCommand:
         result = cmd.execute(ctx)
         assert sorted(result) == ['key1', 'key2']
 
-    # todo need to fix
-    @SkipTest
     def test_keys_escaped_special_chars(self, ctx):
         ctx.db.set('key*1', 'value1')
         ctx.db.set('key?2', 'value2')
@@ -614,12 +637,13 @@ class TestPersistCommand:
         result = cmd.execute(ctx)
         assert result == 0
 
-    def test_persist_after_expiration(self, ctx):
+    def test_persist_after_expiration(self, ctx, mock_time):
         # Set key with 1 second expiration
         ctx.db.set('key', 'value')
         ctx.db.set_expiration('key', int(time.time() * 1000 + 1000))
 
-        time.sleep(1.1)  # Wait for expiration
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
+
         cmd = PersistCommand(['persist', 'key'])
         result = cmd.execute(ctx)
         assert result == 0
@@ -813,10 +837,11 @@ class TestTTLCommand:
         result = cmd.execute(ctx)
         assert result == -2
 
-    def test_ttl_after_expire(self, ctx):
+    def test_ttl_after_expire(self, ctx, mock_time):
         ctx.db.set('key', 'value')
         ctx.db.set_expiration('key', int(time.time() * 1000 + 1000))  # 1 second
-        time.sleep(1.1)
+
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
 
         cmd = TTLCommand(['ttl', 'key'])
         result = cmd.execute(ctx)
@@ -844,10 +869,11 @@ class TestPTTLCommand:
         result = cmd.execute(ctx)
         assert result == -2
 
-    def test_pttl_after_expire(self, ctx):
+    def test_pttl_after_expire(self, ctx, mock_time):
         ctx.db.set('key', 'value')
         ctx.db.set_expiration('key', int(time.time() * 1000 + 1000))  # 1 second
-        time.sleep(1.1)
+
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
 
         cmd = PTTLCommand(['pttl', 'key'])
         result = cmd.execute(ctx)
