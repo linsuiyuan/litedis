@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from refactor2.core.persistence import AOF
-from refactor2.typing import DBCommandLine
+from refactor2.typing import DBCommandTokens
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ class TestAOF:
         assert aof_file.exists_file()
 
     def test_log_command(self, aof_file):
-        cmd = DBCommandLine("test_db", "SET key value")
+        cmd = DBCommandTokens("test_db", "SET key value")
         aof_file.log_command(cmd)
 
         # Verify file content
@@ -59,8 +59,8 @@ class TestAOF:
 
     def test_load_commands(self, aof_file):
         commands = [
-            DBCommandLine("db1", "SET key1 value1"),
-            DBCommandLine("db2", "SET key2 value2"),
+            DBCommandTokens("db1", "SET key1 value1"),
+            DBCommandTokens("db2", "SET key2 value2"),
         ]
 
         # Write test commands
@@ -73,7 +73,7 @@ class TestAOF:
 
         for original, loaded in zip(commands, loaded_commands):
             assert loaded.dbname == original.dbname
-            assert loaded.cmdline == original.cmdline
+            assert loaded.cmdtokens == original.cmdtokens
 
     def test_load_commands_nonexistent_file(self, aof_file):
         commands = list(aof_file.load_commands())
@@ -82,8 +82,8 @@ class TestAOF:
     def test_rewrite_commands(self, aof_file):
         # Test rewriting commands
         original_commands = [
-            DBCommandLine("db1", "SET key1 value1"),
-            DBCommandLine("db2", "SET key2 value2")
+            DBCommandTokens("db1", "SET key1 value1"),
+            DBCommandTokens("db2", "SET key2 value2")
         ]
 
         # Rewrite commands
@@ -95,7 +95,7 @@ class TestAOF:
 
         for i, cmd in enumerate(loaded_commands):
             assert cmd.dbname == original_commands[i].dbname
-            assert cmd.cmdline == original_commands[i].cmdline
+            assert cmd.cmdtokens == original_commands[i].cmdtokens
 
     def test_rewrite_commands_error_handling(self, aof_file, monkeypatch):
         def mock_replace(*args):  # noqa
@@ -104,7 +104,7 @@ class TestAOF:
         monkeypatch.setattr(os, "replace", mock_replace)
 
         with pytest.raises(Exception, match="Failed to rewrite.*"):
-            aof_file.rewrite_commands([DBCommandLine("db1", "SET key1 value1")])
+            aof_file.rewrite_commands([DBCommandTokens("db1", "SET key1 value1")])
 
     def test_close(self, aof_file):
         file = aof_file.get_or_create_file()

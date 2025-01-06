@@ -9,10 +9,10 @@ class ReadWriteType(Enum):
     Write = "write"
 
 
-class DBCommandLine(NamedTuple):
+class DBCommandTokens(NamedTuple):
     dbname: str
-    cmdline: str
+    cmdtokens: str
 
 
 class CommandProcessor(Protocol):
-    def process_command(self, dbcmd: DBCommandLine): ...
+    def process_command(self, dbcmd: DBCommandTokens): ...

@@ -4,7 +4,7 @@ import pytest
 
 from refactor2.core.dbcommand import DBCommandLineConverter
 from refactor2.core.persistence import LitedisDB
-from refactor2.typing import DBCommandLine
+from refactor2.typing import DBCommandTokens
 
 
 @pytest.fixture
@@ -22,8 +22,8 @@ class TestDBCommandLineConverter:
         commands = list(DBCommandLineConverter.dbs_to_commands(dbs))
 
         assert len(commands) == 2
-        assert any(cmd.dbname == "test_db" and cmd.cmdline == 'set key1 value1' for cmd in commands)
-        assert any(cmd.dbname == "test_db" and cmd.cmdline == 'set key2 value2' for cmd in commands)
+        assert any(cmd.dbname == "test_db" and cmd.cmdtokens == 'set key1 value1' for cmd in commands)
+        assert any(cmd.dbname == "test_db" and cmd.cmdtokens == 'set key2 value2' for cmd in commands)
 
     def test_dbs_to_commands_with_expiration(self, mock_db):
         mock_db.set("key1", "value1")
@@ -36,8 +36,8 @@ class TestDBCommandLineConverter:
         assert len(commands) == 1
         cmd = commands[0]
         assert cmd.dbname == "test_db"
-        assert cmd.cmdline.startswith('set key1 value1 pxat')
-        assert str(expiration) in cmd.cmdline
+        assert cmd.cmdtokens.startswith('set key1 value1 pxat')
+        assert str(expiration) in cmd.cmdtokens
 
     def test_convert_db_object_to_cmdline_basic(self, mock_db):
         mock_db.set("key1", "value1")
@@ -65,8 +65,8 @@ class TestDBCommandLineConverter:
 
     def test_commands_to_dbs_basic(self):
         commands = [
-            DBCommandLine("db1", 'set key1 value1'),
-            DBCommandLine("db2", 'set key2 value2')
+            DBCommandTokens("db1", 'set key1 value1'),
+            DBCommandTokens("db2", 'set key2 value2')
         ]
 
         dbs = DBCommandLineConverter.commands_to_dbs(commands)
@@ -79,8 +79,8 @@ class TestDBCommandLineConverter:
 
     def test_commands_to_dbs_same_db(self):
         commands = [
-            DBCommandLine("db1", 'set key1 value1'),
-            DBCommandLine("db1", 'set key2 value2')
+            DBCommandTokens("db1", 'set key1 value1'),
+            DBCommandTokens("db1", 'set key2 value2')
         ]
 
         dbs = DBCommandLineConverter.commands_to_dbs(commands)

@@ -5,7 +5,7 @@ from threading import Lock, Thread
 
 from refactor2.core.command.base import CommandContext
 from refactor2.core.command.factory import CommandFactory
-from refactor2.core.dbcommand import DBCommandLineConverter, DBCommandLine
+from refactor2.core.dbcommand import DBCommandLineConverter, DBCommandTokens
 from refactor2.core.persistence import AOF
 from refactor2.core.persistence import LitedisDB
 from refactor2.typing import CommandProcessor, ReadWriteType
@@ -70,10 +70,10 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
                     self._dbs[dbname] = LitedisDB(dbname)
         return self._dbs[dbname]
 
-    def process_command(self, dbcmd: DBCommandLine):
+    def process_command(self, dbcmd: DBCommandTokens):
         db = self.get_or_create_db(dbcmd.dbname)
         ctx = CommandContext(db)
-        command = CommandFactory.create(dbcmd.cmdline)
+        command = CommandFactory.create(dbcmd.cmdtokens)
 
         with self._db_locks[dbcmd.dbname]:
             result = command.execute(ctx)

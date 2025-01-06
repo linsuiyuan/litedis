@@ -5,7 +5,7 @@ from refactor2.commandline import combine_command_line
 from refactor2.core.command.base import CommandContext
 from refactor2.core.command.factory import CommandFactory
 from refactor2.core.persistence import LitedisDB
-from refactor2.typing import DBCommandLine
+from refactor2.typing import DBCommandTokens
 
 
 class DBCommandLineConverter:
@@ -15,7 +15,7 @@ class DBCommandLineConverter:
         for dbname, db in dbs.items():
             for key in db.keys():
                 cmdline = cls._convert_db_object_to_cmdline(key, db)
-                yield DBCommandLine(dbname, cmdline)
+                yield DBCommandTokens(dbname, cmdline)
 
     @classmethod
     def _convert_db_object_to_cmdline(cls, key: str, db: LitedisDB):
@@ -37,7 +37,7 @@ class DBCommandLineConverter:
         return combine_command_line(pieces)
 
     @classmethod
-    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandLine]) -> dict[str, LitedisDB]:
+    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandTokens]) -> dict[str, LitedisDB]:
         dbs = {}
         for dbcmd in dbcmds:
             dbname, cmdline = dbcmd
@@ -48,7 +48,7 @@ class DBCommandLineConverter:
                 dbs[dbname] = db
 
             ctx = CommandContext(db)
-            command = CommandFactory.create(dbcmd.cmdline)
+            command = CommandFactory.create(dbcmd.cmdtokens)
             command.execute(ctx)
 
         return dbs

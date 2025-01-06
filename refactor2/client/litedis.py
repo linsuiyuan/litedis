@@ -4,7 +4,7 @@ from typing import Any
 from refactor2.client.commands import BasicKeyCommand
 from refactor2.commandline import combine_command_line
 from refactor2.core.dbmanager import DBManager
-from refactor2.typing import CommandProcessor, DBCommandLine
+from refactor2.typing import CommandProcessor, DBCommandTokens
 
 
 class Litedis(BasicKeyCommand):
@@ -21,5 +21,5 @@ class Litedis(BasicKeyCommand):
 
     def execute_command(self, *args) -> Any:
         command_line = combine_command_line(args)
-        result = self.executor.process_command(DBCommandLine(self.dbname, command_line))
+        result = self.executor.process_command(DBCommandTokens(self.dbname, command_line))
         return result

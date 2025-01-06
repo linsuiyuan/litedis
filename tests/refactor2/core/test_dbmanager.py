@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from refactor2.core.dbcommand import DBCommandLine
+from refactor2.core.dbcommand import DBCommandTokens
 from refactor2.core.dbmanager import DBManager
 from refactor2.core.persistence import LitedisDB
 
@@ -86,13 +86,13 @@ class TestDBManager:
         db = db_manager.get_or_create_db("test_db")
         db.set("key1", "value1")
 
-        cmd = DBCommandLine("test_db", "get key1")
+        cmd = DBCommandTokens("test_db", "get key1")
         result = db_manager.process_command(cmd)
         assert result == "value1"
 
     def test_process_command_write(self, db_manager):
         # Test processing write command
-        cmd = DBCommandLine("test_db", "set key1 value1")
+        cmd = DBCommandTokens("test_db", "set key1 value1")
         result = db_manager.process_command(cmd)
         assert result == "OK"
 
@@ -103,7 +103,7 @@ class TestDBManager:
 
     def test_process_command_write_with_persistence(self, db_manager, temp_dir):
         # Test write command with persistence
-        cmd = DBCommandLine("test_db", "set key1 value1")
+        cmd = DBCommandTokens("test_db", "set key1 value1")
         db_manager.process_command(cmd)
 
         # Verify command was logged to AOF
@@ -111,7 +111,7 @@ class TestDBManager:
         commands = list(db_manager._aof.load_commands())
         assert len(commands) == 1
         assert commands[0].dbname == "test_db"
-        assert commands[0].cmdline == "set key1 value1"
+        assert commands[0].cmdtokens == "set key1 value1"
 
         # Create new manager instance to test persistence
         DBManager._instance = None
@@ -124,8 +124,8 @@ class TestDBManager:
         mock_aof = mock_aof_class.return_value
         mock_aof.exists_file.return_value = True
         mock_aof.load_commands.return_value = [
-            DBCommandLine("test_db", "set key1 value1"),
-            DBCommandLine("test_db", "set key2 value2")
+            DBCommandTokens("test_db", "set key1 value1"),
+            DBCommandTokens("test_db", "set key2 value2")
         ]
 
         manager = DBManager(persistence_on=True, data_path=temp_dir)
