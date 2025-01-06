@@ -587,7 +587,7 @@ class RenameCommand(WriteCommand):
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
-            raise ValueError('rename command requires source and destination')
+            raise ValueError(f'{self.name} command requires source and destination')
         self.source = tokens[1]
         self.destination = tokens[2]
 
