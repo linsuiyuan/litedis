@@ -1,5 +1,6 @@
 import time
 
+from refactor2.sortedset import SortedSet
 from refactor2.typing import LitedisObjectT
 
 
@@ -93,5 +94,7 @@ class LitedisDB:
             return "hash"
         elif isinstance(value, set):
             return "set"
+        elif isinstance(value, SortedSet):
+            return "zset"
         else:
             raise TypeError(f"not supported type {type(value)}")

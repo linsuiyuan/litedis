@@ -3,6 +3,7 @@ import time
 import pytest
 
 from refactor2.core.persistence import LitedisDB
+from refactor2.sortedset import SortedSet
 
 
 @pytest.fixture
@@ -122,7 +123,8 @@ def test_get_type(db):
         "string_key": ("string_value", "string"),
         "list_key": (["list", "value"], "list"),
         "dict_key": ({"dict": "value"}, "hash"),
-        "set_key": ({1, 2, 3}, "set")
+        "set_key": ({1, 2, 3}, "set"),
+        "zset_key": (SortedSet({"member1": 1., "member2": 2.}), "zset"),
     }
 
     for key, (value, expected_type) in type_tests.items():
