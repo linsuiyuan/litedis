@@ -183,8 +183,8 @@ class LPushCommand(WriteCommand):
             if not isinstance(value, list):
                 raise TypeError("value is not a list")
 
-        # Prepend elements in reverse order
-        for element in reversed(self.elements):
+        # Prepend elements
+        for element in self.elements:
             value.insert(0, element)
 
         db.set(self.key, value)
