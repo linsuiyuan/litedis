@@ -1,13 +1,18 @@
 from pathlib import Path
 from typing import Any
 
-from refactor2.client.commands import BasicCommands
+from refactor2.client.commands import BasicCommands, HashCommands, ListCommands, SetCommands, ZSetCommands
 from refactor2.core.dbmanager import DBManager
 from refactor2.typing import CommandProcessor, DBCommandTokens
 
 
-class Litedis(BasicCommands):
-
+class Litedis(
+    BasicCommands,
+    HashCommands,
+    ListCommands,
+    SetCommands,
+    ZSetCommands
+):
     def __init__(self,
                  dbname: str = "db",
                  data_path: str | Path = "ldbdata"):
