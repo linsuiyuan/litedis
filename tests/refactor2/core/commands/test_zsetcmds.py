@@ -173,8 +173,6 @@ class TestZIncrByCommand:
             ZIncrByCommand(['zincrby', 'myset'])
 
 
-# todo 实现有问题，待修改
-@SkipTest
 class TestZInterCommand:
     def test_zinter_empty_keys(self, ctx):
         cmd = ZInterCommand(['zinter', '2', 'set1', 'set2'])
@@ -193,8 +191,8 @@ class TestZInterCommand:
         cmd = ZInterCommand(['zinter', '2', 'set1', 'set2'])
         result = cmd.execute(ctx)
         assert len(result) == 2
-        assert ('member2', 2.0) in result
-        assert ('member3', 3.0) in result
+        assert 'member2' in result
+        assert 'member3' in result
 
     def test_zinter_with_withscores(self, ctx):
         # Add members to sets
@@ -217,7 +215,7 @@ class TestZInterCommand:
         with pytest.raises(ValueError, match='zinter command requires numkeys and at least one key'):
             ZInterCommand(['zinter'])
 
-        with pytest.raises(ValueError, match='numkeys must be a positive integer'):
+        with pytest.raises(ValueError, match='numkeys must be positive'):
             ZInterCommand(['zinter', '-1', 'set1'])
 
 

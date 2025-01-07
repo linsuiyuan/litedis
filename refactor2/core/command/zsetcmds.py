@@ -194,6 +194,7 @@ class ZInterCommand(ReadCommand):
     def __init__(self, command_tokens: list[str]):
         self.numkeys: int
         self.keys: list[str]
+        self.withscores: bool = False
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
@@ -211,6 +212,11 @@ class ZInterCommand(ReadCommand):
             raise ValueError('number of keys does not match numkeys')
 
         self.keys = tokens[2:2 + self.numkeys]
+
+        i = 2 + self.numkeys
+        if i < len(tokens) and tokens[i].upper() == 'WITHSCORES':
+            self.withscores = True
+
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
@@ -232,7 +238,13 @@ class ZInterCommand(ReadCommand):
                 if not result:  # Optimization: stop if intersection becomes empty
                     break
 
-        return list(result) if result else []
+        if not result:
+            return []
+
+        if self.withscores:
+            # Flatten the result into [member1, score1, member2, score2, ...]
+            return [item for pair in result for item in pair]
+        return [member for member, _ in result]
 
 
 class ZInterCardCommand(ReadCommand):
