@@ -457,11 +457,8 @@ class TestListCommands(BaseTest):
         assert client.lrange("sorted_list", 0, -1) == ["3", "2", "1"]
 
 
-# todo to fix
-@SkipTest
 class TestSetCommands(BaseTest):
     def test_sadd(self, client):
-        """Test SADD command"""
         # Add single member
         assert client.sadd("set1", "member1") == 1
 
@@ -477,7 +474,6 @@ class TestSetCommands(BaseTest):
         assert all(m in members for m in ["member1", "member2", "member3", "member4"])
 
     def test_scard(self, client):
-        """Test SCARD command"""
         assert client.scard("nonexistent") == 0
 
         client.sadd("set1", "member1", "member2", "member3")
@@ -487,7 +483,6 @@ class TestSetCommands(BaseTest):
         assert client.scard("set1") == 3
 
     def test_sdiff(self, client):
-        """Test SDIFF command"""
         client.sadd("set1", "a", "b", "c", "d")
         client.sadd("set2", "c", "d", "e")
         client.sadd("set3", "d", "e", "f")
@@ -505,7 +500,6 @@ class TestSetCommands(BaseTest):
         assert set(diff) == {"a", "b", "c", "d"}
 
     def test_sdiffstore(self, client):
-        """Test SDIFFSTORE command"""
         client.sadd("set1", "a", "b", "c", "d")
         client.sadd("set2", "c", "d", "e")
 
@@ -519,7 +513,6 @@ class TestSetCommands(BaseTest):
         assert set(client.smembers("dest")) == {"a", "b"}
 
     def test_sinter(self, client):
-        """Test SINTER command"""
         client.sadd("set1", "a", "b", "c", "d")
         client.sadd("set2", "c", "d", "e")
         client.sadd("set3", "d", "e", "f")
@@ -536,7 +529,6 @@ class TestSetCommands(BaseTest):
         assert client.sinter("set1", "nonexistent") == []
 
     def test_sintercard(self, client):
-        """Test SINTERCARD command"""
         client.sadd("set1", "a", "b", "c", "d")
         client.sadd("set2", "c", "d", "e")
         client.sadd("set3", "d", "e", "f")
@@ -551,7 +543,6 @@ class TestSetCommands(BaseTest):
         assert client.sintercard(3, "set1", "set2", "set3", limit=1) == 1
 
     def test_sinterstore(self, client):
-        """Test SINTERSTORE command"""
         client.sadd("set1", "a", "b", "c", "d")
         client.sadd("set2", "c", "d", "e")
 
@@ -565,7 +556,6 @@ class TestSetCommands(BaseTest):
         assert set(client.smembers("dest")) == {"c", "d"}
 
     def test_sismember(self, client):
-        """Test SISMEMBER command"""
         client.sadd("set1", "member1", "member2")
 
         assert client.sismember("set1", "member1") == 1
@@ -574,7 +564,6 @@ class TestSetCommands(BaseTest):
         assert client.sismember("nonexistent", "member1") == 0
 
     def test_smembers(self, client):
-        """Test SMEMBERS command"""
         client.sadd("set1", "member1", "member2", "member3")
 
         members = client.smembers("set1")
@@ -584,7 +573,6 @@ class TestSetCommands(BaseTest):
         assert client.smembers("nonexistent") == []
 
     def test_smismember(self, client):
-        """Test SMISMEMBER command"""
         client.sadd("set1", "member1", "member2")
 
         result = client.smismember("set1", "member1", "member2", "nonexistent")
@@ -593,7 +581,6 @@ class TestSetCommands(BaseTest):
         assert client.smismember("nonexistent", "member1") == [0]
 
     def test_smove(self, client):
-        """Test SMOVE command"""
         client.sadd("source", "member1", "member2")
         client.sadd("dest", "member3")
 
@@ -609,7 +596,6 @@ class TestSetCommands(BaseTest):
         assert client.smove("nonexistent", "dest", "member") == 0
 
     def test_spop(self, client):
-        """Test SPOP command"""
         client.sadd("set1", "member1", "member2", "member3")
 
         # Pop single member
@@ -628,7 +614,6 @@ class TestSetCommands(BaseTest):
         assert client.spop("nonexistent", 2) == []
 
     def test_srandmember(self, client):
-        """Test SRANDMEMBER command"""
         client.sadd("set1", "member1", "member2", "member3")
 
         # Get single random member
@@ -646,7 +631,6 @@ class TestSetCommands(BaseTest):
         assert client.srandmember("nonexistent", 2) == []
 
     def test_srem(self, client):
-        """Test SREM command"""
         client.sadd("set1", "member1", "member2", "member3")
 
         # Remove single member
@@ -661,7 +645,6 @@ class TestSetCommands(BaseTest):
         assert client.srem("nonexistent", "member1") == 0
 
     def test_sunion(self, client):
-        """Test SUNION command"""
         client.sadd("set1", "a", "b", "c")
         client.sadd("set2", "c", "d", "e")
         client.sadd("set3", "e", "f", "g")
