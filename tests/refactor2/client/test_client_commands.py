@@ -32,22 +32,18 @@ class BaseTest:
 
 
 class TestBasicCommands(BaseTest):
-    """Test basic string operations and key commands"""
 
     def test_set_get(self, client):
-        """Test SET and GET operations"""
         assert client.execute("set", "key1", "value1") == "OK"
         assert client.execute("get", "key1") == "value1"
         assert client.execute("get", "nonexistent") is None
 
     def test_append(self, client):
-        """Test APPEND command"""
         assert client.append("key1", "Hello") == 5
         assert client.append("key1", " World") == 11
         assert client.get("key1") == "Hello World"
 
     def test_copy(self, client):
-        """Test COPY command"""
         client.set("source", "value")
         assert client.copy("source", "dest") == 1
         assert client.get("dest") == "value"
@@ -58,14 +54,12 @@ class TestBasicCommands(BaseTest):
         assert client.get("dest") == "value"
 
     def test_decrby(self, client):
-        """Test DECRBY command"""
         client.set("counter", "10")
-        assert client.decrby("counter", 3) == "7"
-        assert client.decrby("counter", 5) == "2"
-        assert client.decrby("nonexistent", 5) == "-5"
+        assert client.decrby("counter", 3) == 7
+        assert client.decrby("counter", 5) == 2
+        assert client.decrby("nonexistent", 5) == -5
 
     def test_delete(self, client):
-        """Test DELETE command"""
         client.set("key1", "value1")
         client.set("key2", "value2")
         assert client.delete("key1", "key2", "nonexistent") == 2
@@ -73,7 +67,6 @@ class TestBasicCommands(BaseTest):
         assert client.get("key2") is None
 
     def test_exists(self, client):
-        """Test EXISTS command"""
         client.set("key1", "value1")
         client.set("key2", "value2")
         assert client.exists("key1", "key2", "nonexistent") == 2
@@ -98,7 +91,6 @@ class TestBasicCommands(BaseTest):
         assert client.expire("key1", 50, lt=True) == 1   # New expiry is less
 
     def test_expiretime(self, client):
-        """Test EXPIRETIME command"""
         client.set("key1", "value1")
         import time
         future = int(time.time()) + 100
@@ -106,17 +98,15 @@ class TestBasicCommands(BaseTest):
         assert client.expiretime("key1") == future
 
     def test_incrby_incrbyfloat(self, client):
-        """Test INCRBY and INCRBYFLOAT commands"""
         # Test INCRBY
-        assert client.incrby("counter", 5) == "5"
-        assert client.incrby("counter", 3) == "8"
+        assert client.incrby("counter", 5) == 5
+        assert client.incrby("counter", 3) == 8
 
         # Test INCRBYFLOAT
-        assert float(client.incrbyfloat("float_counter", 1.5)) == 1.5
-        assert float(client.incrbyfloat("float_counter", 2.1)) == 3.6
+        assert client.incrbyfloat("float_counter", 1.5) == 1.5
+        assert client.incrbyfloat("float_counter", 2.1) == 3.6
 
     def test_keys(self, client):
-        """Test KEYS command"""
         client.set("key1", "value1")
         client.set("key2", "value2")
         client.set("other", "value3")
@@ -127,7 +117,6 @@ class TestBasicCommands(BaseTest):
         assert "key2" in keys
 
     def test_mget_mset(self, client):
-        """Test MGET and MSET commands"""
         # Test MSET
         assert client.mset({"key1": "value1", "key2": "value2"}) == "OK"
 
@@ -135,21 +124,18 @@ class TestBasicCommands(BaseTest):
         assert client.mget("key1", "key2", "nonexistent") == ["value1", "value2", None]
 
     def test_msetnx(self, client):
-        """Test MSETNX command"""
         assert client.msetnx({"key1": "value1", "key2": "value2"}) == 1
         assert client.msetnx({"key2": "new_value", "key3": "value3"}) == 0
         assert client.get("key2") == "value2"  # Original value preserved
         assert client.get("key3") is None  # Not set
 
     def test_persist(self, client):
-        """Test PERSIST command"""
         client.set("key1", "value1")
         client.expire("key1", 100)
         assert client.persist("key1") == 1
         assert client.ttl("key1") == -1
 
     def test_randomkey(self, client):
-        """Test RANDOMKEY command"""
         client.set("key1", "value1")
         client.set("key2", "value2")
         assert client.randomkey() in ["key1", "key2"]
@@ -158,7 +144,6 @@ class TestBasicCommands(BaseTest):
         assert client.randomkey() is None
 
     def test_rename_renamenx(self, client):
-        """Test RENAME and RENAMENX commands"""
         client.set("source", "value")
 
         # Test RENAME
@@ -173,26 +158,22 @@ class TestBasicCommands(BaseTest):
         assert client.get("dest") == "value2"
 
     def test_strlen(self, client):
-        """Test STRLEN command"""
         client.set("key1", "Hello World")
         assert client.strlen("key1") == 11
         assert client.strlen("nonexistent") == 0
 
     def test_substr(self, client):
-        """Test SUBSTR command"""
         client.set("key1", "Hello World")
         assert client.substr("key1", 0, 4) == "Hello"
         assert client.substr("key1", -5, -1) == "World"
 
     def test_ttl(self, client):
-        """Test TTL command"""
         client.set("key1", "value1")
         client.expire("key1", 100)
         assert 0 < client.ttl("key1") <= 100
         assert client.ttl("nonexistent") == -2
 
     def test_type(self, client):
-        """Test TYPE command"""
         client.set("string_key", "value")
         assert client.type("string_key") == "string"
         assert client.type("nonexistent") == "none"

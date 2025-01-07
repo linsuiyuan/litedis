@@ -15,7 +15,8 @@ class BasicCommands(ClientCommands):
         return self.execute("copy", *pieces)
 
     def decrby(self, key: str, decrement: int) -> Any:
-        return self.execute("decrby", key, str(decrement))
+        result = self.execute("decrby", key, str(decrement))
+        return int(result)
 
     def delete(self, *keys: str) -> Any:
         return self.execute("del", *keys)
@@ -110,10 +111,12 @@ class BasicCommands(ClientCommands):
         return self.execute("set", *pieces)
 
     def incrby(self, key: str, increment: int) -> Any:
-        return self.execute("incrby", key, str(increment))
+        result = self.execute("incrby", key, str(increment))
+        return int(result)
 
     def incrbyfloat(self, key: str, increment: float) -> Any:
-        return self.execute("incrbyfloat", key, str(increment))
+        result = self.execute("incrbyfloat", key, str(increment))
+        return float(result)
 
     def keys(self, pattern: str) -> Any:
         return self.execute("keys", pattern)

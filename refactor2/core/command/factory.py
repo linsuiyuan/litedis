@@ -1,7 +1,13 @@
 import inspect
 import sys
 
-from refactor2.core.command import basiccmds
+from refactor2.core.command import (
+    basiccmds,
+    hashcmds,
+    listcmds,
+    setcmds,
+    zsetcmds,
+)
 from refactor2.core.command.base import Command
 
 
@@ -13,6 +19,10 @@ def _import_class(module_name):
 
 _parsers = {}
 _parsers.update(_import_class(basiccmds.__name__))
+_parsers.update(_import_class(hashcmds.__name__))
+_parsers.update(_import_class(listcmds.__name__))
+_parsers.update(_import_class(setcmds.__name__))
+_parsers.update(_import_class(zsetcmds.__name__))
 
 
 class CommandFactory:
