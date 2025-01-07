@@ -453,16 +453,28 @@ class HScanCommand(ReadCommand):
         if not isinstance(value, dict):
             raise TypeError("value is not a hash")
 
-        # Convert items to flat list
+        # Convert items to list and filter by pattern
         items = []
         for field, val in value.items():
-            # Apply pattern matching if pattern is specified
             if self.pattern is None or self._matches_pattern(field, self.pattern):
                 items.extend([field, val])
 
-        # Simple implementation: return all items at once
-        # In a real Redis implementation, this would be paginated
-        return [0, items]
+        # If cursor is 0 or beyond list length, start from beginning
+        if self.cursor >= len(items) or self.cursor == 0:
+            start_index = 0
+        else:
+            start_index = self.cursor
+
+        # Calculate end index based on count
+        end_index = min(start_index + (self.count * 2), len(items))
+
+        # Get the subset of items for this iteration
+        result_items = items[start_index:end_index]
+
+        # Calculate next cursor
+        next_cursor = end_index if end_index < len(items) else 0
+
+        return [next_cursor, result_items]
 
     def _matches_pattern(self, s: str, pattern: str) -> bool:
         """Simple pattern matching supporting only * wildcard"""

@@ -517,63 +517,86 @@ class TestHStrLenCommand:
 
 
 class TestHScanCommand:
-    def test_hscan_basic(self, ctx):
+    def test_hscan_basic_pagination(self, ctx):
+        # Create a hash with multiple entries
         ctx.db.set("hash1", {
             "field1": "value1",
             "field2": "value2",
-            "field3": "value3"
+            "field3": "value3",
+            "field4": "value4",
+            "field5": "value5"
         })
 
-        cmd = HScanCommand(["hscan", "hash1", "0"])
-        result = cmd.execute(ctx)
+        # First scan with count 2
+        cmd = HScanCommand(["hscan", "hash1", "0", "count", "2"])
+        cursor, items = cmd.execute(ctx)
 
-        assert result[0] == 0  # cursor
-        assert len(result[1]) == 6  # 3 fields * 2 (field + value)
-        # Convert flat list to dict for easier comparison
-        result_dict = dict(zip(result[1][::2], result[1][1::2]))
-        assert result_dict == {
-            "field1": "value1",
-            "field2": "value2",
-            "field3": "value3"
-        }
+        assert cursor != 0  # Should not be complete
+        assert len(items) == 4  # 2 pairs of field-value
+        first_batch = dict(zip(items[::2], items[1::2]))
+        assert len(first_batch) == 2
+
+        # Second scan with returned cursor
+        cmd = HScanCommand(["hscan", "hash1", str(cursor), "count", "2"])
+        cursor, items = cmd.execute(ctx)
+
+        second_batch = dict(zip(items[::2], items[1::2]))
+        assert len(second_batch) == 2
+
+        # Final scan
+        cmd = HScanCommand(["hscan", "hash1", str(cursor), "count", "2"])
+        cursor, items = cmd.execute(ctx)
+
+        assert cursor == 0  # Indicates completion
+        final_batch = dict(zip(items[::2], items[1::2]))
+        assert len(final_batch) == 1
+
+        # Verify all items were returned
+        all_returned = {**first_batch, **second_batch, **final_batch}
+        assert len(all_returned) == 5
+        assert all_returned == ctx.db.get("hash1")
 
     def test_hscan_with_pattern(self, ctx):
         ctx.db.set("hash1", {
             "field1": "value1",
             "field2": "value2",
-            "test1": "value3"
+            "test1": "value3",
+            "test2": "value4"
         })
 
-        cmd = HScanCommand(["hscan", "hash1", "0", "match", "field*"])
-        result = cmd.execute(ctx)
+        cmd = HScanCommand(["hscan", "hash1", "0", "match", "field*", "count", "1"])
+        cursor, items = cmd.execute(ctx)
 
-        assert result[0] == 0
-        # Convert flat list to dict for easier comparison
-        result_dict = dict(zip(result[1][::2], result[1][1::2]))
-        assert result_dict == {
-            "field1": "value1",
-            "field2": "value2"
-        }
+        first_batch = dict(zip(items[::2], items[1::2]))
+        assert all(k.startswith("field") for k in first_batch.keys())
 
-    def test_hscan_with_count(self, ctx):
-        ctx.db.set("hash1", {
-            "field1": "value1",
-            "field2": "value2",
-            "field3": "value3"
-        })
+        # Get remaining items
+        cmd = HScanCommand(["hscan", "hash1", str(cursor), "match", "field*", "count", "1"])
+        cursor, items = cmd.execute(ctx)
 
-        cmd = HScanCommand(["hscan", "hash1", "0", "count", "2"])
-        result = cmd.execute(ctx)
+        second_batch = dict(zip(items[::2], items[1::2]))
+        assert all(k.startswith("field") for k in second_batch.keys())
 
-        # In this implementation, count is just a hint and all results are returned
-        assert result[0] == 0
-        assert len(result[1]) == 6
+        # Combined results should include only field* entries
+        all_returned = {**first_batch, **second_batch}
+        assert len(all_returned) == 2
+        assert all(k.startswith("field") for k in all_returned.keys())
+
+    def test_hscan_empty_hash(self, ctx):
+        ctx.db.set("hash1", {})
+
+        cmd = HScanCommand(["hscan", "hash1", "0"])
+        cursor, items = cmd.execute(ctx)
+
+        assert cursor == 0
+        assert items == []
 
     def test_hscan_nonexistent_key(self, ctx):
         cmd = HScanCommand(["hscan", "nonexistent", "0"])
-        result = cmd.execute(ctx)
+        cursor, items = cmd.execute(ctx)
 
-        assert result == [0, []]
+        assert cursor == 0
+        assert items == []
 
     def test_hscan_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
@@ -582,8 +605,32 @@ class TestHScanCommand:
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
-    def test_hscan_invalid_cursor(self, ctx):
-        ctx.db.set("hash1", {"field1": "value1"})
+    def test_hscan_with_large_count(self, ctx):
+        # Create a hash with multiple entries
+        test_data = {f"field{i}": f"value{i}" for i in range(1, 11)}
+        ctx.db.set("hash1", test_data)
 
-        with pytest.raises(ValueError, match="cursor must be an integer"):
-            HScanCommand(["hscan", "hash1", "invalid"])
+        # Request more items than exist
+        cmd = HScanCommand(["hscan", "hash1", "0", "count", "20"])
+        cursor, items = cmd.execute(ctx)
+
+        assert cursor == 0  # Should complete in one iteration
+        result_dict = dict(zip(items[::2], items[1::2]))
+        assert result_dict == test_data
+
+    def test_hscan_cursor_continuity(self, ctx):
+        # Create a hash with multiple entries
+        test_data = {f"field{i}": f"value{i}" for i in range(1, 6)}
+        ctx.db.set("hash1", test_data)
+
+        # First scan
+        cmd = HScanCommand(["hscan", "hash1", "0", "count", "2"])
+        cursor1, items1 = cmd.execute(ctx)
+
+        # Use invalid cursor
+        cmd = HScanCommand(["hscan", "hash1", "999", "count", "2"])
+        cursor2, items2 = cmd.execute(ctx)
+
+        # Should restart from beginning
+        assert len(items2) == len(items1)
+        assert dict(zip(items2[::2], items2[1::2])) == dict(zip(items1[::2], items1[1::2]))

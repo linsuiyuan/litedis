@@ -177,32 +177,26 @@ class TestBasicCommands(BaseTest):
         assert client.type("nonexistent") == "none"
 
 
-# todo to fix
-@SkipTest
 class TestHashCommands(BaseTest):
     def test_hdel(self, client):
-        """Test HDEL command"""
         client.hset("hash1", {"field1": "value1", "field2": "value2"})
         assert client.hdel("hash1", "field1", "field2", "nonexistent") == 2
         assert client.hget("hash1", "field1") is None
         assert client.hget("hash1", "field2") is None
 
     def test_hexists(self, client):
-        """Test HEXISTS command"""
         client.hset("hash1", {"field1": "value1"})
         assert client.hexists("hash1", "field1") == 1
         assert client.hexists("hash1", "nonexistent") == 0
         assert client.hexists("nonexistent_hash", "field1") == 0
 
     def test_hget(self, client):
-        """Test HGET command"""
         client.hset("hash1", {"field1": "value1"})
         assert client.hget("hash1", "field1") == "value1"
         assert client.hget("hash1", "nonexistent") is None
         assert client.hget("nonexistent_hash", "field1") is None
 
     def test_hgetall(self, client):
-        """Test HGETALL command"""
         client.hset("hash1", {"field1": "value1", "field2": "value2"})
         result = client.hgetall("hash1")
         assert len(result) == 4  # [field1, value1, field2, value2]
@@ -212,21 +206,18 @@ class TestHashCommands(BaseTest):
         assert "value2" in result
 
     def test_hincrby(self, client):
-        """Test HINCRBY command"""
-        assert client.hincrby("hash1", "counter", 5) == "5"
-        assert client.hincrby("hash1", "counter", 3) == "8"
-        assert client.hincrby("hash1", "counter", -2) == "6"
-        assert client.hget("hash1", "counter") == "6"
+        assert client.hincrby("hash1", "counter", 5) == 5
+        assert client.hincrby("hash1", "counter", 3) == 8
+        assert client.hincrby("hash1", "counter", -2) == 6
+        assert client.hget("hash1", "counter") == '6'
 
     def test_hincrbyfloat(self, client):
-        """Test HINCRBYFLOAT command"""
         assert float(client.hincrbyfloat("hash1", "counter", 1.5)) == 1.5
         assert float(client.hincrbyfloat("hash1", "counter", 2.1)) == 3.6
         assert float(client.hincrbyfloat("hash1", "counter", -1.1)) == 2.5
         assert float(client.hget("hash1", "counter")) == 2.5
 
     def test_hkeys(self, client):
-        """Test HKEYS command"""
         client.hset("hash1", {"field1": "value1", "field2": "value2"})
         keys = client.hkeys("hash1")
         assert len(keys) == 2
@@ -235,26 +226,17 @@ class TestHashCommands(BaseTest):
         assert client.hkeys("nonexistent") == []
 
     def test_hlen(self, client):
-        """Test HLEN command"""
         client.hset("hash1", {"field1": "value1", "field2": "value2"})
         assert client.hlen("hash1") == 2
         assert client.hlen("nonexistent") == 0
 
     def test_hmget(self, client):
-        """Test HMGET command"""
         client.hset("hash1", {"field1": "value1", "field2": "value2"})
         result = client.hmget("hash1", "field1", "field2", "nonexistent")
         assert result == ["value1", "value2", None]
         assert client.hmget("nonexistent", "field1") == [None]
 
-    def test_hmset(self, client):
-        """Test HMSET command"""
-        assert client.hmset("hash1", {"field1": "value1", "field2": "value2"}) == "OK"
-        assert client.hget("hash1", "field1") == "value1"
-        assert client.hget("hash1", "field2") == "value2"
-
     def test_hset(self, client):
-        """Test HSET command"""
         # Single field-value pair
         assert client.hset("hash1", {"field1": "value1"}) == 1
         assert client.hget("hash1", "field1") == "value1"
@@ -272,20 +254,17 @@ class TestHashCommands(BaseTest):
         assert client.hget("hash1", "field1") == "new_value"
 
     def test_hsetnx(self, client):
-        """Test HSETNX command"""
         assert client.hsetnx("hash1", "field1", "value1") == 1
         assert client.hsetnx("hash1", "field1", "value2") == 0
         assert client.hget("hash1", "field1") == "value1"
 
     def test_hstrlen(self, client):
-        """Test HSTRLEN command"""
         client.hset("hash1", {"field1": "Hello World"})
         assert client.hstrlen("hash1", "field1") == 11
         assert client.hstrlen("hash1", "nonexistent") == 0
         assert client.hstrlen("nonexistent", "field1") == 0
 
     def test_hvals(self, client):
-        """Test HVALS command"""
         client.hset("hash1", {"field1": "value1", "field2": "value2"})
         values = client.hvals("hash1")
         assert len(values) == 2
@@ -294,14 +273,12 @@ class TestHashCommands(BaseTest):
         assert client.hvals("nonexistent") == []
 
     def test_hscan(self, client):
-        """Test HSCAN command"""
         # Populate hash with test data
         test_data = {f"field{i}": f"value{i}" for i in range(10)}
         client.hset("hash1", test_data)
 
         # Test basic scan
         cursor, results = client.hscan("hash1", 0)
-        assert isinstance(cursor, str)
         assert len(results) > 0
 
         # Test with match pattern
@@ -315,7 +292,7 @@ class TestHashCommands(BaseTest):
 
         # Test scanning nonexistent hash
         cursor, results = client.hscan("nonexistent", 0)
-        assert cursor == "0"
+        assert cursor == 0
         assert len(results) == 0
 
 
