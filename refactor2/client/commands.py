@@ -110,15 +110,15 @@ class BasicCommands(ClientCommands):
 
         return self.execute("set", *pieces)
 
-    def incrby(self, key: str, increment: int) -> Any:
+    def incrby(self, key: str, increment: int = 1) -> Any:
         result = self.execute("incrby", key, str(increment))
         return int(result)
 
-    def incrbyfloat(self, key: str, increment: float) -> Any:
+    def incrbyfloat(self, key: str, increment: float = 1.) -> Any:
         result = self.execute("incrbyfloat", key, str(increment))
         return float(result)
 
-    def keys(self, pattern: str) -> Any:
+    def keys(self, pattern: str = "*") -> Any:
         return self.execute("keys", pattern)
 
     def mget(self, *keys: str) -> Any:
