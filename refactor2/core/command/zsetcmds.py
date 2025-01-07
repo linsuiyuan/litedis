@@ -263,10 +263,10 @@ class ZInterCardCommand(ReadCommand):
 
         try:
             self.numkeys = int(tokens[1])
-            if self.numkeys < 1:
-                raise ValueError('numkeys must be positive')
         except ValueError:
             raise ValueError('numkeys must be a positive integer')
+        if self.numkeys < 1:
+            raise ValueError('numkeys must be positive')
 
         if len(tokens) < 2 + self.numkeys:
             raise ValueError('number of keys does not match numkeys')
@@ -928,7 +928,7 @@ class ZScanCommand(ReadCommand):
         count = 0
         pos = start_pos
 
-        while count < self.count and len(result) < total_items:
+        while count < self.count and len(result) / 2 < total_items:
             member, score = items[pos]
             if self.pattern is None or self._matches_pattern(member, self.pattern):
                 result.extend([member, str(score)])
@@ -1024,10 +1024,10 @@ class ZUnionCommand(ReadCommand):
 
         try:
             self.numkeys = int(tokens[1])
-            if self.numkeys < 1:
-                raise ValueError('numkeys must be positive')
         except ValueError:
             raise ValueError('numkeys must be a positive integer')
+        if self.numkeys < 1:
+            raise ValueError('numkeys must be positive')
 
         if len(tokens) < 2 + self.numkeys:
             raise ValueError('number of keys does not match numkeys')

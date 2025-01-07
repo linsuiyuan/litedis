@@ -211,6 +211,11 @@ class SortedSet(Iterable):
         :param other:
         :return:
         """
-        return SortedSet({**other._data, **self._data})
+        # add scores
+        temp = {**other._data}
+        for member in self.members():
+            if member in temp:
+                temp[member] += self[member]
+        return SortedSet({**self._data, **temp})
 
     __or__ = union

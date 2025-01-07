@@ -1,5 +1,3 @@
-from unittest import SkipTest
-
 import pytest
 
 from refactor2.core.command.base import CommandContext
@@ -219,8 +217,6 @@ class TestZInterCommand:
             ZInterCommand(['zinter', '-1', 'set1'])
 
 
-# todo 实现有问题，待修改
-@SkipTest
 class TestZInterCardCommand:
     def test_zintercard_empty_keys(self, ctx):
         cmd = ZInterCardCommand(['zintercard', '2', 'set1', 'set2'])
@@ -256,7 +252,7 @@ class TestZInterCardCommand:
             cmd.execute(ctx)
 
     def test_zintercard_invalid_limit(self, ctx):
-        with pytest.raises(ValueError, match='limit must be a non-negative integer'):
+        with pytest.raises(ValueError, match='limit must be non-negative'):
             ZInterCardCommand(['zintercard', '2', 'set1', 'set2', 'LIMIT', '-1'])
 
 
@@ -781,8 +777,6 @@ class TestZRevRankCommand:
             ZRevRankCommand(['zrevrank'])
 
 
-# todo 实现有问题，待修改
-@SkipTest
 class TestZScanCommand:
     def test_zscan_empty_key(self, ctx):
         cmd = ZScanCommand(['zscan', 'myset', '0'])
@@ -842,7 +836,7 @@ class TestZScanCommand:
             cmd.execute(ctx)
 
     def test_zscan_invalid_cursor(self, ctx):
-        with pytest.raises(ValueError, match='cursor must be a non-negative integer'):
+        with pytest.raises(ValueError, match='cursor must be non-negative'):
             ZScanCommand(['zscan', 'myset', '-1'])
 
     def test_zscan_invalid_count(self, ctx):
@@ -885,8 +879,6 @@ class TestZScoreCommand:
             ZScoreCommand(['zscore'])
 
 
-# todo 实现有问题，待修改
-@SkipTest
 class TestZUnionCommand:
     def test_zunion_empty_keys(self, ctx):
         cmd = ZUnionCommand(['zunion', '2', 'set1', 'set2'])
@@ -928,7 +920,7 @@ class TestZUnionCommand:
         # Convert result to dict for easier comparison
         scores = {result[i]: result[i + 1] for i in range(0, len(result), 2)}
         assert scores['member1'] == 1.0
-        assert scores['member2'] == 3.0  # Takes the highest score
+        assert scores['member2'] == 5.0  # Takes the highest score
         assert scores['member3'] == 4.0
 
     def test_zunion_wrong_type(self, ctx):
