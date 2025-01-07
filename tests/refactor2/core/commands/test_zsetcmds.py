@@ -127,8 +127,8 @@ class TestZDiffCommand:
         cmd = ZDiffCommand(['zdiff', '2', 'set1', 'set2'])
         result = cmd.execute(ctx)
         assert len(result) == 2
-        assert ('member1', 1.0) in result
-        assert ('member3', 3.0) in result
+        assert 'member1' in result
+        assert 'member3' in result
 
     def test_zdiff_wrong_type(self, ctx):
         ctx.db.set('set1', "string")  # Wrong type
@@ -142,6 +142,24 @@ class TestZDiffCommand:
 
         with pytest.raises(ValueError, match='numkeys must be positive'):
             ZDiffCommand(['zdiff', '-1', 'set1'])
+
+    def test_zdiff_with_scores(self, ctx):
+        # Add members to first set
+        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        zadd1.execute(ctx)
+
+        # Add members to second set
+        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '4.0', 'member4'])
+        zadd2.execute(ctx)
+
+        cmd = ZDiffCommand(['zdiff', '2', 'set1', 'set2', 'WITHSCORES'])
+        result = cmd.execute(ctx)
+
+        # Convert result to dict for easier comparison
+        scores = {result[i]: result[i + 1] for i in range(0, len(result), 2)}
+        assert len(scores) == 2
+        assert scores['member1'] == 1.0
+        assert scores['member3'] == 3.0
 
 
 class TestZIncrByCommand:
@@ -648,6 +666,24 @@ class TestZRankCommand:
         with pytest.raises(ValueError, match='zrank command requires key and member'):
             ZRankCommand(['zrank'])
 
+    def test_zrank_with_scores(self, ctx):
+        # Add members with different scores
+        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        zadd.execute(ctx)
+
+        cmd = ZRankCommand(['zrank', 'myset', 'member2', 'WITHSCORES'])
+        result = cmd.execute(ctx)
+        assert result == [1, 2.0]  # rank=1, score=2.0
+
+    def test_zrank_nonexistent_member_with_scores(self, ctx):
+        # Add some members first
+        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        zadd.execute(ctx)
+
+        cmd = ZRankCommand(['zrank', 'myset', 'nonexistent', 'WITHSCORES'])
+        result = cmd.execute(ctx)
+        assert result is None
+
 
 class TestZRemCommand:
     def test_zrem_empty_key(self, ctx):
@@ -775,6 +811,24 @@ class TestZRevRankCommand:
     def test_zrevrank_wrong_args(self, ctx):
         with pytest.raises(ValueError, match='zrevrank command requires key and member'):
             ZRevRankCommand(['zrevrank'])
+
+    def test_zrevrank_with_scores(self, ctx):
+        # Add members with different scores
+        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        zadd.execute(ctx)
+
+        cmd = ZRevRankCommand(['zrevrank', 'myset', 'member2', 'WITHSCORES'])
+        result = cmd.execute(ctx)
+        assert result == [1, 2.0]  # rank=1 (from highest), score=2.0
+
+    def test_zrevrank_nonexistent_member_with_scores(self, ctx):
+        # Add some members first
+        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        zadd.execute(ctx)
+
+        cmd = ZRevRankCommand(['zrevrank', 'myset', 'nonexistent', 'WITHSCORES'])
+        result = cmd.execute(ctx)
+        assert result is None
 
 
 class TestZScanCommand:

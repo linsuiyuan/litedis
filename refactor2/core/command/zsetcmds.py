@@ -113,6 +113,7 @@ class ZDiffCommand(ReadCommand):
     def __init__(self, command_tokens: list[str]):
         self.numkeys: int
         self.keys: list[str]
+        self.withscores: bool = False  # 添加 withscores 属性
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
@@ -130,6 +131,11 @@ class ZDiffCommand(ReadCommand):
             raise ValueError('number of keys does not match numkeys')
 
         self.keys = tokens[2:2 + self.numkeys]
+
+        # 解析可选的 WITHSCORES 参数
+        i = 2 + self.numkeys
+        if i < len(tokens) and tokens[i].upper() == 'WITHSCORES':
+            self.withscores = True
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
@@ -151,7 +157,13 @@ class ZDiffCommand(ReadCommand):
             else:  # Subtract subsequent sets
                 result = result - value
 
-        return list(result) if result else []
+        if not result:
+            return []
+
+        if self.withscores:
+            # Flatten the result into [member1, score1, member2, score2, ...]
+            return [item for pair in result for item in pair]
+        return [member for member, _ in result]
 
 
 class ZIncrByCommand(WriteCommand):
@@ -216,7 +228,6 @@ class ZInterCommand(ReadCommand):
         i = 2 + self.numkeys
         if i < len(tokens) and tokens[i].upper() == 'WITHSCORES':
             self.withscores = True
-
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
@@ -737,13 +748,13 @@ class ZRevRangeByScoreCommand(_ZRangeByScoreCommand):
 
 
 class _ZRankCommand(ReadCommand):
-    """Determine the index of a member in a sorted set"""
     name = '_zrank'
 
     def __init__(self, command_tokens: list[str], desc):
         self.desc = desc
         self.key: str
         self.member: str
+        self.withscores: bool = False  # 添加 withscores 属性
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
@@ -751,6 +762,10 @@ class _ZRankCommand(ReadCommand):
             raise ValueError(f'{self.name} command requires key and member')
         self.key = tokens[1]
         self.member = tokens[2]
+
+        # 解析可选的 WITHSCORES 参数
+        if len(tokens) > 3 and tokens[3].upper() == 'WITHSCORES':
+            self.withscores = True
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
@@ -761,7 +776,14 @@ class _ZRankCommand(ReadCommand):
         if not isinstance(value, SortedSet):
             raise TypeError("value is not a sorted set")
 
-        return value.rank(self.member, desc=self.desc)
+        rank = value.rank(self.member, desc=self.desc)
+        if rank is None:
+            return None
+
+        if self.withscores:
+            score = value.score(self.member)
+            return [rank, score]
+        return rank
 
 
 class ZRankCommand(_ZRankCommand):

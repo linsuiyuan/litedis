@@ -358,28 +358,32 @@ class ZSetCommands(ClientCommands):
     def zcount(self, key: str, min_score: float, max_score: float) -> Any:
         return self.execute("zcount", key, str(min_score), str(max_score))
 
-    def zdiff(self, numkeys: int, *keys: str) -> Any:
-        return self.execute("zdiff", str(numkeys), *keys)
+    def zdiff(self, *keys: str, withscores: bool = False) -> Any:
+        pieces = [str(len(keys))]
+        pieces.extend(keys)
+        if withscores:
+            pieces.append("WITHSCORES")
+        return self.execute("zdiff", *pieces)
 
     def zincrby(self, key: str, increment: float, member: str) -> Any:
         return self.execute("zincrby", key, str(increment), member)
 
-    def zinter(self, numkeys: int, *keys: str, withscores: bool = False) -> Any:
-        pieces = [str(numkeys)]
+    def zinter(self, *keys: str, withscores: bool = False) -> Any:
+        pieces = [str(len(keys))]
         pieces.extend(keys)
         if withscores:
             pieces.append("WITHSCORES")
         return self.execute("zinter", *pieces)
 
-    def zintercard(self, numkeys: int, *keys: str, limit: int | None = None) -> Any:
-        pieces = [str(numkeys)]
+    def zintercard(self, *keys: str, limit: int | None = None) -> Any:
+        pieces = [str(len(keys))]
         pieces.extend(keys)
         if limit is not None:
             pieces.extend(["LIMIT", str(limit)])
         return self.execute("zintercard", *pieces)
 
-    def zinterstore(self, destination: str, numkeys: int, *keys: str) -> Any:
-        return self.execute("zinterstore", destination, str(numkeys), *keys)
+    def zinterstore(self, destination: str, *keys: str) -> Any:
+        return self.execute("zinterstore", destination, str(len(keys)), *keys)
 
     def zpopmax(self, key: str, count: int | None = None) -> Any:
         pieces = [key]
@@ -406,17 +410,21 @@ class ZSetCommands(ClientCommands):
             pieces.append("WITHSCORES")
         return self.execute("zrandmember", *pieces)
 
-    # todo 实现有问题
     def zmpop(
             self,
-            numkeys: int,
             *keys: str,
-            where: str = "MIN",
+            min_=False,
+            max_=False,
             count: int | None = None
     ) -> Any:
-        pieces = [str(numkeys)]
+        pieces = [str(len(keys))]
         pieces.extend(keys)
-        pieces.append(where.upper())
+        if (min_ and max_) or (not min_ and not max_):
+            raise ValueError("min_ and max_ cannot be both True or False")
+        elif min_:
+            pieces.append("MIN")
+        else:
+            pieces.append("MAX")
         if count is not None:
             pieces.extend(["COUNT", str(count)])
         return self.execute("zmpop", *pieces)
@@ -466,8 +474,11 @@ class ZSetCommands(ClientCommands):
             pieces.extend(["LIMIT", str(limit[0]), str(limit[1])])
         return self.execute("zrevrangebyscore", *pieces)
 
-    def zrank(self, key: str, member: str) -> Any:
-        return self.execute("zrank", key, member)
+    def zrank(self, key: str, member: str, withscores: bool = False) -> Any:
+        pieces = [key, member]
+        if withscores:
+            pieces.append("WITHSCORES")
+        return self.execute("zrank", *pieces)
 
     def zrem(self, key: str, *members: str) -> Any:
         return self.execute("zrem", key, *members)
@@ -475,8 +486,11 @@ class ZSetCommands(ClientCommands):
     def zremrangebyscore(self, key: str, min_score: float, max_score: float) -> Any:
         return self.execute("zremrangebyscore", key, str(min_score), str(max_score))
 
-    def zrevrank(self, key: str, member: str) -> Any:
-        return self.execute("zrevrank", key, member)
+    def zrevrank(self, key: str, member: str, withscores: bool = False) -> Any:
+        pieces = [key, member]
+        if withscores:
+            pieces.append("WITHSCORES")
+        return self.execute("zrevrank", *pieces)
 
     def zscan(
             self,
@@ -495,8 +509,8 @@ class ZSetCommands(ClientCommands):
     def zscore(self, key: str, member: str) -> Any:
         return self.execute("zscore", key, member)
 
-    def zunion(self, numkeys: int, *keys: str, withscores: bool = False) -> Any:
-        pieces = [str(numkeys)]
+    def zunion(self, *keys: str, withscores: bool = False) -> Any:
+        pieces = [str(len(keys))]
         pieces.extend(keys)
         if withscores:
             pieces.append("WITHSCORES")
