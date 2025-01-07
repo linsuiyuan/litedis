@@ -7,7 +7,7 @@ from refactor2.core.command.hashcmds import (
     HGetCommand,
     HGetAllCommand,
     HIncrByCommand, HIncrByFloatCommand, HKeysCommand, HLenCommand, HSetCommand, HSetNXCommand, HMGetCommand,
-    HValsCommand, HStrLenCommand, HMSetCommand, HScanCommand,
+    HValsCommand, HStrLenCommand, HScanCommand,
 )
 from refactor2.core.persistence.ldb import LitedisDB
 
@@ -512,53 +512,6 @@ class TestHStrLenCommand:
         ctx.db.set("string1", "not_a_hash")
 
         cmd = HStrLenCommand(["hstrlen", "string1", "field1"])
-        with pytest.raises(TypeError, match="value is not a hash"):
-            cmd.execute(ctx)
-
-
-class TestHMSetCommand:
-    def test_hmset_new_fields(self, ctx):
-        ctx.db.set("hash1", {"existing": "value"})
-
-        cmd = HMSetCommand(["hmset", "hash1", "field1", "value1", "field2", "value2"])
-        result = cmd.execute(ctx)
-
-        assert result == "OK"
-        assert ctx.db.get("hash1") == {
-            "existing": "value",
-            "field1": "value1",
-            "field2": "value2"
-        }
-
-    def test_hmset_update_existing_fields(self, ctx):
-        ctx.db.set("hash1", {"field1": "old1", "field2": "old2"})
-
-        cmd = HMSetCommand(["hmset", "hash1", "field1", "new1", "field2", "new2"])
-        result = cmd.execute(ctx)
-
-        assert result == "OK"
-        assert ctx.db.get("hash1") == {"field1": "new1", "field2": "new2"}
-
-    def test_hmset_mixed_update_new(self, ctx):
-        ctx.db.set("hash1", {"field1": "old1"})
-
-        cmd = HMSetCommand(["hmset", "hash1", "field1", "new1", "field2", "value2"])
-        result = cmd.execute(ctx)
-
-        assert result == "OK"
-        assert ctx.db.get("hash1") == {"field1": "new1", "field2": "value2"}
-
-    def test_hmset_nonexistent_key(self, ctx):
-        cmd = HMSetCommand(["hmset", "hash1", "field1", "value1", "field2", "value2"])
-        result = cmd.execute(ctx)
-
-        assert result == "OK"
-        assert ctx.db.get("hash1") == {"field1": "value1", "field2": "value2"}
-
-    def test_hmset_invalid_type(self, ctx):
-        ctx.db.set("string1", "not_a_hash")
-
-        cmd = HMSetCommand(["hmset", "string1", "field1", "value1"])
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 

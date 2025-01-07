@@ -407,39 +407,6 @@ class HStrLenCommand(ReadCommand):
         return len(str(field_value))
 
 
-class HMSetCommand(WriteCommand):
-    name = 'hmset'
-
-    def __init__(self, command_tokens: list[str]):
-        self.key: str
-        self.pairs: list[tuple[str, str]]
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 4 or len(tokens) % 2 != 0:
-            raise ValueError('hmset command requires key and field value pairs')
-        self.key = tokens[1]
-        # Convert flat list to pairs
-        self.pairs = []
-        for i in range(2, len(tokens), 2):
-            self.pairs.append((tokens[i], tokens[i + 1]))
-
-    def execute(self, ctx: CommandContext):
-        db = ctx.db
-        if not db.exists(self.key):
-            value = {}
-        else:
-            value = db.get(self.key)
-            if not isinstance(value, dict):
-                raise TypeError("value is not a hash")
-
-        for field, val in self.pairs:
-            value[field] = val
-
-        db.set(self.key, value)
-        return "OK"
-
-
 class HScanCommand(ReadCommand):
     name = 'hscan'
 

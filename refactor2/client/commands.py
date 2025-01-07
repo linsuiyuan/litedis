@@ -174,10 +174,10 @@ class HashCommands(ClientCommands):
     def hgetall(self, key: str) -> Any:
         return self.execute("hgetall", key)
 
-    def hincrby(self, key: str, field: str, increment: int) -> Any:
+    def hincrby(self, key: str, field: str, increment: int = 1) -> Any:
         return self.execute("hincrby", key, field, str(increment))
 
-    def hincrbyfloat(self, key: str, field: str, increment: float) -> Any:
+    def hincrbyfloat(self, key: str, field: str, increment: float = 1.) -> Any:
         return self.execute("hincrbyfloat", key, field, str(increment))
 
     def hkeys(self, key: str) -> Any:
@@ -188,12 +188,6 @@ class HashCommands(ClientCommands):
 
     def hmget(self, key: str, *fields: str) -> Any:
         return self.execute("hmget", key, *fields)
-
-    def hmset(self, key: str, mapping: dict[str, str]) -> Any:
-        pieces: list[str] = []
-        for field, value in mapping.items():
-            pieces.extend([field, value])
-        return self.execute("hmset", key, *pieces)
 
     def hset(self, key: str, mapping: dict[str, str]) -> Any:
         pieces: list[str] = []
