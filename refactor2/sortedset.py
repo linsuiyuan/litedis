@@ -3,11 +3,10 @@ from collections import OrderedDict
 from typing import Iterable
 
 
-# todo 将中文注释改为英文
 class SortedSet(Iterable):
     """
-    有序集合类，供数据库有序集合类型使用。
-    底层使用 OrderedDict 作为有序结构
+    Sorted Set class, used for database sorted set type.
+    Uses OrderedDict as the underlying ordered structure.
     """
 
     def __init__(self, iterable: Iterable = None):
@@ -52,18 +51,18 @@ class SortedSet(Iterable):
 
     def add(self, item: (str, float)):
         """
-        添加元素到有序集合，不存在则添加，存在则更新
-        :param item: 成员+分数 元组
+        Add an element to the sorted set. If it exists, update it.
+        :param item: (member, score) tuple
         """
         m, s = item
         self[m] = s
 
     def count(self, min_: float, max_: float) -> int:
         """
-        分数在 min_ 和 max_ 之间的元素数量
+        Count elements with scores between min_ and max_
         """
         if min_ > max_:
-            raise ValueError("min_ 不能大于 max_")
+            raise ValueError("min_ cannot be greater than max_")
 
         c = 0
         for s in self.scores():
@@ -77,9 +76,9 @@ class SortedSet(Iterable):
 
     def difference(self, other: "SortedSet"):
         """
-        差集
-        :param other:
-        :return:
+        Set difference
+        :param other: Another SortedSet
+        :return: A new SortedSet containing elements in self but not in other
         """
         ms = self.members() - other.members()
         return SortedSet({m: self[m] for m in ms})
@@ -88,19 +87,20 @@ class SortedSet(Iterable):
 
     def get(self, member, default=None):
         """
-        获取某个成员的分数
-        :param member:
-        :param default:
-        :return:
+        Get the score of a member
+        :param member: Member to look up
+        :param default: Default value if member not found
+        :return: Score of the member or default value
         """
         return self._data.get(member, default)
 
     def incr(self, member: str, amount: float) -> float:
         """
-        递增某个成员的分数，如成员不存在，则以该分数初始化成员-分数键值对
-        :param member:
-        :param amount: 增加的分数值
-        :return:
+        Increment the score of a member. If member doesn't exist,
+        initialize it with the given score.
+        :param member: Member to increment
+        :param amount: Amount to increment by
+        :return: The new score
         """
         if member in self:
             self[member] += amount
@@ -111,9 +111,9 @@ class SortedSet(Iterable):
 
     def intersection(self, other: "SortedSet"):
         """
-        交集
-        :param other:
-        :return:
+        Set intersection
+        :param other: Another SortedSet
+        :return: A new SortedSet containing elements present in both sets
         """
         ms = self.members() & other.members()
         return SortedSet({m: self[m] for m in ms})
@@ -122,27 +122,27 @@ class SortedSet(Iterable):
 
     def pop(self, member, default=None):
         """
-        移除并返回某个成员的分数
-        :param member:
-        :param default:
-        :return:
+        Remove and return the score of a member
+        :param member: Member to remove
+        :param default: Default value if member not found
+        :return: Score of the removed member or default value
         """
         return self._data.pop(member, default)
 
     def popitem(self, last=True):
         """
-        从头部或者尾部弹出 item
-        :param last:
-        :return:
+        Pop an item from either end
+        :param last: If True, pop from the end; if False, pop from the beginning
+        :return: (member, score) tuple
         """
         return self._data.popitem(last=last)
 
     def randmember(self, count: int = 1, unique=True):
         """
-        随机获取成员
-        :param count: 获取的成员数量，默认 1
-        :param unique: 获取的成员是否能重复
-        :return:
+        Get random members
+        :param count: Number of members to return, default 1
+        :param unique: Whether returned members should be unique
+        :return: List of (member, score) tuples
         """
         if unique:
             return random.sample(list(self), count)
@@ -157,13 +157,13 @@ class SortedSet(Iterable):
               desc: bool = False,
               ) -> list:
         """
-        根据索引范围或分数范围获取相应范围的 成员-分数 键值对
-        :param start:
-        :param end:
-        :param min_:
-        :param max_:
-        :param desc:
-        :return:
+        Get member-score pairs within index range or score range
+        :param start: Start index
+        :param end: End index
+        :param min_: Minimum score
+        :param max_: Maximum score
+        :param desc: Sort in descending order if True
+        :return: List of (member, score) tuples
         """
 
         if desc:
@@ -171,13 +171,13 @@ class SortedSet(Iterable):
         else:
             sorted_items = list(self)
 
-        # 过滤分数范围
+        # Filter by score range
         if min_ is not None and max_ is not None:
             sorted_items = [(m, s)
                             for m, s in sorted_items
                             if min_ <= s <= max_]
 
-        # 处理索引, Redis 是包含右边界的
+        # Handle index range (Redis includes right boundary)
         if end < 0:
             end = len(sorted_items) + end + 1
         else:
@@ -190,10 +190,10 @@ class SortedSet(Iterable):
 
     def rank(self, member: str, desc=False) -> int | None:
         """
-        获取某个成员的排名
-        :param member:
-        :param desc: 是否按降序排名
-        :return:
+        Get the rank of a member
+        :param member: Member to look up
+        :param desc: If True, rank in descending order
+        :return: Rank of the member or None if not found
         """
         if member not in self:
             return None
@@ -207,9 +207,10 @@ class SortedSet(Iterable):
 
     def union(self, other: "SortedSet"):
         """
-        并集
-        :param other:
-        :return:
+        Set union
+        :param other: Another SortedSet
+        :return: A new SortedSet containing elements from both sets,
+                with scores added for common elements
         """
         # add scores
         temp = {**other._data}
