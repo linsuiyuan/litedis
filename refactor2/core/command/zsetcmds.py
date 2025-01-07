@@ -643,30 +643,48 @@ class ZRangeCommand(ReadCommand):
         return [member for member, _ in result]
 
 
-class ZRangeByScoreCommand(ReadCommand):
+class _ZRangeByScoreCommand(ReadCommand):
     """Return a range of members in a sorted set by score"""
-    name = 'zrangebyscore'
+    name = '_zrangebyscore'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self, command_tokens: list[str], desc):
+        self.desc = desc
         self.key: str
         self.min: float
         self.max: float
-        self.withscores: bool
+        self.withscores: bool = False
+        self.limit: tuple | None = None
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
-            raise ValueError('zrangebyscore command requires key, min and max')
+            raise ValueError(f'{self.name} command requires key, min and max')
         self.key = tokens[1]
         try:
             self.min = float(tokens[2])
             self.max = float(tokens[3])
         except ValueError:
             raise ValueError('min and max must be valid float numbers')
+        if self.min > self.max:
+            self.min, self.max = self.max, self.min
 
-        self.withscores = False
-        if len(tokens) > 4 and tokens[4].upper() == 'WITHSCORES':
-            self.withscores = True
+        i = 4
+        while i < len(tokens):
+            if tokens[i].upper() == 'WITHSCORES':
+                self.withscores = True
+                i = i + 1
+            elif tokens[i].upper() == 'LIMIT':
+                if i + 2 >= len(tokens):
+                    raise ValueError('LIMIT requires two arguments')
+                try:
+                    offset = int(tokens[i + 1])
+                    count = int(tokens[i + 2])
+                except ValueError:
+                    raise ValueError('LIMIT requires two integers')
+                if offset < 0 or count < 0:
+                    raise ValueError('LIMIT requires two non-negative integers')
+                self.limit = (offset, count)
+                i = i + 3
 
     def execute(self, ctx: CommandContext):
         db = ctx.db
@@ -678,7 +696,11 @@ class ZRangeByScoreCommand(ReadCommand):
             raise TypeError("value is not a sorted set")
 
         # Use range with score limits
-        result = value.range(0, -1, min_=self.min, max_=self.max)
+        result = value.range(0, -1, min_=self.min, max_=self.max, desc=self.desc)
+
+        if self.limit is not None:
+            offset, count = self.limit
+            result = result[offset:offset + count]
 
         if self.withscores:
             # Flatten the result into [member1, score1, member2, score2, ...]
@@ -686,61 +708,35 @@ class ZRangeByScoreCommand(ReadCommand):
         return [member for member, _ in result]
 
 
-class ZRevRangeByScoreCommand(ReadCommand):
+class ZRangeByScoreCommand(_ZRangeByScoreCommand):
+    """Return a range of members in a sorted set by score"""
+    name = 'zrangebyscore'
+
+    def __init__(self, command_tokens: list[str]):
+        super().__init__(command_tokens, desc=False)
+
+
+class ZRevRangeByScoreCommand(_ZRangeByScoreCommand):
     """Return a range of members in a sorted set by score, with scores ordered from high to low"""
     name = 'zrevrangebyscore'
 
     def __init__(self, command_tokens: list[str]):
-        self.key: str
-        self.max: float
-        self.min: float
-        self.withscores: bool
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 4:
-            raise ValueError('zrevrangebyscore command requires key, max and min')
-        self.key = tokens[1]
-        try:
-            self.max = float(tokens[2])
-            self.min = float(tokens[3])
-        except ValueError:
-            raise ValueError('max and min must be valid float numbers')
-
-        self.withscores = False
-        if len(tokens) > 4 and tokens[4].upper() == 'WITHSCORES':
-            self.withscores = True
-
-    def execute(self, ctx: CommandContext):
-        db = ctx.db
-        if not db.exists(self.key):
-            return []
-
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
-
-        # Use range with score limits and descending order
-        result = value.range(0, -1, min_=self.min, max_=self.max, desc=True)
-
-        if self.withscores:
-            # Flatten the result into [member1, score1, member2, score2, ...]
-            return [item for pair in result for item in pair]
-        return [member for member, _ in result]
+        super().__init__(command_tokens, desc=True)
 
 
-class ZRankCommand(ReadCommand):
+class _ZRankCommand(ReadCommand):
     """Determine the index of a member in a sorted set"""
-    name = 'zrank'
+    name = '_zrank'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self, command_tokens: list[str], desc):
+        self.desc = desc
         self.key: str
         self.member: str
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
-            raise ValueError('zrank command requires key and member')
+            raise ValueError(f'{self.name} command requires key and member')
         self.key = tokens[1]
         self.member = tokens[2]
 
@@ -753,7 +749,15 @@ class ZRankCommand(ReadCommand):
         if not isinstance(value, SortedSet):
             raise TypeError("value is not a sorted set")
 
-        return value.rank(self.member)
+        return value.rank(self.member, desc=self.desc)
+
+
+class ZRankCommand(_ZRankCommand):
+    """Determine the index of a member in a sorted set"""
+    name = 'zrank'
+
+    def __init__(self, command_tokens: list[str]):
+        super().__init__(command_tokens, desc=False)
 
 
 class ZRemCommand(WriteCommand):
@@ -838,31 +842,12 @@ class ZRemRangeByScoreCommand(WriteCommand):
         return len(to_remove)
 
 
-class ZRevRankCommand(ReadCommand):
+class ZRevRankCommand(_ZRankCommand):
     """Determine the index of a member in a sorted set, with scores ordered from high to low"""
     name = 'zrevrank'
 
     def __init__(self, command_tokens: list[str]):
-        self.key: str
-        self.member: str
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 3:
-            raise ValueError('zrevrank command requires key and member')
-        self.key = tokens[1]
-        self.member = tokens[2]
-
-    def execute(self, ctx: CommandContext):
-        db = ctx.db
-        if not db.exists(self.key):
-            return None
-
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
-
-        return value.rank(self.member, desc=True)
+        super().__init__(command_tokens, desc=True)
 
 
 class ZScanCommand(ReadCommand):
