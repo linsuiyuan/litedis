@@ -86,7 +86,7 @@ class TestBasicCommands(BaseTest):
         # Test with NX, XX, GT, LT options
         assert client.expire("key1", 200, nx=True) == 0  # Already has expiry
         assert client.expire("key1", 200, gt=True) == 1  # New expiry is greater
-        assert client.expire("key1", 50, lt=True) == 1   # New expiry is less
+        assert client.expire("key1", 50, lt=True) == 1  # New expiry is less
 
     def test_expiretime(self, client):
         client.set("key1", "value1")
@@ -296,12 +296,9 @@ class TestHashCommands(BaseTest):
         assert len(results) == 0
 
 
-# todo to fix
-@SkipTest
 class TestListCommands(BaseTest):
 
     def test_lindex(self, client):
-        """Test LINDEX command"""
         client.rpush("list1", "value1", "value2", "value3")
         assert client.lindex("list1", 0) == "value1"
         assert client.lindex("list1", -1) == "value3"
@@ -309,7 +306,6 @@ class TestListCommands(BaseTest):
         assert client.lindex("nonexistent", 0) is None
 
     def test_linsert(self, client):
-        """Test LINSERT command"""
         client.rpush("list1", "value1", "value2", "value3")
         # Insert before
         assert client.linsert("list1", True, "value2", "new1") == 4
@@ -326,13 +322,11 @@ class TestListCommands(BaseTest):
         assert client.linsert("nonexistent", True, "value", "new") == 0
 
     def test_llen(self, client):
-        """Test LLEN command"""
         assert client.llen("nonexistent") == 0
         client.rpush("list1", "value1", "value2", "value3")
         assert client.llen("list1") == 3
 
     def test_lpop(self, client):
-        """Test LPOP command"""
         client.rpush("list1", "value1", "value2", "value3")
         # Single pop
         assert client.lpop("list1") == "value1"
@@ -348,13 +342,11 @@ class TestListCommands(BaseTest):
         assert len(client.lpop("list2", 5)) == 1  # Only one element left
 
     def test_lpush(self, client):
-        """Test LPUSH command"""
         assert client.lpush("list1", "value1") == 1
         assert client.lpush("list1", "value2", "value3") == 3
         assert client.lrange("list1", 0, -1) == ["value3", "value2", "value1"]
 
     def test_lpushx(self, client):
-        """Test LPUSHX command"""
         # Push to non-existing list
         assert client.lpushx("list1", "value1") == 0
         assert client.llen("list1") == 0
@@ -365,7 +357,6 @@ class TestListCommands(BaseTest):
         assert client.lrange("list1", 0, -1) == ["value3", "value2", "value1"]
 
     def test_lrange(self, client):
-        """Test LRANGE command"""
         client.rpush("list1", "value1", "value2", "value3", "value4", "value5")
         assert client.lrange("list1", 0, 2) == ["value1", "value2", "value3"]
         assert client.lrange("list1", -3, -1) == ["value3", "value4", "value5"]
@@ -373,7 +364,6 @@ class TestListCommands(BaseTest):
         assert client.lrange("nonexistent", 0, -1) == []
 
     def test_lrem(self, client):
-        """Test LREM command"""
         client.rpush("list1", "value1", "value2", "value1", "value3", "value1")
         # Remove from head
         assert client.lrem("list1", 2, "value1") == 2
@@ -390,7 +380,6 @@ class TestListCommands(BaseTest):
         assert client.lrange("list3", 0, -1) == ["value2", "value3"]
 
     def test_lset(self, client):
-        """Test LSET command"""
         client.rpush("list1", "value1", "value2", "value3")
         assert client.lset("list1", 1, "new_value") == "OK"
         assert client.lrange("list1", 0, -1) == ["value1", "new_value", "value3"]
@@ -408,7 +397,6 @@ class TestListCommands(BaseTest):
             client.lset("nonexistent", 0, "value")
 
     def test_ltrim(self, client):
-        """Test LTRIM command"""
         client.rpush("list1", "value1", "value2", "value3", "value4", "value5")
         assert client.ltrim("list1", 1, 3) == "OK"
         assert client.lrange("list1", 0, -1) == ["value2", "value3", "value4"]
@@ -423,7 +411,6 @@ class TestListCommands(BaseTest):
         assert client.lrange("list1", 0, -1) == []
 
     def test_rpop(self, client):
-        """Test RPOP command"""
         client.rpush("list1", "value1", "value2", "value3")
         # Single pop
         assert client.rpop("list1") == "value3"
@@ -439,13 +426,11 @@ class TestListCommands(BaseTest):
         assert len(client.rpop("list2", 5)) == 1  # Only one element left
 
     def test_rpush(self, client):
-        """Test RPUSH command"""
         assert client.rpush("list1", "value1") == 1
         assert client.rpush("list1", "value2", "value3") == 3
         assert client.lrange("list1", 0, -1) == ["value1", "value2", "value3"]
 
     def test_rpushx(self, client):
-        """Test RPUSHX command"""
         # Push to non-existing list
         assert client.rpushx("list1", "value1") == 0
         assert client.llen("list1") == 0
@@ -456,7 +441,6 @@ class TestListCommands(BaseTest):
         assert client.lrange("list1", 0, -1) == ["value1", "value2", "value3"]
 
     def test_sort(self, client):
-        """Test SORT command"""
         # Sort numbers
         client.rpush("list1", "3", "1", "2")
         assert client.sort("list1") == ["1", "2", "3"]

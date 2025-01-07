@@ -301,7 +301,7 @@ class TestRPopCommand:
     def test_rpop_multiple_elements(self, ctx):
         ctx.db.set('mylist', ['a', 'b', 'c', 'd'])
         cmd = RPopCommand(['rpop', 'mylist', '2'])
-        assert cmd.execute(ctx) == ['c', 'd']
+        assert cmd.execute(ctx) == ['d', 'c']
         assert ctx.db.get('mylist') == ['a', 'b']
 
     def test_rpop_empty_list(self, ctx):

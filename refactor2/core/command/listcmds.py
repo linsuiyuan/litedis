@@ -438,6 +438,7 @@ class RPopCommand(WriteCommand):
             # Pop multiple elements
             count = min(self.count, len(value))
             result = value[-count:]
+            result.reverse()
             value = value[:-count]
 
         if value:
