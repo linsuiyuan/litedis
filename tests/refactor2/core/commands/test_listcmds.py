@@ -6,8 +6,16 @@ from refactor2.core.command.listcmds import (
     LInsertCommand,
     LLenCommand,
     LPopCommand,
-    LPushCommand, LPushXCommand, LRangeCommand, LRemCommand, LSetCommand, LTrimCommand, RPopCommand, RPushCommand,
-    RPushXCommand, SortCommand,
+    LPushCommand,
+    LPushXCommand,
+    LRangeCommand,
+    LRemCommand,
+    LSetCommand,
+    LTrimCommand,
+    RPopCommand,
+    RPushCommand,
+    RPushXCommand,
+    SortCommand,
 )
 from refactor2.core.persistence.ldb import LitedisDB
 

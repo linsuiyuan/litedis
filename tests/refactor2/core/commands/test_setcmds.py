@@ -6,8 +6,17 @@ from refactor2.core.command.setcmds import (
     SCardCommand,
     SDiffCommand,
     SDiffStoreCommand,
-    SInterCommand, SInterCardCommand, SInterStoreCommand, SIsMemberCommand, SMembersCommand, SMIsMemberCommand,
-    SMoveCommand, SPopCommand, SRandMemberCommand, SRemCommand, SUnionCommand,
+    SInterCommand,
+    SInterCardCommand,
+    SInterStoreCommand,
+    SIsMemberCommand,
+    SMembersCommand,
+    SMIsMemberCommand,
+    SMoveCommand,
+    SPopCommand,
+    SRandMemberCommand,
+    SRemCommand,
+    SUnionCommand,
 )
 from refactor2.core.persistence.ldb import LitedisDB
 

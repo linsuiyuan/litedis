@@ -1,7 +1,13 @@
 from pathlib import Path
 from typing import Any
 
-from refactor2.client.commands import BasicCommands, HashCommands, ListCommands, SetCommands, ZSetCommands
+from refactor2.client.commands import (
+    BasicCommands,
+    HashCommands,
+    ListCommands,
+    SetCommands,
+    ZSetCommands
+)
 from refactor2.core.dbmanager import DBManager
 from refactor2.typing import CommandProcessor, DBCommandTokens
 

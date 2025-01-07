@@ -24,6 +24,7 @@ class DBCommandTokensConverter:
         match value:
             case str():
                 pieces = ['set', key, value]
+            # todo to implement the other types
             case _:
                 raise TypeError(f"the value type the key({key}) is not supported")
 
