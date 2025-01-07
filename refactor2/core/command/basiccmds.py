@@ -291,6 +291,10 @@ class ExpireCommand(WriteCommand):
     def __init__(self, command_tokens: list[str]):
         self.key: str
         self.seconds: int
+        self.nx: bool = False
+        self.xx: bool = False
+        self.gt: bool = False
+        self.lt: bool = False
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
@@ -304,14 +308,53 @@ class ExpireCommand(WriteCommand):
         if self.seconds < 0:
             raise ValueError('seconds must be >= 0')
 
+        # Parse options
+        i = 3
+        while i < len(tokens):
+            opt = tokens[i].upper()
+            if opt == 'NX':
+                if self.xx:
+                    raise ValueError('NX and XX options are mutually exclusive')
+                self.nx = True
+            elif opt == 'XX':
+                if self.nx:
+                    raise ValueError('NX and XX options are mutually exclusive')
+                self.xx = True
+            elif opt == 'GT':
+                if self.lt:
+                    raise ValueError('GT and LT options are mutually exclusive')
+                self.gt = True
+            elif opt == 'LT':
+                if self.gt:
+                    raise ValueError('GT and LT options are mutually exclusive')
+                self.lt = True
+            else:
+                raise ValueError(f'invalid option: {opt}')
+            i += 1
+
     def execute(self, ctx: CommandContext):
         db = ctx.db
         if not db.exists(self.key):
             return 0
 
         now = int(time.time() * 1000)
-        expiration = now + self.seconds * 1000
-        return db.set_expiration(self.key, expiration)
+        new_expiration = now + self.seconds * 1000
+        current_expiration = db.get_expiration(self.key)
+
+        # Check NX/XX conditions
+        if self.nx and current_expiration != -1:
+            return 0
+        if self.xx and current_expiration == -1:
+            return 0
+
+        # Check GT/LT conditions
+        if current_expiration != -1:
+            if self.gt and new_expiration <= current_expiration:
+                return 0
+            if self.lt and new_expiration >= current_expiration:
+                return 0
+
+        return db.set_expiration(self.key, new_expiration)
 
 
 class ExpireatCommand(WriteCommand):
@@ -320,6 +363,10 @@ class ExpireatCommand(WriteCommand):
     def __init__(self, command_tokens: list[str]):
         self.key: str
         self.timestamp: int
+        self.nx: bool = False
+        self.xx: bool = False
+        self.gt: bool = False
+        self.lt: bool = False
         self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
@@ -331,14 +378,53 @@ class ExpireatCommand(WriteCommand):
         except ValueError:
             raise ValueError('timestamp must be an integer')
 
+        # Parse options
+        i = 3
+        while i < len(tokens):
+            opt = tokens[i].upper()
+            if opt == 'NX':
+                if self.xx:
+                    raise ValueError('NX and XX options are mutually exclusive')
+                self.nx = True
+            elif opt == 'XX':
+                if self.nx:
+                    raise ValueError('NX and XX options are mutually exclusive')
+                self.xx = True
+            elif opt == 'GT':
+                if self.lt:
+                    raise ValueError('GT and LT options are mutually exclusive')
+                self.gt = True
+            elif opt == 'LT':
+                if self.gt:
+                    raise ValueError('GT and LT options are mutually exclusive')
+                self.lt = True
+            else:
+                raise ValueError(f'invalid option: {opt}')
+            i += 1
+
     def execute(self, ctx: CommandContext):
         db = ctx.db
         if not db.exists(self.key):
             return 0
 
         # Convert seconds to milliseconds
-        expiration = self.timestamp * 1000
-        return db.set_expiration(self.key, expiration)
+        new_expiration = self.timestamp * 1000
+        current_expiration = db.get_expiration(self.key)
+
+        # Check NX/XX conditions
+        if self.nx and current_expiration != -1:
+            return 0
+        if self.xx and current_expiration == -1:
+            return 0
+
+        # Check GT/LT conditions
+        if current_expiration != -1:
+            if self.gt and new_expiration <= current_expiration:
+                return 0
+            if self.lt and new_expiration >= current_expiration:
+                return 0
+
+        return db.set_expiration(self.key, new_expiration)
 
 
 class ExpireTimeCommand(ReadCommand):

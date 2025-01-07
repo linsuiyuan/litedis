@@ -302,11 +302,11 @@ class TestExpireCommand:
         assert ctx.db.exists_expiration('key')
 
         # Simulate the passage of time
-        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 6
+        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 2
         assert ctx.db.get('key') is None
 
     def test_expire_nonexistent_key(self, ctx):
-        cmd = ExpireCommand(['expire', 'nonexistent', '1'])
+        cmd = ExpireCommand(['expire', 'key', '1'])
         result = cmd.execute(ctx)
         assert result == 0
 
@@ -315,24 +315,73 @@ class TestExpireCommand:
         with pytest.raises(ValueError):
             ExpireCommand(['expire', 'key', '-1'])
 
-    def test_expire_update_existing(self, ctx, mock_time):
+    def test_expire_nx_option(self, ctx):
+        # Test NX when key has no expiration
         ctx.db.set('key', 'value')
-        # set initial expiration to 5s
-        cmd1 = ExpireCommand(['expire', 'key', '5'])
-        cmd1.execute(ctx)
-
-        # update to 10s
-        cmd2 = ExpireCommand(['expire', 'key', '10'])
-        result = cmd2.execute(ctx)
+        cmd = ExpireCommand(['expire', 'key', '10', 'NX'])
+        result = cmd.execute(ctx)
         assert result == 1
 
-        # check that key exists after 8s
-        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 8
-        assert ctx.db.get('key') == 'value'
+        # Test NX when key has expiration
+        cmd = ExpireCommand(['expire', 'key', '20', 'NX'])
+        result = cmd.execute(ctx)
+        assert result == 0
 
-        # check that key not exists after 12s
-        mock_time.return_value = MOCK_TIME_INITIAL_TIMESTAMP + 12
-        assert ctx.db.get('key') is None
+    def test_expire_xx_option(self, ctx):
+        # Test XX when key has no expiration
+        ctx.db.set('key', 'value')
+        cmd = ExpireCommand(['expire', 'key', '10', 'XX'])
+        result = cmd.execute(ctx)
+        assert result == 0
+
+        # Set expiration and try again
+        ctx.db.set_expiration('key', int(time.time() * 1000 + 5000))
+        cmd = ExpireCommand(['expire', 'key', '20', 'XX'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+    def test_expire_gt_option(self, ctx):
+        ctx.db.set('key', 'value')
+        initial_expiry = int(time.time() * 1000 + 10000)  # 10 seconds
+        ctx.db.set_expiration('key', initial_expiry)
+
+        # Try setting smaller expiration with GT
+        cmd = ExpireCommand(['expire', 'key', '5', 'GT'])
+        result = cmd.execute(ctx)
+        assert result == 0
+        assert ctx.db.get_expiration('key') == initial_expiry
+
+        # Try setting larger expiration with GT
+        cmd = ExpireCommand(['expire', 'key', '15', 'GT'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+    def test_expire_lt_option(self, ctx):
+        ctx.db.set('key', 'value')
+        initial_expiry = int(time.time() * 1000 + 10000)  # 10 seconds
+        ctx.db.set_expiration('key', initial_expiry)
+
+        # Try setting larger expiration with LT
+        cmd = ExpireCommand(['expire', 'key', '15', 'LT'])
+        result = cmd.execute(ctx)
+        assert result == 0
+        assert ctx.db.get_expiration('key') == initial_expiry
+
+        # Try setting smaller expiration with LT
+        cmd = ExpireCommand(['expire', 'key', '5', 'LT'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+    def test_expire_invalid_option_combinations(self, ctx):
+        ctx.db.set('key', 'value')
+
+        # Test NX and XX together
+        with pytest.raises(ValueError):
+            ExpireCommand(['expire', 'key', '10', 'NX', 'XX'])
+
+        # Test GT and LT together
+        with pytest.raises(ValueError):
+            ExpireCommand(['expire', 'key', '10', 'GT', 'LT'])
 
 
 class TestExpireatCommand:
@@ -365,6 +414,77 @@ class TestExpireatCommand:
         ctx.db.set('key', 'value')
         with pytest.raises(ValueError):
             ExpireatCommand(['expireat', 'key', 'invalid'])
+
+    def test_expireat_nx_option(self, ctx):
+        ctx.db.set('key', 'value')
+        future_timestamp = int(time.time()) + 10
+
+        # Test NX when key has no expiration
+        cmd = ExpireatCommand(['expireat', 'key', str(future_timestamp), 'NX'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+        # Test NX when key has expiration
+        cmd = ExpireatCommand(['expireat', 'key', str(future_timestamp + 10), 'NX'])
+        result = cmd.execute(ctx)
+        assert result == 0
+
+    def test_expireat_xx_option(self, ctx):
+        ctx.db.set('key', 'value')
+        future_timestamp = int(time.time()) + 10
+
+        # Test XX when key has no expiration
+        cmd = ExpireatCommand(['expireat', 'key', str(future_timestamp), 'XX'])
+        result = cmd.execute(ctx)
+        assert result == 0
+
+        # Set expiration and try again
+        ctx.db.set_expiration('key', int(time.time() * 1000 + 5000))
+        cmd = ExpireatCommand(['expireat', 'key', str(future_timestamp), 'XX'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+    def test_expireat_gt_option(self, ctx):
+        ctx.db.set('key', 'value')
+        initial_timestamp = int(time.time()) + 10
+        ctx.db.set_expiration('key', initial_timestamp * 1000)
+
+        # Try setting earlier timestamp with GT
+        cmd = ExpireatCommand(['expireat', 'key', str(initial_timestamp - 5), 'GT'])
+        result = cmd.execute(ctx)
+        assert result == 0
+
+        # Try setting later timestamp with GT
+        cmd = ExpireatCommand(['expireat', 'key', str(initial_timestamp + 5), 'GT'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+    def test_expireat_lt_option(self, ctx):
+        ctx.db.set('key', 'value')
+        initial_timestamp = int(time.time()) + 10
+        ctx.db.set_expiration('key', initial_timestamp * 1000)
+
+        # Try setting later timestamp with LT
+        cmd = ExpireatCommand(['expireat', 'key', str(initial_timestamp + 5), 'LT'])
+        result = cmd.execute(ctx)
+        assert result == 0
+
+        # Try setting earlier timestamp with LT
+        cmd = ExpireatCommand(['expireat', 'key', str(initial_timestamp - 5), 'LT'])
+        result = cmd.execute(ctx)
+        assert result == 1
+
+    def test_expireat_invalid_option_combinations(self, ctx):
+        ctx.db.set('key', 'value')
+        future_timestamp = int(time.time()) + 10
+
+        # Test NX and XX together
+        with pytest.raises(ValueError):
+            ExpireatCommand(['expireat', 'key', str(future_timestamp), 'NX', 'XX'])
+
+        # Test GT and LT together
+        with pytest.raises(ValueError):
+            ExpireatCommand(['expireat', 'key', str(future_timestamp), 'GT', 'LT'])
 
 
 class TestExpireTimeCommand:

@@ -71,8 +71,6 @@ class TestBasicCommands(BaseTest):
         client.set("key2", "value2")
         assert client.exists("key1", "key2", "nonexistent") == 2
 
-    # todo 对应的命令实现有问题
-    @SkipTest
     def test_expire_expireat(self, client):
         """Test EXPIRE and EXPIREAT commands"""
         client.set("key1", "value1")
