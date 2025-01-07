@@ -1,6 +1,6 @@
 from typing import Protocol, Any
 
 
-class CommandsProtocol(Protocol):
+class ClientCommands(Protocol):
 
-    def execute_command(self, *args) -> Any: ...
+    def execute(self, *args) -> Any: ...

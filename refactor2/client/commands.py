@@ -1,9 +1,9 @@
 from typing import Any
 
-from refactor2.client.typing import CommandsProtocol
+from refactor2.client.typing import ClientCommands
 
 
-class BasicKeyCommand(CommandsProtocol):
+class BasicCommands(ClientCommands):
     def set(
             self,
             name: str,
@@ -42,7 +42,7 @@ class BasicKeyCommand(CommandsProtocol):
         if get:
             pieces.append("get")
 
-        return self.execute_command("set", *pieces)
+        return self.execute("set", *pieces)
 
     def get(self, name: str) -> Any:
-        return self.execute_command("get", name)
+        return self.execute("get", name)

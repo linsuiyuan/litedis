@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Any
 
-from refactor2.client.commands import BasicKeyCommand
+from refactor2.client.commands import BasicCommands
 from refactor2.core.dbmanager import DBManager
 from refactor2.typing import CommandProcessor, DBCommandTokens
 
 
-class Litedis(BasicKeyCommand):
+class Litedis(BasicCommands):
 
     def __init__(self,
                  dbname: str = "db",
@@ -18,6 +18,6 @@ class Litedis(BasicKeyCommand):
 
         self.executor: CommandProcessor = dbmanager
 
-    def execute_command(self, *args) -> Any:
+    def execute(self, *args) -> Any:
         result = self.executor.process_command(DBCommandTokens(self.dbname, list(args)))
         return result

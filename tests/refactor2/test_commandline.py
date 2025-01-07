@@ -32,7 +32,6 @@ def test_parse_command_line_with_json():
 
     # Test parsing command with quoted JSON string
     json_cmd_quoted = 'set key1 "{\\"name\\": \\"John\\", \\"age\\": 30}"'
-    print(json_cmd_quoted)
     assert parse_command_line(json_cmd_quoted) == ["set", "key1", '{"name": "John", "age": 30}']
 
 
@@ -40,7 +39,6 @@ def test_combine_command_line_with_json():
     # Test combining command with JSON string
     args = ["set", "key1", '{\"name\": \"John\", \"age\": 30}']
     expected = r'set key1 "{\"name\": \"John\", \"age\": 30}"'
-    print(expected)
     assert combine_command_line(args) == expected
 
 
