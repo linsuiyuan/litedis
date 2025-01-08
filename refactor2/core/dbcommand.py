@@ -4,10 +4,11 @@ from typing import Iterable
 from refactor2.core.command.base import CommandContext
 from refactor2.core.command.factory import CommandFactory
 from refactor2.core.persistence import LitedisDB
+from refactor2.sortedset import SortedSet
 from refactor2.typing import DBCommandTokens
 
 
-class DBCommandTokensConverter:
+class DBCommandConverter:
 
     @classmethod
     def dbs_to_commands(cls, dbs: dict[str, LitedisDB]):
@@ -24,7 +25,18 @@ class DBCommandTokensConverter:
         match value:
             case str():
                 pieces = ['set', key, value]
-            # todo to implement the other types
+            case dict():
+                pieces = ['hset', key]
+                for field, val in value.items():
+                    pieces.extend([field, str(val)])
+            case list():
+                pieces = ['rpush', key, *value]
+            case set():
+                pieces = ['sadd', key, *value]
+            case SortedSet():
+                pieces = ['zadd', key]
+                for member, score in value.items():
+                    pieces.extend([str(score), member])
             case _:
                 raise TypeError(f"the value type the key({key}) is not supported")
 
