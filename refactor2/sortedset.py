@@ -1,20 +1,77 @@
 import random
-from collections import OrderedDict
+from collections.abc import Mapping
 from typing import Iterable
+
+from sortedcontainers import SortedDict, SortedList
+
+
+class _ValueSortedDict:
+    def __init__(self):
+        self._data = SortedDict()
+        self._sorted_by_value = SortedList(key=lambda item: item[1])
+
+    def __setitem__(self, key, value):
+        if key in self._data:
+            # delete old value
+            old_value = self._data[key]
+            self._sorted_by_value.discard((key, old_value))
+        # insert new value
+        self._data[key] = value
+        self._sorted_by_value.add((key, value))
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __len__(self):
+        return len(self._data)
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def remove(self, key):
+        if key in self._data:
+            value = self._data.pop(key)
+            self._sorted_by_value.discard((key, value))
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
+    def pop(self, key, default=None):
+        if key in self._data:
+            value = self._data.pop(key)
+            self._sorted_by_value.discard((key, value))
+        else:
+            value = default
+        return value
+
+    def popitem(self, index=-1):
+        item = self._data.popitem(index)
+        self._sorted_by_value.discard(item)
+        return item
 
 
 class SortedSet(Iterable):
     """
     Sorted Set class, used for database sorted set type.
-    Uses OrderedDict as the underlying ordered structure.
+    Uses SortedDict of sortedcontainers as the underlying ordered structure.
     """
 
-    def __init__(self, iterable: Iterable = None):
-        if iterable is None:
-            self._data = OrderedDict()
+    def __init__(self, mapping: Mapping = None):
+        if mapping is None:
+            self._data = _ValueSortedDict()
         else:
-            self._data = OrderedDict(iterable)
-            self._sort_data()
+            self._data = _ValueSortedDict()
+            for key, value in mapping.items():
+                self._data[key] = value
 
     def members(self):
         return self._data.keys()
@@ -24,10 +81,6 @@ class SortedSet(Iterable):
 
     def items(self):
         return self._data.items()
-
-    def _sort_data(self):
-        sortdata = sorted(self, key=lambda x: (x[1], x[0]))
-        self._data = OrderedDict(sortdata)
 
     def __contains__(self, m) -> bool:
         return m in self._data
@@ -39,9 +92,7 @@ class SortedSet(Iterable):
         return self._data[item]
 
     def __setitem__(self, key, value):
-        self._data[key] = float(value)
-
-        self._sort_data()
+        self._data[key] = value
 
     def __len__(self):
         return len(self._data)
@@ -135,7 +186,7 @@ class SortedSet(Iterable):
         :param last: If True, pop from the end; if False, pop from the beginning
         :return: (member, score) tuple
         """
-        return self._data.popitem(last=last)
+        return self._data.popitem(index=-1 if last else 0)
 
     def randmember(self, count: int = 1, unique=True):
         """
@@ -191,9 +242,6 @@ class SortedSet(Iterable):
     def rank(self, member: str, desc=False) -> int | None:
         """
         Get the rank of a member
-        :param member: Member to look up
-        :param desc: If True, rank in descending order
-        :return: Rank of the member or None if not found
         """
         if member not in self:
             return None
@@ -208,7 +256,6 @@ class SortedSet(Iterable):
     def union(self, other: "SortedSet"):
         """
         Set union
-        :param other: Another SortedSet
         :return: A new SortedSet containing elements from both sets,
                 with scores added for common elements
         """
