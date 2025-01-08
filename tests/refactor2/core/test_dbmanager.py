@@ -34,12 +34,12 @@ class TestDBManager:
 
         # Should return the same instance with original configuration
         assert manager1 is manager2
-        assert manager2._persistence_on is True
+        assert manager2.persistence_on is True
         assert manager2._data_path == temp_dir
 
     def test_init_with_persistence(self, temp_dir):
         manager = DBManager(persistence_on=True, data_path=temp_dir)
-        assert manager._persistence_on is True
+        assert manager.persistence_on is True
         assert isinstance(manager._data_path, Path)
         assert manager._data_path.exists()
         assert manager._aof is not None

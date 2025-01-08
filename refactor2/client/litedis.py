@@ -21,11 +21,11 @@ class Litedis(
 ):
     def __init__(self,
                  dbname: str = "db",
+                 persistence_on: bool = True,
                  data_path: str | Path = "ldbdata"):
         self.dbname = dbname
-        self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)
 
-        dbmanager = DBManager(self.data_path)
+        dbmanager = DBManager(data_path, persistence_on=persistence_on)
 
         self.executor: CommandProcessor = dbmanager
 

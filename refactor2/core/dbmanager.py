@@ -21,9 +21,9 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
                  data_path: str | Path = Path("ldbdata"),
                  persistence_on=True,
                  aof_rewrite_cycle=666):
-        if not persistence_on:
+        self.persistence_on = persistence_on
+        if not self.persistence_on:
             return
-        self._persistence_on = persistence_on
 
         self._data_path = data_path if isinstance(data_path, Path) else Path(data_path)
         self._data_path.mkdir(parents=True, exist_ok=True)
@@ -80,7 +80,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         with self._db_locks[dbcmd.dbname]:
             result = command.execute(ctx)
 
-        if self._persistence_on and self._aof:
+        if self.persistence_on and self._aof:
             if command.rwtype == ReadWriteType.Write:
                 with self._aof_lock:
                     self._aof.log_command(dbcmd)
