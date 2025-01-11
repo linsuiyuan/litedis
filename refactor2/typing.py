@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Protocol, NamedTuple
 
-from refactor2.sortedset import SortedSet
+from refactor2.core.command.sortedset import SortedSet
 
 LitedisObjectT = dict | list | set | str | SortedSet
 
@@ -13,10 +13,10 @@ class ReadWriteType(Enum):
     Write = "write"
 
 
-class DBCommandTokens(NamedTuple):
+class DBCommandPair(NamedTuple):
     dbname: str
     cmdtokens: list[str]
 
 
 class CommandProcessor(Protocol):
-    def process_command(self, dbcmd: DBCommandTokens): ...
+    def process_command(self, dbcmd: DBCommandPair): ...

@@ -1,6 +1,9 @@
-from typing import Any
+from typing import Any, Protocol
 
-from refactor2.client.typing import ClientCommands
+
+class ClientCommands(Protocol):
+
+    def execute(self, *args) -> Any: ...
 
 
 class BasicCommands(ClientCommands):

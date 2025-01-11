@@ -2,10 +2,10 @@ import time
 
 import pytest
 
+from refactor2.core.command.sortedset import SortedSet
 from refactor2.core.dbcommand import DBCommandConverter
 from refactor2.core.persistence import LitedisDB
-from refactor2.sortedset import SortedSet
-from refactor2.typing import DBCommandTokens
+from refactor2.typing import DBCommandPair
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ class TestDBCommandTokensConverter:
         assert set(cmdtokens[2:]) == {"member1", "member2", "member3"}
 
     def test_convert_db_object_to_cmdtokens_sorted_set(self, mock_db):
-        from refactor2.sortedset import SortedSet
+        from refactor2.core.command.sortedset import SortedSet
         zset = SortedSet()
         zset["member1"] = 1.0
         zset["member2"] = 2.0
@@ -82,7 +82,7 @@ class TestDBCommandTokensConverter:
         assert cmdtokens == ['zadd', 'zset_key', '1.0', 'member1', '2.0', 'member2']
 
     def test_dbs_to_commands_all_types(self, mock_db):
-        from refactor2.sortedset import SortedSet
+        from refactor2.core.command.sortedset import SortedSet
         # Set up different types of data
         mock_db.set("str_key", "string_value")
         mock_db.set("hash_key", {"field1": "val1", "field2": "val2"})
@@ -120,8 +120,8 @@ class TestDBCommandTokensConverter:
 
     def test_commands_to_dbs_basic(self):
         commands = [
-            DBCommandTokens("db1", ['set', 'key1', 'value1']),
-            DBCommandTokens("db2", ['set', 'key2', 'value2'])
+            DBCommandPair("db1", ['set', 'key1', 'value1']),
+            DBCommandPair("db2", ['set', 'key2', 'value2'])
         ]
 
         dbs = DBCommandConverter.commands_to_dbs(commands)
@@ -134,8 +134,8 @@ class TestDBCommandTokensConverter:
 
     def test_commands_to_dbs_same_db(self):
         commands = [
-            DBCommandTokens("db1", ['set', 'key1', 'value1']),
-            DBCommandTokens("db1", ['set', 'key2', 'value2'])
+            DBCommandPair("db1", ['set', 'key1', 'value1']),
+            DBCommandPair("db1", ['set', 'key2', 'value2'])
         ]
 
         dbs = DBCommandConverter.commands_to_dbs(commands)
@@ -147,11 +147,11 @@ class TestDBCommandTokensConverter:
 
     def test_commands_to_dbs_all_types(self):
         commands = [
-            DBCommandTokens("db1", ['set', 'str_key', 'string_value']),
-            DBCommandTokens("db1", ['hset', 'hash_key', 'field1', 'val1', 'field2', 'val2']),
-            DBCommandTokens("db1", ['rpush', 'list_key', 'item1', 'item2']),
-            DBCommandTokens("db1", ['sadd', 'set_key', 'member1', 'member2']),
-            DBCommandTokens("db1", ['zadd', 'zset_key', '1.0', 'member1', '2.0', 'member2'])
+            DBCommandPair("db1", ['set', 'str_key', 'string_value']),
+            DBCommandPair("db1", ['hset', 'hash_key', 'field1', 'val1', 'field2', 'val2']),
+            DBCommandPair("db1", ['rpush', 'list_key', 'item1', 'item2']),
+            DBCommandPair("db1", ['sadd', 'set_key', 'member1', 'member2']),
+            DBCommandPair("db1", ['zadd', 'zset_key', '1.0', 'member1', '2.0', 'member2'])
         ]
 
         dbs = DBCommandConverter.commands_to_dbs(commands)

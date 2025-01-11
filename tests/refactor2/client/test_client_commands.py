@@ -3,8 +3,8 @@ from threading import Lock
 
 import pytest
 
-from refactor2.client.litedis import Litedis
 from refactor2.core.dbmanager import DBManager
+from refactor2.litedis import Litedis
 
 
 class BaseTest:

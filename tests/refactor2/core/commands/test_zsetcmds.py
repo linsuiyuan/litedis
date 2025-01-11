@@ -1,6 +1,7 @@
 import pytest
 
 from refactor2.core.command.base import CommandContext
+from refactor2.core.command.sortedset import SortedSet
 from refactor2.core.command.zsetcmds import (
     ZAddCommand,
     ZCardCommand,
@@ -27,7 +28,6 @@ from refactor2.core.command.zsetcmds import (
     ZMScoreCommand,
 )
 from refactor2.core.persistence.ldb import LitedisDB
-from refactor2.sortedset import SortedSet
 
 
 @pytest.fixture

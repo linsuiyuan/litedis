@@ -1,7 +1,7 @@
 import re
 
 from refactor2.core.command.base import CommandContext, ReadCommand, WriteCommand
-from refactor2.sortedset import SortedSet
+from refactor2.core.command.sortedset import SortedSet
 
 
 class ZAddCommand(WriteCommand):

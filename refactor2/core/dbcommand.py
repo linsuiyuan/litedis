@@ -3,9 +3,9 @@ from typing import Iterable
 
 from refactor2.core.command.base import CommandContext
 from refactor2.core.command.factory import CommandFactory
+from refactor2.core.command.sortedset import SortedSet
 from refactor2.core.persistence import LitedisDB
-from refactor2.sortedset import SortedSet
-from refactor2.typing import DBCommandTokens
+from refactor2.typing import DBCommandPair
 
 
 class DBCommandConverter:
@@ -15,7 +15,7 @@ class DBCommandConverter:
         for dbname, db in dbs.items():
             for key in db.keys():
                 cmdtokens = cls._convert_db_object_to_cmdtokens(key, db)
-                yield DBCommandTokens(dbname, cmdtokens)
+                yield DBCommandPair(dbname, cmdtokens)
 
     @classmethod
     def _convert_db_object_to_cmdtokens(cls, key: str, db: LitedisDB):
@@ -49,7 +49,7 @@ class DBCommandConverter:
         return pieces
 
     @classmethod
-    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandTokens]) -> dict[str, LitedisDB]:
+    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandPair]) -> dict[str, LitedisDB]:
         dbs = {}
         for dbcmd in dbcmds:
             dbname, cmdtokens = dbcmd

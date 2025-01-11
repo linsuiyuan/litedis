@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from refactor2.core.persistence import AOF
-from refactor2.typing import DBCommandTokens, DB_COMMAND_SEPARATOR
+from refactor2.typing import DBCommandPair, DB_COMMAND_SEPARATOR
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ class TestAOF:
         assert aof_file.exists_file()
 
     def test_log_command(self, aof_file):
-        cmd = DBCommandTokens("test_db", ["SET", "key", "value"])
+        cmd = DBCommandPair("test_db", ["SET", "key", "value"])
         aof_file.log_command(cmd)
 
         # Verify file content
@@ -59,8 +59,8 @@ class TestAOF:
 
     def test_load_commands(self, aof_file):
         commands = [
-            DBCommandTokens("db1", ["SET", "key1", "value1"]),
-            DBCommandTokens("db2", ["SET", "key2", "value2"]),
+            DBCommandPair("db1", ["SET", "key1", "value1"]),
+            DBCommandPair("db2", ["SET", "key2", "value2"]),
         ]
 
         # Write test commands
@@ -82,8 +82,8 @@ class TestAOF:
     def test_rewrite_commands(self, aof_file):
         # Test rewriting commands
         original_commands = [
-            DBCommandTokens("db1", ["SET", "key1", "value1"]),
-            DBCommandTokens("db2", ["SET", "key2", "value2"])
+            DBCommandPair("db1", ["SET", "key1", "value1"]),
+            DBCommandPair("db2", ["SET", "key2", "value2"])
         ]
 
         # Rewrite commands
@@ -104,7 +104,7 @@ class TestAOF:
         monkeypatch.setattr(os, "replace", mock_replace)
 
         with pytest.raises(Exception, match="Failed to rewrite.*"):
-            aof_file.rewrite_commands([DBCommandTokens("db1", ["SET", "key1", "value1"])])
+            aof_file.rewrite_commands([DBCommandPair("db1", ["SET", "key1", "value1"])])
 
     def test_close(self, aof_file):
         file = aof_file.get_or_create_file()

@@ -2,8 +2,8 @@ import time
 
 import pytest
 
+from refactor2.core.command.sortedset import SortedSet
 from refactor2.core.persistence import LitedisDB
-from refactor2.sortedset import SortedSet
 
 
 @pytest.fixture

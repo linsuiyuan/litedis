@@ -1,6 +1,6 @@
 import time
 
-from refactor2.sortedset import SortedSet
+from refactor2.core.command.sortedset import SortedSet
 from refactor2.typing import LitedisObjectT
 
 

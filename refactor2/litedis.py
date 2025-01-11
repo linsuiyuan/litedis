@@ -9,7 +9,7 @@ from refactor2.client.commands import (
     ZSetCommands
 )
 from refactor2.core.dbmanager import DBManager
-from refactor2.typing import CommandProcessor, DBCommandTokens
+from refactor2.typing import CommandProcessor, DBCommandPair
 
 
 class Litedis(
@@ -30,5 +30,5 @@ class Litedis(
         self.executor: CommandProcessor = dbmanager
 
     def execute(self, *args) -> Any:
-        result = self.executor.process_command(DBCommandTokens(self.dbname, list(args)))
+        result = self.executor.process_command(DBCommandPair(self.dbname, list(args)))
         return result
