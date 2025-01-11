@@ -10,7 +10,6 @@ from refactor2.core.command.zsetcmds import (
     ZIncrByCommand,
     ZInterCommand,
     ZInterCardCommand,
-    ZInterStoreCommand,
     ZPopMaxCommand,
     ZPopMinCommand,
     ZRandMemberCommand,
@@ -288,40 +287,6 @@ class TestZInterCardCommand:
     def test_zintercard_invalid_limit(self, ctx):
         with pytest.raises(ValueError, match='limit must be non-negative'):
             ZInterCardCommand(['zintercard', '2', 'set1', 'set2', 'LIMIT', '-1'])
-
-
-class TestZInterStoreCommand:
-    def test_zinterstore_empty_keys(self, ctx):
-        cmd = ZInterStoreCommand(['zinterstore', 'dest', '2', 'set1', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 0
-        assert isinstance(ctx.db.get('dest'), SortedSet)
-        assert len(ctx.db.get('dest')) == 0
-
-    def test_zinterstore_with_members(self, ctx):
-        # Add members to sets
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd1.execute(ctx)
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4'])
-        zadd2.execute(ctx)
-
-        cmd = ZInterStoreCommand(['zinterstore', 'dest', '2', 'set1', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 2
-
-        dest_set = ctx.db.get('dest')
-        assert dest_set.score('member2') == 2.0
-        assert dest_set.score('member3') == 3.0
-
-    def test_zinterstore_wrong_type(self, ctx):
-        ctx.db.set('set1', "string")  # Wrong type
-        cmd = ZInterStoreCommand(['zinterstore', 'dest', '2', 'set1', 'set2'])
-        with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
-            cmd.execute(ctx)
-
-    def test_zinterstore_wrong_args(self, ctx):
-        with pytest.raises(ValueError, match='zinterstore command requires destination, numkeys and at least one key'):
-            ZInterStoreCommand(['zinterstore'])
 
 
 class TestZPopMaxCommand:

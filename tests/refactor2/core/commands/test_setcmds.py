@@ -5,10 +5,8 @@ from refactor2.core.command.setcmds import (
     SAddCommand,
     SCardCommand,
     SDiffCommand,
-    SDiffStoreCommand,
     SInterCommand,
     SInterCardCommand,
-    SInterStoreCommand,
     SIsMemberCommand,
     SMembersCommand,
     SMIsMemberCommand,
@@ -120,41 +118,6 @@ class TestSDiffCommand:
             SDiffCommand(['sdiff'])
 
 
-class TestSDiffStoreCommand:
-    def test_sdiffstore_two_sets(self, ctx):
-        ctx.db.set('set1', {'a', 'b', 'c'})
-        ctx.db.set('set2', {'b', 'c', 'd'})
-        cmd = SDiffStoreCommand(['sdiffstore', 'dest', 'set1', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 1
-        assert ctx.db.get('dest') == {'a'}
-
-    def test_sdiffstore_empty_result(self, ctx):
-        ctx.db.set('set1', {'a', 'b'})
-        ctx.db.set('set2', {'a', 'b'})
-        cmd = SDiffStoreCommand(['sdiffstore', 'dest', 'set1', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 0
-        assert ctx.db.get('dest') == set()
-
-    def test_sdiffstore_nonexistent_first_key(self, ctx):
-        cmd = SDiffStoreCommand(['sdiffstore', 'dest', 'nosuchkey', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 0
-        assert ctx.db.get('dest') == set()
-
-    def test_sdiffstore_wrong_type(self, ctx):
-        ctx.db.set('set1', {'a', 'b'})
-        ctx.db.set('str1', 'string')
-        cmd = SDiffStoreCommand(['sdiffstore', 'dest', 'set1', 'str1'])
-        with pytest.raises(TypeError, match="value at str1 is not a set"):
-            cmd.execute(ctx)
-
-    def test_sdiffstore_invalid_syntax(self):
-        with pytest.raises(ValueError, match="sdiffstore command requires destination and at least one key"):
-            SDiffStoreCommand(['sdiffstore', 'dest'])
-
-
 class TestSInterCommand:
     def test_sinter_two_sets(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c'})
@@ -234,51 +197,6 @@ class TestSInterCardCommand:
     def test_sintercard_invalid_limit(self):
         with pytest.raises(ValueError, match="limit must be non-negative"):
             SInterCardCommand(['sintercard', '1', 'set1', 'LIMIT', '-1'])
-
-
-class TestSInterStoreCommand:
-    def test_sinterstore_two_sets(self, ctx):
-        ctx.db.set('set1', {'a', 'b', 'c'})
-        ctx.db.set('set2', {'b', 'c', 'd'})
-        cmd = SInterStoreCommand(['sinterstore', 'dest', 'set1', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 2
-        assert ctx.db.get('dest') == {'b', 'c'}
-
-    def test_sinterstore_multiple_sets(self, ctx):
-        ctx.db.set('set1', {'a', 'b', 'c', 'd'})
-        ctx.db.set('set2', {'b', 'c', 'd'})
-        ctx.db.set('set3', {'b', 'c'})
-        cmd = SInterStoreCommand(['sinterstore', 'dest', 'set1', 'set2', 'set3'])
-        result = cmd.execute(ctx)
-        assert result == 2
-        assert ctx.db.get('dest') == {'b', 'c'}
-
-    def test_sinterstore_empty_result(self, ctx):
-        ctx.db.set('set1', {'a', 'b'})
-        ctx.db.set('set2', {'c', 'd'})
-        cmd = SInterStoreCommand(['sinterstore', 'dest', 'set1', 'set2'])
-        result = cmd.execute(ctx)
-        assert result == 0
-        assert ctx.db.get('dest') == set()
-
-    def test_sinterstore_nonexistent_key(self, ctx):
-        ctx.db.set('set1', {'a', 'b'})
-        cmd = SInterStoreCommand(['sinterstore', 'dest', 'set1', 'nosuchkey'])
-        result = cmd.execute(ctx)
-        assert result == 0
-        assert ctx.db.get('dest') == set()
-
-    def test_sinterstore_wrong_type(self, ctx):
-        ctx.db.set('set1', {'a', 'b'})
-        ctx.db.set('str1', 'string')
-        cmd = SInterStoreCommand(['sinterstore', 'dest', 'set1', 'str1'])
-        with pytest.raises(TypeError, match="value at str1 is not a set"):
-            cmd.execute(ctx)
-
-    def test_sinterstore_invalid_syntax(self):
-        with pytest.raises(ValueError, match="sinterstore command requires destination and at least one key"):
-            SInterStoreCommand(['sinterstore'])
 
 
 class TestSIsMemberCommand:

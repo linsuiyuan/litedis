@@ -18,9 +18,9 @@ from refactor2.core.command.basiccmds import (
     IncrbyCommand,
     IncrbyfloatCommand,
     KeysCommand,
-    MgetCommand,
-    MsetCommand,
-    MsetnxCommand,
+    MGetCommand,
+    MSetCommand,
+    MSetnxCommand,
     PersistCommand,
     RandomKeyCommand,
     RenameCommand,
@@ -647,25 +647,25 @@ class TestMgetCommand:
     def test_mget_all_existing(self, ctx):
         ctx.db.set('key1', 'value1')
         ctx.db.set('key2', 'value2')
-        cmd = MgetCommand(['mget', 'key1', 'key2'])
+        cmd = MGetCommand(['mget', 'key1', 'key2'])
         result = cmd.execute(ctx)
         assert result == ['value1', 'value2']
 
     def test_mget_some_missing(self, ctx):
         ctx.db.set('key1', 'value1')
-        cmd = MgetCommand(['mget', 'key1', 'nonexistent'])
+        cmd = MGetCommand(['mget', 'key1', 'nonexistent'])
         result = cmd.execute(ctx)
         assert result == ['value1', None]
 
     def test_mget_all_missing(self, ctx):
-        cmd = MgetCommand(['mget', 'nonexistent1', 'nonexistent2'])
+        cmd = MGetCommand(['mget', 'nonexistent1', 'nonexistent2'])
         result = cmd.execute(ctx)
         assert result == [None, None]
 
     def test_mget_wrong_type(self, ctx):
         ctx.db.set('key1', 'value1')
         ctx.db.set('key2', [1, 2, 3])  # Wrong type
-        cmd = MgetCommand(['mget', 'key1', 'key2'])
+        cmd = MGetCommand(['mget', 'key1', 'key2'])
         result = cmd.execute(ctx)
         assert result[0] == 'value1'
         assert result[1] is not None  # The wrong type value should still be returned
@@ -673,7 +673,7 @@ class TestMgetCommand:
 
 class TestMsetCommand:
     def test_mset_basic(self, ctx):
-        cmd = MsetCommand(['mset', 'key1', 'value1', 'key2', 'value2'])
+        cmd = MSetCommand(['mset', 'key1', 'value1', 'key2', 'value2'])
         result = cmd.execute(ctx)
         assert result == 'OK'
         assert ctx.db.get('key1') == 'value1'
@@ -681,7 +681,7 @@ class TestMsetCommand:
 
     def test_mset_override_existing(self, ctx):
         ctx.db.set('key1', 'oldvalue1')
-        cmd = MsetCommand(['mset', 'key1', 'newvalue1', 'key2', 'value2'])
+        cmd = MSetCommand(['mset', 'key1', 'newvalue1', 'key2', 'value2'])
         result = cmd.execute(ctx)
         assert result == 'OK'
         assert ctx.db.get('key1') == 'newvalue1'
@@ -689,17 +689,17 @@ class TestMsetCommand:
 
     def test_mset_invalid_pairs(self, ctx):
         with pytest.raises(ValueError):
-            MsetCommand(['mset', 'key1', 'value1', 'key2'])  # Missing value for key2
+            MSetCommand(['mset', 'key1', 'value1', 'key2'])  # Missing value for key2
 
     def test_mset_empty_values(self, ctx):
-        cmd = MsetCommand(['mset', 'key1', '', 'key2', ''])
+        cmd = MSetCommand(['mset', 'key1', '', 'key2', ''])
         result = cmd.execute(ctx)
         assert result == 'OK'
         assert ctx.db.get('key1') == ''
         assert ctx.db.get('key2') == ''
 
     def test_mset_with_spaces(self, ctx):
-        cmd = MsetCommand(['mset', 'key 1', 'value 1', 'key 2', 'value 2'])
+        cmd = MSetCommand(['mset', 'key 1', 'value 1', 'key 2', 'value 2'])
         result = cmd.execute(ctx)
         assert result == 'OK'
         assert ctx.db.get('key 1') == 'value 1'
@@ -708,7 +708,7 @@ class TestMsetCommand:
 
 class TestMsetnxCommand:
     def test_msetnx_all_new_keys(self, ctx):
-        cmd = MsetnxCommand(['msetnx', 'key1', 'value1', 'key2', 'value2'])
+        cmd = MSetnxCommand(['msetnx', 'key1', 'value1', 'key2', 'value2'])
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.get('key1') == 'value1'
@@ -716,7 +716,7 @@ class TestMsetnxCommand:
 
     def test_msetnx_with_existing_key(self, ctx):
         ctx.db.set('key1', 'oldvalue')
-        cmd = MsetnxCommand(['msetnx', 'key1', 'value1', 'key2', 'value2'])
+        cmd = MSetnxCommand(['msetnx', 'key1', 'value1', 'key2', 'value2'])
         result = cmd.execute(ctx)
         assert result == 0
         assert ctx.db.get('key1') == 'oldvalue'
@@ -724,10 +724,10 @@ class TestMsetnxCommand:
 
     def test_msetnx_invalid_pairs(self, ctx):
         with pytest.raises(ValueError):
-            MsetnxCommand(['msetnx', 'key1'])  # Missing value
+            MSetnxCommand(['msetnx', 'key1'])  # Missing value
 
     def test_msetnx_empty_values(self, ctx):
-        cmd = MsetnxCommand(['msetnx', 'key1', '', 'key2', ''])
+        cmd = MSetnxCommand(['msetnx', 'key1', '', 'key2', ''])
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.get('key1') == ''

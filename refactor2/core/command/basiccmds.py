@@ -608,7 +608,7 @@ class KeysCommand(ReadCommand):
             raise ValueError(f"Invalid pattern: {str(e)}")
 
 
-class MgetCommand(ReadCommand):
+class MGetCommand(ReadCommand):
     name = 'mget'
 
     def __init__(self, command_tokens: list[str]):
@@ -628,7 +628,7 @@ class MgetCommand(ReadCommand):
         return result
 
 
-class MsetCommand(WriteCommand):
+class MSetCommand(WriteCommand):
     name = 'mset'
 
     def __init__(self, command_tokens: list[str]):
@@ -651,7 +651,7 @@ class MsetCommand(WriteCommand):
         return "OK"
 
 
-class MsetnxCommand(WriteCommand):
+class MSetnxCommand(WriteCommand):
     name = 'msetnx'
 
     def __init__(self, command_tokens: list[str]):

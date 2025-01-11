@@ -498,19 +498,6 @@ class TestSetCommands(BaseTest):
         diff = client.sdiff("set1", "nonexistent")
         assert set(diff) == {"a", "b", "c", "d"}
 
-    def test_sdiffstore(self, client):
-        client.sadd("set1", "a", "b", "c", "d")
-        client.sadd("set2", "c", "d", "e")
-
-        # Store diff in new set
-        assert client.sdiffstore("dest", "set1", "set2") == 2
-        assert set(client.smembers("dest")) == {"a", "b"}
-
-        # Store diff in existing set (overwrite)
-        client.sadd("dest", "x", "y", "z")
-        assert client.sdiffstore("dest", "set1", "set2") == 2
-        assert set(client.smembers("dest")) == {"a", "b"}
-
     def test_sinter(self, client):
         client.sadd("set1", "a", "b", "c", "d")
         client.sadd("set2", "c", "d", "e")
@@ -540,19 +527,6 @@ class TestSetCommands(BaseTest):
 
         # Test with limit
         assert client.sintercard(3, "set1", "set2", "set3", limit=1) == 1
-
-    def test_sinterstore(self, client):
-        client.sadd("set1", "a", "b", "c", "d")
-        client.sadd("set2", "c", "d", "e")
-
-        # Store intersection in new set
-        assert client.sinterstore("dest", "set1", "set2") == 2
-        assert set(client.smembers("dest")) == {"c", "d"}
-
-        # Store intersection in existing set (overwrite)
-        client.sadd("dest", "x", "y", "z")
-        assert client.sinterstore("dest", "set1", "set2") == 2
-        assert set(client.smembers("dest")) == {"c", "d"}
 
     def test_sismember(self, client):
         client.sadd("set1", "member1", "member2")
@@ -712,12 +686,6 @@ class TestZSetCommands(BaseTest):
         client.zadd("zset2", {"b": 2, "c": 3})
         assert client.zintercard("zset1", "zset2") == 1
         assert client.zintercard("zset1", "zset2", limit=1) == 1
-
-    def test_zinterstore(self, client):
-        client.zadd("zset1", {"a": 1, "b": 2})
-        client.zadd("zset2", {"b": 2, "c": 3})
-        assert client.zinterstore("dest", "zset1", "zset2") == 1
-        assert "b" in client.zrange("dest", 0, -1)
 
     def test_zmpop(self, client):
         client.zadd("zset1", {"a": 1, "b": 2, "c": 3})

@@ -96,48 +96,6 @@ class SDiffCommand(ReadCommand):
         return list(result) if result else []
 
 
-class SDiffStoreCommand(WriteCommand):
-    name = 'sdiffstore'
-
-    def __init__(self, command_tokens: list[str]):
-        self.destination: str
-        self.keys: list[str]
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 3:
-            raise ValueError('sdiffstore command requires destination and at least one key')
-        self.destination = tokens[1]
-        self.keys = tokens[2:]
-
-    def execute(self, ctx: CommandContext):
-        db = ctx.db
-        result = None
-
-        # Process each key
-        for i, key in enumerate(self.keys):
-            if not db.exists(key):
-                if i == 0:  # If first key doesn't exist
-                    db.set(self.destination, set())
-                    return 0
-                continue
-
-            value = db.get(key)
-            if not isinstance(value, set):
-                raise TypeError(f"value at {key} is not a set")
-
-            if i == 0:  # First set
-                result = value.copy()
-            else:  # Subtract subsequent sets
-                result -= value
-
-        # Store result
-        if result is None:
-            result = set()
-        db.set(self.destination, result)
-        return len(result)
-
-
 class SInterCommand(ReadCommand):
     """Intersect multiple sets"""
     name = 'sinter'
@@ -239,50 +197,6 @@ class SInterCardCommand(ReadCommand):
             cardinality = min(cardinality, self.limit)
 
         return cardinality
-
-
-class SInterStoreCommand(WriteCommand):
-    name = 'sinterstore'
-
-    def __init__(self, command_tokens: list[str]):
-        self.destination: str
-        self.keys: list[str]
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 3:
-            raise ValueError('sinterstore command requires destination and at least one key')
-        self.destination = tokens[1]
-        self.keys = tokens[2:]
-
-    def execute(self, ctx: CommandContext):
-        db = ctx.db
-        result = None
-
-        # Process each key
-        for key in self.keys:
-            if not db.exists(key):
-                # If any key doesn't exist, store empty set
-                db.set(self.destination, set())
-                return 0
-
-            value = db.get(key)
-            if not isinstance(value, set):
-                raise TypeError(f"value at {key} is not a set")
-
-            if result is None:  # First set
-                result = value.copy()
-            else:  # Intersect with subsequent sets
-                result &= value
-
-                if not result:  # Optimization: stop if intersection becomes empty
-                    break
-
-        # Store result
-        if result is None:
-            result = set()
-        db.set(self.destination, result)
-        return len(result)
 
 
 class SIsMemberCommand(ReadCommand):

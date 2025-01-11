@@ -326,63 +326,6 @@ class ZInterCardCommand(ReadCommand):
         return cardinality
 
 
-class ZInterStoreCommand(WriteCommand):
-    """Store the intersection of multiple sorted sets in a destination key"""
-    name = 'zinterstore'
-
-    def __init__(self, command_tokens: list[str]):
-        self.destination: str
-        self.numkeys: int
-        self.keys: list[str]
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 4:
-            raise ValueError('zinterstore command requires destination, numkeys and at least one key')
-
-        self.destination = tokens[1]
-
-        try:
-            self.numkeys = int(tokens[2])
-        except ValueError:
-            raise ValueError('numkeys must be a positive integer')
-        if self.numkeys < 1:
-            raise ValueError('numkeys must be positive')
-
-        if len(tokens) < 3 + self.numkeys:
-            raise ValueError('number of keys does not match numkeys')
-
-        self.keys = tokens[3:3 + self.numkeys]
-
-    def execute(self, ctx: CommandContext):
-        db = ctx.db
-        result = None
-
-        for key in self.keys:
-            if not db.exists(key):
-                # If any key doesn't exist, store empty set
-                db.set(self.destination, SortedSet())
-                return 0
-
-            value = db.get(key)
-            if not isinstance(value, SortedSet):
-                raise TypeError(f"value at {key} is not a sorted set")
-
-            if result is None:  # First set
-                result = value
-            else:  # Intersect with subsequent sets
-                result = result & value
-
-                if not result:  # Optimization: stop if intersection becomes empty
-                    break
-
-        # Store result
-        if result is None:
-            result = SortedSet()
-        db.set(self.destination, result)
-        return len(result)
-
-
 class ZPopMaxCommand(WriteCommand):
     """Remove and return members with the highest scores in a sorted set"""
     name = 'zpopmax'
