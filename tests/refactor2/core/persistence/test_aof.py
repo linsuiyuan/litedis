@@ -18,7 +18,6 @@ def aof_file(temp_dir):
     # Create an AOF instance for testing
     aof = AOF(temp_dir, "test.aof")
     yield aof
-    aof.close()
 
 
 class TestAOF:
@@ -110,7 +109,7 @@ class TestAOF:
         file = aof_file.get_or_create_file()
         assert not file.closed
 
-        aof_file.close()
+        aof_file.close_file()
         assert file.closed
 
     def test_auto_close_on_del(self, temp_dir):

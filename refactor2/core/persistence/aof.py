@@ -17,14 +17,7 @@ class AOF:
         self._file: TextIO | None = None
 
     def __del__(self):
-        self._close_file()
-
-    def _close_file(self):
-        if self._file is not None and not self._file.closed:
-            self._file.close()
-
-    def close(self):
-        self._close_file()
+        self.close_file()
 
     def get_or_create_file(self):
         if self._file is None:
@@ -33,6 +26,10 @@ class AOF:
 
     def exists_file(self):
         return self._file_path.exists()
+
+    def close_file(self):
+        if self._file is not None and not self._file.closed:
+            self._file.close()
 
     def log_command(self, dbcmd: DBCommandPair):
         file = self.get_or_create_file()
@@ -44,7 +41,7 @@ class AOF:
         if not self._file_path.exists():
             return
 
-        self._close_file()
+        self.close_file()
         with open(self._file_path, "r") as f:
             for line in f:
                 dbname, cmdtokens = line.strip().split(sep=DB_COMMAND_SEPARATOR, maxsplit=1)
