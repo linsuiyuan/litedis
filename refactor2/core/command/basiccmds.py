@@ -914,22 +914,3 @@ class TypeCommand(ReadCommand):
             return "none"
 
         return db.get_type(self.key)
-
-
-class UnlinkCommand(WriteCommand):
-    name = 'unlink'
-
-    def __init__(self, command_tokens: list[str]):
-        self.keys: list[str]
-        self._parse(command_tokens)
-
-    def _parse(self, tokens: list[str]):
-        if len(tokens) < 2:
-            raise ValueError('unlink command requires at least one key')
-        self.keys = tokens[1:]
-
-    def execute(self, ctx: CommandContext):
-        deleted = 0
-        for key in self.keys:
-            deleted += ctx.db.delete(key)
-        return deleted

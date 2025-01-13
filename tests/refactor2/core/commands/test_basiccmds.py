@@ -30,7 +30,6 @@ from refactor2.core.command.basiccmds import (
     TTLCommand,
     PTTLCommand,
     TypeCommand,
-    UnlinkCommand
 )
 from refactor2.core.command.sortedset import SortedSet
 from refactor2.core.persistence.ldb import LitedisDB
@@ -1035,37 +1034,3 @@ class TestTypeCommand:
         cmd = TypeCommand(['type', 'nonexistent'])
         result = cmd.execute(ctx)
         assert result == 'none'
-
-
-class TestUnlinkCommand:
-    def test_unlink_single_key(self, ctx):
-        ctx.db.set('key', 'value')
-        cmd = UnlinkCommand(['unlink', 'key'])
-        result = cmd.execute(ctx)
-        assert result == 1
-        assert not ctx.db.exists('key')
-
-    def test_unlink_multiple_keys(self, ctx):
-        ctx.db.set('key1', 'value1')
-        ctx.db.set('key2', 'value2')
-        ctx.db.set('key3', 'value3')
-        cmd = UnlinkCommand(['unlink', 'key1', 'key2', 'nonexistent'])
-        result = cmd.execute(ctx)
-        assert result == 2
-        assert not ctx.db.exists('key1')
-        assert not ctx.db.exists('key2')
-        assert ctx.db.exists('key3')
-
-    def test_unlink_nonexistent_keys(self, ctx):
-        cmd = UnlinkCommand(['unlink', 'nonexistent1', 'nonexistent2'])
-        result = cmd.execute(ctx)
-        assert result == 0
-
-    def test_unlink_with_expiration(self, ctx):
-        ctx.db.set('key', 'value')
-        ctx.db.set_expiration('key', int(time.time() * 1000 + 5000))
-        cmd = UnlinkCommand(['unlink', 'key'])
-        result = cmd.execute(ctx)
-        assert result == 1
-        assert not ctx.db.exists('key')
-        assert not ctx.db.exists_expiration('key')
