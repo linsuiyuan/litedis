@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from refactor2.core.persistence import AOF
-from refactor2.typing import DBCommandPair, DB_COMMAND_SEPARATOR
+from refactor2.typing import DBCommandPair
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ class TestAOF:
         # Verify file content
         with open(aof_file._file_path, "r") as f:
             content = f.read()
-            assert content == f"test_db{DB_COMMAND_SEPARATOR}['SET', 'key', 'value']\n"
+            assert content == f"'test_db',['SET', 'key', 'value']\n"
 
     def test_load_commands(self, aof_file):
         commands = [

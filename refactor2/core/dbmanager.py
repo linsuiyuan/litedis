@@ -8,7 +8,7 @@ from refactor2.core.command.factory import CommandFactory
 from refactor2.core.dbcommand import DBCommandConverter, DBCommandPair
 from refactor2.core.persistence import AOF
 from refactor2.core.persistence import LitedisDB
-from refactor2.typing import CommandProcessor, ReadWriteType, DB_COMMAND_SEPARATOR
+from refactor2.typing import CommandProcessor, ReadWriteType
 from refactor2.utils import SingletonMeta
 
 
@@ -67,8 +67,6 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         if dbname not in self._dbs:
             with self._dbs_lock:
                 if dbname not in self._dbs:
-                    if DB_COMMAND_SEPARATOR in dbname:
-                        raise ValueError("dbname can not contain '='")
                     self._dbs[dbname] = LitedisDB(dbname)
         return self._dbs[dbname]
 
