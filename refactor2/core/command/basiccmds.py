@@ -8,7 +8,7 @@ from refactor2.core.command.base import CommandContext, ReadCommand, WriteComman
 class SetCommand(WriteCommand):
     name = 'set'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.value: str
         self.ex: int | None = None  # Expire time in seconds
@@ -21,7 +21,6 @@ class SetCommand(WriteCommand):
         # Other options
         self.keepttl: bool = False  # Retain the TTL associated with the key
         self.get: bool = False  # Return the old value stored at key
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -80,7 +79,8 @@ class SetCommand(WriteCommand):
             i += 2
 
     def execute(self, ctx: CommandContext):
-        """Execute the SET command"""
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         # Check existence conditions
@@ -122,9 +122,8 @@ class SetCommand(WriteCommand):
 class GetCommand(ReadCommand):
     name = 'get'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         """Parse command arguments"""
@@ -133,7 +132,8 @@ class GetCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
-        """Execute the GET command"""
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         value = db.get(self.key)
@@ -146,10 +146,9 @@ class GetCommand(ReadCommand):
 class AppendCommand(WriteCommand):
     name = 'append'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.value: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -158,6 +157,8 @@ class AppendCommand(WriteCommand):
         self.value = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             db.set(self.key, self.value)
@@ -175,10 +176,9 @@ class AppendCommand(WriteCommand):
 class DecrbyCommand(WriteCommand):
     name = 'decrby'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.decrement: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -190,6 +190,8 @@ class DecrbyCommand(WriteCommand):
             raise ValueError('decrement must be an integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = 0
@@ -210,9 +212,8 @@ class DecrbyCommand(WriteCommand):
 class DeleteCommand(WriteCommand):
     name = 'del'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.keys: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -220,6 +221,8 @@ class DeleteCommand(WriteCommand):
         self.keys = tokens[1:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         deleted = 0
         for key in self.keys:
             deleted += ctx.db.delete(key)
@@ -229,9 +232,8 @@ class DeleteCommand(WriteCommand):
 class ExistsCommand(ReadCommand):
     name = 'exists'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.keys: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -239,6 +241,8 @@ class ExistsCommand(ReadCommand):
         self.keys = tokens[1:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         count = 0
         for key in self.keys:
             if ctx.db.exists(key):
@@ -249,11 +253,10 @@ class ExistsCommand(ReadCommand):
 class CopyCommand(WriteCommand):
     name = 'copy'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.source: str
         self.destination: str
         self.replace: bool
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -267,6 +270,8 @@ class CopyCommand(WriteCommand):
                 self.replace = True
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.source):
             return 0
@@ -288,14 +293,13 @@ class CopyCommand(WriteCommand):
 class ExpireCommand(WriteCommand):
     name = 'expire'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.seconds: int
         self.nx: bool = False
         self.xx: bool = False
         self.gt: bool = False
         self.lt: bool = False
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -333,6 +337,8 @@ class ExpireCommand(WriteCommand):
             i += 1
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -360,14 +366,13 @@ class ExpireCommand(WriteCommand):
 class ExpireatCommand(WriteCommand):
     name = 'expireat'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.timestamp: int
         self.nx: bool = False
         self.xx: bool = False
         self.gt: bool = False
         self.lt: bool = False
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -403,6 +408,8 @@ class ExpireatCommand(WriteCommand):
             i += 1
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -430,9 +437,8 @@ class ExpireatCommand(WriteCommand):
 class ExpireTimeCommand(ReadCommand):
     name = 'expiretime'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -440,6 +446,8 @@ class ExpireTimeCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         if not db.exists(self.key):  # Key does not exist
@@ -454,10 +462,9 @@ class ExpireTimeCommand(ReadCommand):
 class IncrbyCommand(WriteCommand):
     name = 'incrby'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.increment: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -469,6 +476,8 @@ class IncrbyCommand(WriteCommand):
             raise ValueError('increment must be an integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = 0
@@ -489,10 +498,9 @@ class IncrbyCommand(WriteCommand):
 class IncrbyfloatCommand(WriteCommand):
     name = 'incrbyfloat'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.increment: float
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -504,6 +512,8 @@ class IncrbyfloatCommand(WriteCommand):
             raise ValueError('increment must be a float')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = 0.0
@@ -528,9 +538,8 @@ class IncrbyfloatCommand(WriteCommand):
 class KeysCommand(ReadCommand):
     name = 'keys'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.pattern: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -591,6 +600,8 @@ class KeysCommand(ReadCommand):
         return f'^{"".join(result)}$'
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         try:
             # Convert Redis pattern to regex pattern
             regex_pattern = self._convert_pattern_to_regex(self.pattern)
@@ -611,9 +622,8 @@ class KeysCommand(ReadCommand):
 class MGetCommand(ReadCommand):
     name = 'mget'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.keys: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -621,19 +631,17 @@ class MGetCommand(ReadCommand):
         self.keys = tokens[1:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
-        result = []
-        for key in self.keys:
-            result.append(db.get(key))
-        return result
+        return [db.get(key) for key in self.keys]
 
 
 class MSetCommand(WriteCommand):
     name = 'mset'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.pairs: list[tuple[str, str]]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3 or len(tokens) % 2 != 1:
@@ -645,6 +653,8 @@ class MSetCommand(WriteCommand):
             self.pairs.append((tokens[i], tokens[i + 1]))
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         for key, value in self.pairs:
             db.set(key, value)
@@ -654,9 +664,8 @@ class MSetCommand(WriteCommand):
 class MSetnxCommand(WriteCommand):
     name = 'msetnx'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.pairs: list[tuple[str, str]]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3 or len(tokens) % 2 != 1:
@@ -668,6 +677,8 @@ class MSetnxCommand(WriteCommand):
             self.pairs.append((tokens[i], tokens[i + 1]))
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         # First check if any key exists
@@ -684,9 +695,8 @@ class MSetnxCommand(WriteCommand):
 class PersistCommand(WriteCommand):
     name = 'persist'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -694,6 +704,8 @@ class PersistCommand(WriteCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -710,14 +722,13 @@ class PersistCommand(WriteCommand):
 class RandomKeyCommand(ReadCommand):
     name = 'randomkey'
 
-    def __init__(self, command_tokens: list[str]):
-        self._parse(command_tokens)
-
     def _parse(self, tokens: list[str]):
         if len(tokens) > 1:
             raise ValueError('randomkey command takes no arguments')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         keys = list(ctx.db.keys())
         if not keys:
             return None
@@ -727,10 +738,9 @@ class RandomKeyCommand(ReadCommand):
 class RenameCommand(WriteCommand):
     name = 'rename'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.source: str
         self.destination: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -739,6 +749,7 @@ class RenameCommand(WriteCommand):
         self.destination = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
         db = ctx.db
         if self.source == self.destination:
             raise ValueError("source and destination keys are the same")
@@ -766,6 +777,8 @@ class RenamenxCommand(RenameCommand):
     name = 'renamenx'
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         if ctx.db.exists(self.destination):
             return 0
 
@@ -777,9 +790,8 @@ class RenamenxCommand(RenameCommand):
 class StrlenCommand(ReadCommand):
     name = 'strlen'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -787,6 +799,8 @@ class StrlenCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -801,11 +815,10 @@ class StrlenCommand(ReadCommand):
 class SubstrCommand(ReadCommand):
     name = 'substr'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.start: int
         self.end: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -818,6 +831,8 @@ class SubstrCommand(ReadCommand):
             raise ValueError('start and end must be integers')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -844,9 +859,8 @@ class SubstrCommand(ReadCommand):
 class TTLCommand(ReadCommand):
     name = 'ttl'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -854,6 +868,8 @@ class TTLCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         if not db.exists(self.key):
@@ -872,9 +888,8 @@ class TTLCommand(ReadCommand):
 class PTTLCommand(ReadCommand):
     name = 'pttl'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -882,6 +897,8 @@ class PTTLCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         if not db.exists(self.key):
@@ -899,9 +916,8 @@ class PTTLCommand(ReadCommand):
 class TypeCommand(ReadCommand):
     name = 'type'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -909,6 +925,8 @@ class TypeCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return "none"

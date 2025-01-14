@@ -4,10 +4,9 @@ from refactor2.core.command.base import CommandContext, ReadCommand, WriteComman
 class HDelCommand(WriteCommand):
     name = 'hdel'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.fields: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -16,6 +15,8 @@ class HDelCommand(WriteCommand):
         self.fields = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -41,10 +42,9 @@ class HDelCommand(WriteCommand):
 class HExistsCommand(ReadCommand):
     name = 'hexists'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.field: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -53,6 +53,8 @@ class HExistsCommand(ReadCommand):
         self.field = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -67,10 +69,9 @@ class HExistsCommand(ReadCommand):
 class HGetCommand(ReadCommand):
     name = 'hget'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.field: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -79,6 +80,8 @@ class HGetCommand(ReadCommand):
         self.field = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -93,9 +96,8 @@ class HGetCommand(ReadCommand):
 class HGetAllCommand(ReadCommand):
     name = 'hgetall'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -103,6 +105,8 @@ class HGetAllCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -121,11 +125,10 @@ class HGetAllCommand(ReadCommand):
 class HIncrByCommand(WriteCommand):
     name = 'hincrby'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self,):
         self.key: str
         self.field: str
         self.increment: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -138,6 +141,8 @@ class HIncrByCommand(WriteCommand):
             raise ValueError('increment must be an integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = {}
@@ -163,11 +168,10 @@ class HIncrByCommand(WriteCommand):
 class HIncrByFloatCommand(WriteCommand):
     name = 'hincrbyfloat'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.field: str
         self.increment: float
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -180,6 +184,8 @@ class HIncrByFloatCommand(WriteCommand):
             raise ValueError('increment must be a float')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = {}
@@ -210,9 +216,8 @@ class HIncrByFloatCommand(WriteCommand):
 class HKeysCommand(ReadCommand):
     name = 'hkeys'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -220,6 +225,8 @@ class HKeysCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -234,9 +241,8 @@ class HKeysCommand(ReadCommand):
 class HLenCommand(ReadCommand):
     name = 'hlen'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -244,6 +250,8 @@ class HLenCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -258,10 +266,9 @@ class HLenCommand(ReadCommand):
 class HSetCommand(WriteCommand):
     name = 'hset'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.pairs: list[tuple[str, str]]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4 or len(tokens) % 2 != 0:
@@ -273,6 +280,8 @@ class HSetCommand(WriteCommand):
             self.pairs.append((tokens[i], tokens[i + 1]))
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = {}
@@ -294,11 +303,10 @@ class HSetCommand(WriteCommand):
 class HSetNXCommand(WriteCommand):
     name = 'hsetnx'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.field: str
         self.value: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -308,6 +316,8 @@ class HSetNXCommand(WriteCommand):
         self.value = tokens[3]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = {}
@@ -329,10 +339,9 @@ class HMGetCommand(ReadCommand):
     """Get the values of all the given hash fields"""
     name = 'hmget'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.fields: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -341,6 +350,8 @@ class HMGetCommand(ReadCommand):
         self.fields = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return [None] * len(self.fields)
@@ -356,9 +367,8 @@ class HMGetCommand(ReadCommand):
 class HValsCommand(ReadCommand):
     name = 'hvals'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -366,6 +376,8 @@ class HValsCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -380,10 +392,9 @@ class HValsCommand(ReadCommand):
 class HStrLenCommand(ReadCommand):
     name = 'hstrlen'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.field: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -392,6 +403,8 @@ class HStrLenCommand(ReadCommand):
         self.field = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -410,12 +423,11 @@ class HStrLenCommand(ReadCommand):
 class HScanCommand(ReadCommand):
     name = 'hscan'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.cursor: int
         self.pattern: str | None
         self.count: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -445,6 +457,8 @@ class HScanCommand(ReadCommand):
                 raise ValueError('invalid argument')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return [0, []]

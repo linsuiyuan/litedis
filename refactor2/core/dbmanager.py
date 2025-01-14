@@ -72,8 +72,8 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
     def process_command(self, dbcmd: DBCommandPair):
         db = self.get_or_create_db(dbcmd.dbname)
-        ctx = CommandContext(db)
-        command = CommandFactory.create(dbcmd.cmdtokens)
+        ctx = CommandContext(db, dbcmd.cmdtokens)
+        command = CommandFactory.create(dbcmd.cmdtokens[0])
 
         with self._db_locks[dbcmd.dbname]:
             result = command.execute(ctx)

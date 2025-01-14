@@ -26,65 +26,74 @@ def db():
 
 @pytest.fixture
 def ctx(db):
-    return CommandContext(db)
+    return CommandContext(db, [])
 
 
 class TestSAddCommand:
-    def test_sadd_new_set(self, ctx):
-        cmd = SAddCommand(['sadd', 'myset', 'a', 'b', 'c'])
-        result = cmd.execute(ctx)
-        assert result == 3
-        assert ctx.db.get('myset') == {'a', 'b', 'c'}
+    def test_sadd_to_new_set(self, ctx):
+        ctx.cmdtokens = ['sadd', 'myset', 'a', 'b']
+        cmd = SAddCommand()
+        assert cmd.execute(ctx) == 2
+        assert ctx.db.get('myset') == {'a', 'b'}
 
-    def test_sadd_existing_set(self, ctx):
-        ctx.db.set('myset', {'a', 'b'})
-        cmd = SAddCommand(['sadd', 'myset', 'b', 'c'])
-        result = cmd.execute(ctx)
-        assert result == 1  # Only 'c' is new
-        assert ctx.db.get('myset') == {'a', 'b', 'c'}
+    def test_sadd_to_existing_set(self, ctx):
+        ctx.db.set('myset', {'a'})
+        ctx.cmdtokens = ['sadd', 'myset', 'a', 'b']
+        cmd = SAddCommand()
+        assert cmd.execute(ctx) == 1
+        assert ctx.db.get('myset') == {'a', 'b'}
 
-    def test_sadd_wrong_type(self, ctx):
-        ctx.db.set('mystr', 'string')
-        cmd = SAddCommand(['sadd', 'mystr', 'a'])
+    def test_sadd_nonexistent_key(self, ctx):
+        ctx.cmdtokens = ['sadd', 'myset', 'a']
+        cmd = SAddCommand()
+        assert cmd.execute(ctx) == 1
+        assert ctx.db.get('myset') == {'a'}
+
+    def test_sadd_invalid_type(self, ctx):
+        ctx.db.set('mystr', 'not_a_set')
+        ctx.cmdtokens = ['sadd', 'mystr', 'a']
+        cmd = SAddCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
-
-    def test_sadd_invalid_syntax(self):
-        with pytest.raises(ValueError, match="sadd command requires key and at least one member"):
-            SAddCommand(['sadd'])
 
 
 class TestSCardCommand:
     def test_scard_empty_set(self, ctx):
         ctx.db.set('myset', set())
-        cmd = SCardCommand(['scard', 'myset'])
+        ctx.cmdtokens = ['scard', 'myset']
+        cmd = SCardCommand()
         assert cmd.execute(ctx) == 0
 
     def test_scard_populated_set(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SCardCommand(['scard', 'myset'])
+        ctx.cmdtokens = ['scard', 'myset']
+        cmd = SCardCommand()
         assert cmd.execute(ctx) == 3
 
     def test_scard_nonexistent_key(self, ctx):
-        cmd = SCardCommand(['scard', 'nosuchkey'])
+        ctx.cmdtokens = ['scard', 'nosuchkey']
+        cmd = SCardCommand()
         assert cmd.execute(ctx) == 0
 
     def test_scard_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SCardCommand(['scard', 'mystr'])
+        ctx.cmdtokens = ['scard', 'mystr']
+        cmd = SCardCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
-    def test_scard_invalid_syntax(self):
+    def test_scard_invalid_syntax(self, ctx):
         with pytest.raises(ValueError, match="scard command requires key"):
-            SCardCommand(['scard'])
+            ctx.cmdtokens = ['scard']
+            SCardCommand().execute(ctx)
 
 
 class TestSDiffCommand:
     def test_sdiff_two_sets(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c'})
         ctx.db.set('set2', {'b', 'c', 'd'})
-        cmd = SDiffCommand(['sdiff', 'set1', 'set2'])
+        ctx.cmdtokens = ['sdiff', 'set1', 'set2']
+        cmd = SDiffCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a'}
 
@@ -92,202 +101,237 @@ class TestSDiffCommand:
         ctx.db.set('set1', {'a', 'b', 'c', 'd'})
         ctx.db.set('set2', {'b'})
         ctx.db.set('set3', {'c'})
-        cmd = SDiffCommand(['sdiff', 'set1', 'set2', 'set3'])
+        ctx.cmdtokens = ['sdiff', 'set1', 'set2', 'set3']
+        cmd = SDiffCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'd'}
 
     def test_sdiff_nonexistent_first_key(self, ctx):
-        cmd = SDiffCommand(['sdiff', 'nosuchkey', 'set2'])
+        ctx.cmdtokens = ['sdiff', 'nosuchkey', 'set2']
+        cmd = SDiffCommand()
         assert cmd.execute(ctx) == []
 
     def test_sdiff_nonexistent_other_key(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c'})
-        cmd = SDiffCommand(['sdiff', 'set1', 'nosuchkey'])
+        ctx.cmdtokens = ['sdiff', 'set1', 'nosuchkey']
+        cmd = SDiffCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b', 'c'}
 
     def test_sdiff_wrong_type(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('str1', 'string')
-        cmd = SDiffCommand(['sdiff', 'set1', 'str1'])
+        ctx.cmdtokens = ['sdiff', 'set1', 'str1']
+        cmd = SDiffCommand()
         with pytest.raises(TypeError, match="value at str1 is not a set"):
             cmd.execute(ctx)
 
-    def test_sdiff_invalid_syntax(self):
+    def test_sdiff_invalid_syntax(self, ctx):
         with pytest.raises(ValueError, match="sdiff command requires at least one key"):
-            SDiffCommand(['sdiff'])
+            ctx.cmdtokens = ['sdiff']
+            SDiffCommand().execute(ctx)
 
 
 class TestSInterCommand:
     def test_sinter_two_sets(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c'})
         ctx.db.set('set2', {'b', 'c', 'd'})
-        cmd = SInterCommand(['sinter', 'set1', 'set2'])
+        ctx.cmdtokens = ['sinter', 'set1', 'set2']
+        cmd = SInterCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'b', 'c'}
 
     def test_sinter_multiple_sets(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c', 'd'})
-        ctx.db.set('set2', {'b', 'c', 'd'})
-        ctx.db.set('set3', {'b', 'c'})
-        cmd = SInterCommand(['sinter', 'set1', 'set2', 'set3'])
+        ctx.db.set('set2', {'b', 'c'})
+        ctx.db.set('set3', {'c', 'd'})
+        ctx.cmdtokens = ['sinter', 'set1', 'set2', 'set3']
+        cmd = SInterCommand()
         result = cmd.execute(ctx)
-        assert set(result) == {'b', 'c'}
+        assert set(result) == {'c'}
 
     def test_sinter_empty_intersection(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('set2', {'c', 'd'})
-        cmd = SInterCommand(['sinter', 'set1', 'set2'])
+        ctx.cmdtokens = ['sinter', 'set1', 'set2']
+        cmd = SInterCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_sinter_nonexistent_key(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
-        cmd = SInterCommand(['sinter', 'set1', 'nosuchkey'])
+        ctx.cmdtokens = ['sinter', 'set1', 'nosuchkey']
+        cmd = SInterCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_sinter_wrong_type(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('str1', 'string')
-        cmd = SInterCommand(['sinter', 'set1', 'str1'])
+        ctx.cmdtokens = ['sinter', 'set1', 'str1']
+        cmd = SInterCommand()
         with pytest.raises(TypeError, match="value at str1 is not a set"):
             cmd.execute(ctx)
 
-    def test_sinter_invalid_syntax(self):
+    def test_sinter_invalid_syntax(self, ctx):
         with pytest.raises(ValueError, match="sinter command requires at least one key"):
-            SInterCommand(['sinter'])
+            ctx.cmdtokens = ['sinter']
+            SInterCommand().execute(ctx)
 
 
 class TestSInterCardCommand:
     def test_sintercard_two_sets(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c'})
         ctx.db.set('set2', {'b', 'c', 'd'})
-        cmd = SInterCardCommand(['sintercard', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['sintercard', '2', 'set1', 'set2']
+        cmd = SInterCardCommand()
         assert cmd.execute(ctx) == 2  # {'b', 'c'}
 
     def test_sintercard_with_limit(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c', 'd'})
         ctx.db.set('set2', {'b', 'c', 'd'})
-        cmd = SInterCardCommand(['sintercard', '2', 'set1', 'set2', 'LIMIT', '1'])
+        ctx.cmdtokens = ['sintercard', '2', 'set1', 'set2', 'LIMIT', '1']
+        cmd = SInterCardCommand()
         assert cmd.execute(ctx) == 1
 
     def test_sintercard_empty_intersection(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('set2', {'c', 'd'})
-        cmd = SInterCardCommand(['sintercard', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['sintercard', '2', 'set1', 'set2']
+        cmd = SInterCardCommand()
         assert cmd.execute(ctx) == 0
 
     def test_sintercard_nonexistent_key(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
-        cmd = SInterCardCommand(['sintercard', '2', 'set1', 'nosuchkey'])
+        ctx.cmdtokens = ['sintercard', '2', 'set1', 'nosuchkey']
+        cmd = SInterCardCommand()
         assert cmd.execute(ctx) == 0
 
     def test_sintercard_wrong_type(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('str1', 'string')
-        cmd = SInterCardCommand(['sintercard', '2', 'set1', 'str1'])
+        ctx.cmdtokens = ['sintercard', '2', 'set1', 'str1']
+        cmd = SInterCardCommand()
         with pytest.raises(TypeError, match="value at str1 is not a set"):
             cmd.execute(ctx)
 
-    def test_sintercard_invalid_numkeys(self):
+    def test_sintercard_invalid_numkeys(self, ctx):
+        ctx.cmdtokens = ['sintercard', '-1', 'set1']
         with pytest.raises(ValueError, match="numkeys must be positive"):
-            SInterCardCommand(['sintercard', '-1', 'set1'])
+            SInterCardCommand().execute(ctx)
 
-    def test_sintercard_invalid_limit(self):
+    def test_sintercard_invalid_limit(self, ctx):
+        ctx.cmdtokens = ['sintercard', '1', 'set1', 'LIMIT', '-1']
         with pytest.raises(ValueError, match="limit must be non-negative"):
-            SInterCardCommand(['sintercard', '1', 'set1', 'LIMIT', '-1'])
+            SInterCardCommand().execute(ctx)
 
 
 class TestSIsMemberCommand:
     def test_sismember_existing_member(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SIsMemberCommand(['sismember', 'myset', 'b'])
+        ctx.cmdtokens = ['sismember', 'myset', 'b']
+        cmd = SIsMemberCommand()
         assert cmd.execute(ctx) == 1
 
     def test_sismember_nonexistent_member(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SIsMemberCommand(['sismember', 'myset', 'd'])
+        ctx.cmdtokens = ['sismember', 'myset', 'd']
+        cmd = SIsMemberCommand()
         assert cmd.execute(ctx) == 0
 
     def test_sismember_nonexistent_key(self, ctx):
-        cmd = SIsMemberCommand(['sismember', 'nosuchkey', 'a'])
+        ctx.cmdtokens = ['sismember', 'nosuchkey', 'a']
+        cmd = SIsMemberCommand()
         assert cmd.execute(ctx) == 0
 
     def test_sismember_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SIsMemberCommand(['sismember', 'mystr', 'a'])
+        ctx.cmdtokens = ['sismember', 'mystr', 'a']
+        cmd = SIsMemberCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
-    def test_sismember_invalid_syntax(self):
+    def test_sismember_invalid_syntax(self, ctx):
+        ctx.cmdtokens = ['sismember']
         with pytest.raises(ValueError, match="sismember command requires key and member"):
-            SIsMemberCommand(['sismember'])
+            SIsMemberCommand().execute(ctx)
 
 
 class TestSMembersCommand:
     def test_smembers_populated_set(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SMembersCommand(['smembers', 'myset'])
+        ctx.cmdtokens = ['smembers', 'myset']
+        cmd = SMembersCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b', 'c'}
 
     def test_smembers_empty_set(self, ctx):
         ctx.db.set('myset', set())
-        cmd = SMembersCommand(['smembers', 'myset'])
+        ctx.cmdtokens = ['smembers', 'myset']
+        cmd = SMembersCommand()
         assert cmd.execute(ctx) == []
 
     def test_smembers_nonexistent_key(self, ctx):
-        cmd = SMembersCommand(['smembers', 'nosuchkey'])
+        ctx.cmdtokens = ['smembers', 'nosuchkey']
+        cmd = SMembersCommand()
         assert cmd.execute(ctx) == []
 
     def test_smembers_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SMembersCommand(['smembers', 'mystr'])
+        ctx.cmdtokens = ['smembers', 'mystr']
+        cmd = SMembersCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
-    def test_smembers_invalid_syntax(self):
+    def test_smembers_invalid_syntax(self, ctx):
+        ctx.cmdtokens = ['smembers']
         with pytest.raises(ValueError, match="smembers command requires key"):
-            SMembersCommand(['smembers'])
+            SMembersCommand().execute(ctx)
 
 
 class TestSMIsMemberCommand:
     def test_smismember_all_existing(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SMIsMemberCommand(['smismember', 'myset', 'a', 'b'])
+        ctx.cmdtokens = ['smismember', 'myset', 'a', 'b']
+        cmd = SMIsMemberCommand()
         assert cmd.execute(ctx) == [1, 1]
 
     def test_smismember_mixed_existence(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SMIsMemberCommand(['smismember', 'myset', 'a', 'd', 'b'])
+        ctx.cmdtokens = ['smismember', 'myset', 'a', 'd', 'b']
+        cmd = SMIsMemberCommand()
         assert cmd.execute(ctx) == [1, 0, 1]
 
     def test_smismember_none_existing(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SMIsMemberCommand(['smismember', 'myset', 'd', 'e'])
+        ctx.cmdtokens = ['smismember', 'myset', 'd', 'e']
+        cmd = SMIsMemberCommand()
         assert cmd.execute(ctx) == [0, 0]
 
     def test_smismember_nonexistent_key(self, ctx):
-        cmd = SMIsMemberCommand(['smismember', 'nosuchkey', 'a', 'b'])
+        ctx.cmdtokens = ['smismember', 'nosuchkey', 'a', 'b']
+        cmd = SMIsMemberCommand()
         assert cmd.execute(ctx) == [0, 0]
 
     def test_smismember_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SMIsMemberCommand(['smismember', 'mystr', 'a', 'b'])
+        ctx.cmdtokens = ['smismember', 'mystr', 'a', 'b']
+        cmd = SMIsMemberCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
-    def test_smismember_invalid_syntax(self):
+    def test_smismember_invalid_syntax(self, ctx):
+        ctx.cmdtokens = ['smismember']
         with pytest.raises(ValueError, match="smismember command requires key and at least one member"):
-            SMIsMemberCommand(['smismember', 'myset'])
+            SMIsMemberCommand().execute(ctx)
 
 
 class TestSMoveCommand:
     def test_smove_existing_member(self, ctx):
         ctx.db.set('source', {'a', 'b', 'c'})
         ctx.db.set('dest', {'d', 'e'})
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'b'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'b']
+        cmd = SMoveCommand()
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.get('source') == {'a', 'c'}
@@ -295,7 +339,8 @@ class TestSMoveCommand:
 
     def test_smove_to_empty_dest(self, ctx):
         ctx.db.set('source', {'a', 'b', 'c'})
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'b'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'b']
+        cmd = SMoveCommand()
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.get('source') == {'a', 'c'}
@@ -304,7 +349,8 @@ class TestSMoveCommand:
     def test_smove_last_member(self, ctx):
         ctx.db.set('source', {'a'})
         ctx.db.set('dest', {'b'})
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'a'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'a']
+        cmd = SMoveCommand()
         result = cmd.execute(ctx)
         assert result == 1
         assert not ctx.db.exists('source')  # Source set should be deleted
@@ -313,7 +359,8 @@ class TestSMoveCommand:
     def test_smove_nonexistent_member(self, ctx):
         ctx.db.set('source', {'a', 'b'})
         ctx.db.set('dest', {'c'})
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'd'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'd']
+        cmd = SMoveCommand()
         result = cmd.execute(ctx)
         assert result == 0
         assert ctx.db.get('source') == {'a', 'b'}
@@ -321,33 +368,38 @@ class TestSMoveCommand:
 
     def test_smove_nonexistent_source(self, ctx):
         ctx.db.set('dest', {'a'})
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'b'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'b']
+        cmd = SMoveCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_smove_wrong_type_source(self, ctx):
         ctx.db.set('source', 'string')
         ctx.db.set('dest', {'a'})
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'b'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'b']
+        cmd = SMoveCommand()
         with pytest.raises(TypeError, match="source value is not a set"):
             cmd.execute(ctx)
 
     def test_smove_wrong_type_dest(self, ctx):
         ctx.db.set('source', {'a', 'b'})
         ctx.db.set('dest', 'string')
-        cmd = SMoveCommand(['smove', 'source', 'dest', 'b'])
+        ctx.cmdtokens = ['smove', 'source', 'dest', 'b']
+        cmd = SMoveCommand()
         with pytest.raises(TypeError, match="destination value is not a set"):
             cmd.execute(ctx)
 
-    def test_smove_invalid_syntax(self):
+    def test_smove_invalid_syntax(self, ctx):
+        ctx.cmdtokens = ['smove', 'source']
         with pytest.raises(ValueError, match="smove command requires source, destination and member"):
-            SMoveCommand(['smove', 'source'])
+            SMoveCommand().execute(ctx)
 
 
 class TestSPopCommand:
     def test_spop_single(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SPopCommand(['spop', 'myset'])
+        ctx.cmdtokens = ['spop', 'myset']
+        cmd = SPopCommand()
         result = cmd.execute(ctx)
         assert result in {'a', 'b', 'c'}
         assert len(ctx.db.get('myset')) == 2
@@ -355,7 +407,8 @@ class TestSPopCommand:
 
     def test_spop_multiple(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c', 'd'})
-        cmd = SPopCommand(['spop', 'myset', '2'])
+        ctx.cmdtokens = ['spop', 'myset', '2']
+        cmd = SPopCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert set(result).issubset({'a', 'b', 'c', 'd'})
@@ -363,49 +416,57 @@ class TestSPopCommand:
 
     def test_spop_all_members(self, ctx):
         ctx.db.set('myset', {'a', 'b'})
-        cmd = SPopCommand(['spop', 'myset', '2'])
+        ctx.cmdtokens = ['spop', 'myset', '2']
+        cmd = SPopCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b'}
         assert not ctx.db.exists('myset')  # Set should be deleted
 
     def test_spop_more_than_exists(self, ctx):
         ctx.db.set('myset', {'a', 'b'})
-        cmd = SPopCommand(['spop', 'myset', '5'])
+        ctx.cmdtokens = ['spop', 'myset', '5']
+        cmd = SPopCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b'}
         assert not ctx.db.exists('myset')
 
     def test_spop_empty_set(self, ctx):
         ctx.db.set('myset', set())
-        cmd = SPopCommand(['spop', 'myset'])
+        ctx.cmdtokens = ['spop', 'myset']
+        cmd = SPopCommand()
         assert cmd.execute(ctx) is None
 
     def test_spop_nonexistent_key(self, ctx):
-        cmd = SPopCommand(['spop', 'nosuchkey'])
+        ctx.cmdtokens = ['spop', 'nosuchkey']
+        cmd = SPopCommand()
         assert cmd.execute(ctx) is None
 
     def test_spop_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SPopCommand(['spop', 'mystr'])
+        ctx.cmdtokens = ['spop', 'mystr']
+        cmd = SPopCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
-    def test_spop_invalid_count(self):
+    def test_spop_invalid_count(self, ctx):
+        ctx.cmdtokens = ['spop', 'myset', '-1']
         with pytest.raises(ValueError, match="count must be positive"):
-            SPopCommand(['spop', 'myset', '-1'])
+            SPopCommand().execute(ctx)
 
 
 class TestSRandMemberCommand:
     def test_srandmember_single(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SRandMemberCommand(['srandmember', 'myset'])
+        ctx.cmdtokens = ['srandmember', 'myset']
+        cmd = SRandMemberCommand()
         result = cmd.execute(ctx)
         assert result in {'a', 'b', 'c'}
         assert ctx.db.get('myset') == {'a', 'b', 'c'}  # Set should remain unchanged
 
     def test_srandmember_multiple_distinct(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c', 'd'})
-        cmd = SRandMemberCommand(['srandmember', 'myset', '2'])
+        ctx.cmdtokens = ['srandmember', 'myset', '2']
+        cmd = SRandMemberCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert set(result).issubset({'a', 'b', 'c', 'd'})
@@ -413,23 +474,27 @@ class TestSRandMemberCommand:
 
     def test_srandmember_multiple_with_repeats(self, ctx):
         ctx.db.set('myset', {'a', 'b'})
-        cmd = SRandMemberCommand(['srandmember', 'myset', '-3'])
+        ctx.cmdtokens = ['srandmember', 'myset', '-3']
+        cmd = SRandMemberCommand()
         result = cmd.execute(ctx)
         assert len(result) == 3
         assert set(result).issubset({'a', 'b'})
 
     def test_srandmember_empty_set(self, ctx):
         ctx.db.set('myset', set())
-        cmd = SRandMemberCommand(['srandmember', 'myset'])
+        ctx.cmdtokens = ['srandmember', 'myset']
+        cmd = SRandMemberCommand()
         assert cmd.execute(ctx) is None
 
     def test_srandmember_nonexistent_key(self, ctx):
-        cmd = SRandMemberCommand(['srandmember', 'nosuchkey'])
+        ctx.cmdtokens = ['srandmember', 'nosuchkey']
+        cmd = SRandMemberCommand()
         assert cmd.execute(ctx) is None
 
     def test_srandmember_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SRandMemberCommand(['srandmember', 'mystr'])
+        ctx.cmdtokens = ['srandmember', 'mystr']
+        cmd = SRandMemberCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
@@ -437,46 +502,53 @@ class TestSRandMemberCommand:
 class TestSRemCommand:
     def test_srem_existing_members(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c', 'd'})
-        cmd = SRemCommand(['srem', 'myset', 'b', 'c'])
+        ctx.cmdtokens = ['srem', 'myset', 'b', 'c']
+        cmd = SRemCommand()
         result = cmd.execute(ctx)
         assert result == 2
         assert ctx.db.get('myset') == {'a', 'd'}
 
     def test_srem_some_nonexistent(self, ctx):
         ctx.db.set('myset', {'a', 'b', 'c'})
-        cmd = SRemCommand(['srem', 'myset', 'b', 'd'])
+        ctx.cmdtokens = ['srem', 'myset', 'b', 'd']
+        cmd = SRemCommand()
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.get('myset') == {'a', 'c'}
 
     def test_srem_all_members(self, ctx):
         ctx.db.set('myset', {'a', 'b'})
-        cmd = SRemCommand(['srem', 'myset', 'a', 'b'])
+        ctx.cmdtokens = ['srem', 'myset', 'a', 'b']
+        cmd = SRemCommand()
         result = cmd.execute(ctx)
         assert result == 2
         assert not ctx.db.exists('myset')  # Set should be deleted
 
     def test_srem_nonexistent_key(self, ctx):
-        cmd = SRemCommand(['srem', 'nosuchkey', 'a'])
+        ctx.cmdtokens = ['srem', 'nosuchkey', 'a']
+        cmd = SRemCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_srem_wrong_type(self, ctx):
         ctx.db.set('mystr', 'string')
-        cmd = SRemCommand(['srem', 'mystr', 'a'])
+        ctx.cmdtokens = ['srem', 'mystr', 'a']
+        cmd = SRemCommand()
         with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
-    def test_srem_invalid_syntax(self):
+    def test_srem_invalid_syntax(self, ctx):
+        ctx.cmdtokens = ['srem', 'myset']
         with pytest.raises(ValueError, match="srem command requires key and at least one member"):
-            SRemCommand(['srem', 'myset'])
+            SRemCommand().execute(ctx)
 
 
 class TestSUnionCommand:
     def test_sunion_two_sets(self, ctx):
         ctx.db.set('set1', {'a', 'b', 'c'})
         ctx.db.set('set2', {'c', 'd', 'e'})
-        cmd = SUnionCommand(['sunion', 'set1', 'set2'])
+        ctx.cmdtokens = ['sunion', 'set1', 'set2']
+        cmd = SUnionCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b', 'c', 'd', 'e'}
 
@@ -484,35 +556,41 @@ class TestSUnionCommand:
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('set2', {'b', 'c'})
         ctx.db.set('set3', {'c', 'd'})
-        cmd = SUnionCommand(['sunion', 'set1', 'set2', 'set3'])
+        ctx.cmdtokens = ['sunion', 'set1', 'set2', 'set3']
+        cmd = SUnionCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b', 'c', 'd'}
 
     def test_sunion_with_empty_set(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('set2', set())
-        cmd = SUnionCommand(['sunion', 'set1', 'set2'])
+        ctx.cmdtokens = ['sunion', 'set1', 'set2']
+        cmd = SUnionCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b'}
 
     def test_sunion_nonexistent_key(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
-        cmd = SUnionCommand(['sunion', 'set1', 'nosuchkey'])
+        ctx.cmdtokens = ['sunion', 'set1', 'nosuchkey']
+        cmd = SUnionCommand()
         result = cmd.execute(ctx)
         assert set(result) == {'a', 'b'}
 
     def test_sunion_all_nonexistent(self, ctx):
-        cmd = SUnionCommand(['sunion', 'nosuchkey1', 'nosuchkey2'])
+        ctx.cmdtokens = ['sunion', 'nosuchkey1', 'nosuchkey2']
+        cmd = SUnionCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_sunion_wrong_type(self, ctx):
         ctx.db.set('set1', {'a', 'b'})
         ctx.db.set('str1', 'string')
-        cmd = SUnionCommand(['sunion', 'set1', 'str1'])
+        ctx.cmdtokens = ['sunion', 'set1', 'str1']
+        cmd = SUnionCommand()
         with pytest.raises(TypeError, match="value at str1 is not a set"):
             cmd.execute(ctx)
 
-    def test_sunion_invalid_syntax(self):
+    def test_sunion_invalid_syntax(self, ctx):
+        ctx.cmdtokens = ['sunion']
         with pytest.raises(ValueError, match="sunion command requires at least one key"):
-            SUnionCommand(['sunion'])
+            SUnionCommand().execute(ctx)

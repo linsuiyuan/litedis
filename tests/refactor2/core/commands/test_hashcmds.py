@@ -27,7 +27,7 @@ def db():
 
 @pytest.fixture
 def ctx(db):
-    return CommandContext(db)
+    return CommandContext(db, [])
 
 
 class TestHDelCommand:
@@ -36,7 +36,8 @@ class TestHDelCommand:
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2"})
 
         # Execute
-        cmd = HDelCommand(["hdel", "hash1", "field1"])
+        ctx.cmdtokens = ["hdel", "hash1", "field1"]
+        cmd = HDelCommand()
         result = cmd.execute(ctx)
 
         # Verify
@@ -46,14 +47,16 @@ class TestHDelCommand:
     def test_hdel_multiple_fields(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2", "field3": "value3"})
 
-        cmd = HDelCommand(["hdel", "hash1", "field1", "field2"])
+        ctx.cmdtokens = ["hdel", "hash1", "field1", "field2"]
+        cmd = HDelCommand()
         result = cmd.execute(ctx)
 
         assert result == 2
         assert ctx.db.get("hash1") == {"field3": "value3"}
 
     def test_hdel_nonexistent_key(self, ctx):
-        cmd = HDelCommand(["hdel", "nonexistent", "field1"])
+        ctx.cmdtokens = ["hdel", "nonexistent", "field1"]
+        cmd = HDelCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
@@ -61,7 +64,8 @@ class TestHDelCommand:
     def test_hdel_nonexistent_field(self, ctx):
         ctx.db.set("hash1", {"field1": "value1"})
 
-        cmd = HDelCommand(["hdel", "hash1", "nonexistent"])
+        ctx.cmdtokens = ["hdel", "hash1", "nonexistent"]
+        cmd = HDelCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
@@ -70,7 +74,8 @@ class TestHDelCommand:
     def test_hdel_all_fields_removes_key(self, ctx):
         ctx.db.set("hash1", {"field1": "value1"})
 
-        cmd = HDelCommand(["hdel", "hash1", "field1"])
+        ctx.cmdtokens = ["hdel", "hash1", "field1"]
+        cmd = HDelCommand()
         result = cmd.execute(ctx)
 
         assert result == 1
@@ -79,7 +84,8 @@ class TestHDelCommand:
     def test_hdel_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HDelCommand(["hdel", "string1", "field1"])
+        ctx.cmdtokens = ["hdel", "string1", "field1"]
+        cmd = HDelCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -88,7 +94,8 @@ class TestHExistsCommand:
     def test_hexists_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "value1"})
 
-        cmd = HExistsCommand(["hexists", "hash1", "field1"])
+        ctx.cmdtokens = ["hexists", "hash1", "field1"]
+        cmd = HExistsCommand()
         result = cmd.execute(ctx)
 
         assert result == 1
@@ -96,13 +103,15 @@ class TestHExistsCommand:
     def test_hexists_nonexistent_field(self, ctx):
         ctx.db.set("hash1", {"field1": "value1"})
 
-        cmd = HExistsCommand(["hexists", "hash1", "nonexistent"])
+        ctx.cmdtokens = ["hexists", "hash1", "nonexistent"]
+        cmd = HExistsCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
 
     def test_hexists_nonexistent_key(self, ctx):
-        cmd = HExistsCommand(["hexists", "nonexistent", "field1"])
+        ctx.cmdtokens = ["hexists", "nonexistent", "field1"]
+        cmd = HExistsCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
@@ -110,7 +119,8 @@ class TestHExistsCommand:
     def test_hexists_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HExistsCommand(["hexists", "string1", "field1"])
+        ctx.cmdtokens = ["hexists", "string1", "field1"]
+        cmd = HExistsCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -119,7 +129,8 @@ class TestHGetCommand:
     def test_hget_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "value1"})
 
-        cmd = HGetCommand(["hget", "hash1", "field1"])
+        ctx.cmdtokens = ["hget", "hash1", "field1"]
+        cmd = HGetCommand()
         result = cmd.execute(ctx)
 
         assert result == "value1"
@@ -127,13 +138,15 @@ class TestHGetCommand:
     def test_hget_nonexistent_field(self, ctx):
         ctx.db.set("hash1", {"field1": "value1"})
 
-        cmd = HGetCommand(["hget", "hash1", "nonexistent"])
+        ctx.cmdtokens = ["hget", "hash1", "nonexistent"]
+        cmd = HGetCommand()
         result = cmd.execute(ctx)
 
         assert result is None
 
     def test_hget_nonexistent_key(self, ctx):
-        cmd = HGetCommand(["hget", "nonexistent", "field1"])
+        ctx.cmdtokens = ["hget", "nonexistent", "field1"]
+        cmd = HGetCommand()
         result = cmd.execute(ctx)
 
         assert result is None
@@ -141,7 +154,8 @@ class TestHGetCommand:
     def test_hget_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HGetCommand(["hget", "string1", "field1"])
+        ctx.cmdtokens = ["hget", "string1", "field1"]
+        cmd = HGetCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -150,7 +164,8 @@ class TestHGetAllCommand:
     def test_hgetall_existing_hash(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2"})
 
-        cmd = HGetAllCommand(["hgetall", "hash1"])
+        ctx.cmdtokens = ["hgetall", "hash1"]
+        cmd = HGetAllCommand()
         result = cmd.execute(ctx)
 
         assert len(result) == 4
@@ -158,7 +173,8 @@ class TestHGetAllCommand:
         assert set(result[1::2]) == {"value1", "value2"}  # Values
 
     def test_hgetall_nonexistent_key(self, ctx):
-        cmd = HGetAllCommand(["hgetall", "nonexistent"])
+        ctx.cmdtokens = ["hgetall", "nonexistent"]
+        cmd = HGetAllCommand()
         result = cmd.execute(ctx)
 
         assert result == []
@@ -166,7 +182,8 @@ class TestHGetAllCommand:
     def test_hgetall_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HGetAllCommand(["hgetall", "string1"])
+        ctx.cmdtokens = ["hgetall", "string1"]
+        cmd = HGetAllCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -175,7 +192,8 @@ class TestHIncrByCommand:
     def test_hincrby_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "5"})
 
-        cmd = HIncrByCommand(["hincrby", "hash1", "field1", "3"])
+        ctx.cmdtokens = ["hincrby", "hash1", "field1", "3"]
+        cmd = HIncrByCommand()
         result = cmd.execute(ctx)
 
         assert result == 8
@@ -184,14 +202,16 @@ class TestHIncrByCommand:
     def test_hincrby_nonexistent_field(self, ctx):
         ctx.db.set("hash1", {})
 
-        cmd = HIncrByCommand(["hincrby", "hash1", "field1", "3"])
+        ctx.cmdtokens = ["hincrby", "hash1", "field1", "3"]
+        cmd = HIncrByCommand()
         result = cmd.execute(ctx)
 
         assert result == 3
         assert ctx.db.get("hash1")["field1"] == "3"
 
     def test_hincrby_nonexistent_key(self, ctx):
-        cmd = HIncrByCommand(["hincrby", "hash1", "field1", "3"])
+        ctx.cmdtokens = ["hincrby", "hash1", "field1", "3"]
+        cmd = HIncrByCommand()
         result = cmd.execute(ctx)
 
         assert result == 3
@@ -200,7 +220,8 @@ class TestHIncrByCommand:
     def test_hincrby_negative_increment(self, ctx):
         ctx.db.set("hash1", {"field1": "5"})
 
-        cmd = HIncrByCommand(["hincrby", "hash1", "field1", "-3"])
+        ctx.cmdtokens = ["hincrby", "hash1", "field1", "-3"]
+        cmd = HIncrByCommand()
         result = cmd.execute(ctx)
 
         assert result == 2
@@ -209,14 +230,16 @@ class TestHIncrByCommand:
     def test_hincrby_invalid_value(self, ctx):
         ctx.db.set("hash1", {"field1": "not_a_number"})
 
-        cmd = HIncrByCommand(["hincrby", "hash1", "field1", "3"])
+        ctx.cmdtokens = ["hincrby", "hash1", "field1", "3"]
+        cmd = HIncrByCommand()
         with pytest.raises(ValueError, match="value is not an integer"):
             cmd.execute(ctx)
 
     def test_hincrby_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HIncrByCommand(["hincrby", "string1", "field1", "3"])
+        ctx.cmdtokens = ["hincrby", "string1", "field1", "3"]
+        cmd = HIncrByCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -225,7 +248,8 @@ class TestHIncrByFloatCommand:
     def test_hincrbyfloat_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "5.5"})
 
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "hash1", "field1", "3.3"])
+        ctx.cmdtokens = ["hincrbyfloat", "hash1", "field1", "3.3"]
+        cmd = HIncrByFloatCommand()
         result = cmd.execute(ctx)
 
         assert result == "8.8"
@@ -234,7 +258,8 @@ class TestHIncrByFloatCommand:
     def test_hincrbyfloat_whole_number_result(self, ctx):
         ctx.db.set("hash1", {"field1": "5.5"})
 
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "hash1", "field1", "4.5"])
+        ctx.cmdtokens = ["hincrbyfloat", "hash1", "field1", "4.5"]
+        cmd = HIncrByFloatCommand()
         result = cmd.execute(ctx)
 
         assert result == "10"  # No decimal point for whole numbers
@@ -243,14 +268,16 @@ class TestHIncrByFloatCommand:
     def test_hincrbyfloat_nonexistent_field(self, ctx):
         ctx.db.set("hash1", {})
 
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "hash1", "field1", "3.14"])
+        ctx.cmdtokens = ["hincrbyfloat", "hash1", "field1", "3.14"]
+        cmd = HIncrByFloatCommand()
         result = cmd.execute(ctx)
 
         assert result == "3.14"
         assert ctx.db.get("hash1")["field1"] == "3.14"
 
     def test_hincrbyfloat_nonexistent_key(self, ctx):
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "hash1", "field1", "3.14"])
+        ctx.cmdtokens = ["hincrbyfloat", "hash1", "field1", "3.14"]
+        cmd = HIncrByFloatCommand()
         result = cmd.execute(ctx)
 
         assert result == "3.14"
@@ -259,7 +286,8 @@ class TestHIncrByFloatCommand:
     def test_hincrbyfloat_negative_increment(self, ctx):
         ctx.db.set("hash1", {"field1": "5.5"})
 
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "hash1", "field1", "-2.2"])
+        ctx.cmdtokens = ["hincrbyfloat", "hash1", "field1", "-2.2"]
+        cmd = HIncrByFloatCommand()
         result = cmd.execute(ctx)
 
         assert result == "3.3"
@@ -268,14 +296,16 @@ class TestHIncrByFloatCommand:
     def test_hincrbyfloat_invalid_value(self, ctx):
         ctx.db.set("hash1", {"field1": "not_a_number"})
 
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "hash1", "field1", "3.14"])
+        ctx.cmdtokens = ["hincrbyfloat", "hash1", "field1", "3.14"]
+        cmd = HIncrByFloatCommand()
         with pytest.raises(ValueError, match="value is not a float"):
             cmd.execute(ctx)
 
     def test_hincrbyfloat_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HIncrByFloatCommand(["hincrbyfloat", "string1", "field1", "3.14"])
+        ctx.cmdtokens = ["hincrbyfloat", "string1", "field1", "3.14"]
+        cmd = HIncrByFloatCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -284,7 +314,8 @@ class TestHKeysCommand:
     def test_hkeys_existing_hash(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2"})
 
-        cmd = HKeysCommand(["hkeys", "hash1"])
+        ctx.cmdtokens = ["hkeys", "hash1"]
+        cmd = HKeysCommand()
         result = cmd.execute(ctx)
 
         assert set(result) == {"field1", "field2"}
@@ -292,13 +323,15 @@ class TestHKeysCommand:
     def test_hkeys_empty_hash(self, ctx):
         ctx.db.set("hash1", {})
 
-        cmd = HKeysCommand(["hkeys", "hash1"])
+        ctx.cmdtokens = ["hkeys", "hash1"]
+        cmd = HKeysCommand()
         result = cmd.execute(ctx)
 
         assert result == []
 
     def test_hkeys_nonexistent_key(self, ctx):
-        cmd = HKeysCommand(["hkeys", "nonexistent"])
+        ctx.cmdtokens = ["hkeys", "nonexistent"]
+        cmd = HKeysCommand()
         result = cmd.execute(ctx)
 
         assert result == []
@@ -306,7 +339,8 @@ class TestHKeysCommand:
     def test_hkeys_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HKeysCommand(["hkeys", "string1"])
+        ctx.cmdtokens = ["hkeys", "string1"]
+        cmd = HKeysCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -315,7 +349,8 @@ class TestHLenCommand:
     def test_hlen_existing_hash(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2"})
 
-        cmd = HLenCommand(["hlen", "hash1"])
+        ctx.cmdtokens = ["hlen", "hash1"]
+        cmd = HLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 2
@@ -323,13 +358,15 @@ class TestHLenCommand:
     def test_hlen_empty_hash(self, ctx):
         ctx.db.set("hash1", {})
 
-        cmd = HLenCommand(["hlen", "hash1"])
+        ctx.cmdtokens = ["hlen", "hash1"]
+        cmd = HLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
 
     def test_hlen_nonexistent_key(self, ctx):
-        cmd = HLenCommand(["hlen", "nonexistent"])
+        ctx.cmdtokens = ["hlen", "nonexistent"]
+        cmd = HLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
@@ -337,7 +374,8 @@ class TestHLenCommand:
     def test_hlen_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HLenCommand(["hlen", "string1"])
+        ctx.cmdtokens = ["hlen", "string1"]
+        cmd = HLenCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -346,7 +384,8 @@ class TestHSetCommand:
     def test_hset_new_field(self, ctx):
         ctx.db.set("hash1", {"existing": "value"})
 
-        cmd = HSetCommand(["hset", "hash1", "field1", "value1"])
+        ctx.cmdtokens = ["hset", "hash1", "field1", "value1"]
+        cmd = HSetCommand()
         result = cmd.execute(ctx)
 
         assert result == 1
@@ -355,7 +394,8 @@ class TestHSetCommand:
     def test_hset_multiple_fields(self, ctx):
         ctx.db.set("hash1", {"existing": "value"})
 
-        cmd = HSetCommand(["hset", "hash1", "field1", "value1", "field2", "value2"])
+        ctx.cmdtokens = ["hset", "hash1", "field1", "value1", "field2", "value2"]
+        cmd = HSetCommand()
         result = cmd.execute(ctx)
 
         assert result == 2
@@ -368,14 +408,16 @@ class TestHSetCommand:
     def test_hset_update_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "old_value"})
 
-        cmd = HSetCommand(["hset", "hash1", "field1", "new_value"])
+        ctx.cmdtokens = ["hset", "hash1", "field1", "new_value"]
+        cmd = HSetCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
         assert ctx.db.get("hash1") == {"field1": "new_value"}
 
     def test_hset_nonexistent_key(self, ctx):
-        cmd = HSetCommand(["hset", "hash1", "field1", "value1"])
+        ctx.cmdtokens = ["hset", "hash1", "field1", "value1"]
+        cmd = HSetCommand()
         result = cmd.execute(ctx)
 
         assert result == 1
@@ -384,7 +426,8 @@ class TestHSetCommand:
     def test_hset_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HSetCommand(["hset", "string1", "field1", "value1"])
+        ctx.cmdtokens = ["hset", "string1", "field1", "value1"]
+        cmd = HSetCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -393,7 +436,8 @@ class TestHSetNXCommand:
     def test_hsetnx_new_field(self, ctx):
         ctx.db.set("hash1", {"existing": "value"})
 
-        cmd = HSetNXCommand(["hsetnx", "hash1", "field1", "value1"])
+        ctx.cmdtokens = ["hsetnx", "hash1", "field1", "value1"]
+        cmd = HSetNXCommand()
         result = cmd.execute(ctx)
 
         assert result == 1
@@ -402,14 +446,16 @@ class TestHSetNXCommand:
     def test_hsetnx_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "old_value"})
 
-        cmd = HSetNXCommand(["hsetnx", "hash1", "field1", "new_value"])
+        ctx.cmdtokens = ["hsetnx", "hash1", "field1", "new_value"]
+        cmd = HSetNXCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
         assert ctx.db.get("hash1") == {"field1": "old_value"}
 
     def test_hsetnx_nonexistent_key(self, ctx):
-        cmd = HSetNXCommand(["hsetnx", "hash1", "field1", "value1"])
+        ctx.cmdtokens = ["hsetnx", "hash1", "field1", "value1"]
+        cmd = HSetNXCommand()
         result = cmd.execute(ctx)
 
         assert result == 1
@@ -418,7 +464,8 @@ class TestHSetNXCommand:
     def test_hsetnx_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HSetNXCommand(["hsetnx", "string1", "field1", "value1"])
+        ctx.cmdtokens = ["hsetnx", "string1", "field1", "value1"]
+        cmd = HSetNXCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -427,7 +474,8 @@ class TestHMGetCommand:
     def test_hmget_existing_fields(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2", "field3": "value3"})
 
-        cmd = HMGetCommand(["hmget", "hash1", "field1", "field2"])
+        ctx.cmdtokens = ["hmget", "hash1", "field1", "field2"]
+        cmd = HMGetCommand()
         result = cmd.execute(ctx)
 
         assert result == ["value1", "value2"]
@@ -435,13 +483,15 @@ class TestHMGetCommand:
     def test_hmget_mixed_existing_nonexisting(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field3": "value3"})
 
-        cmd = HMGetCommand(["hmget", "hash1", "field1", "field2", "field3"])
+        ctx.cmdtokens = ["hmget", "hash1", "field1", "field2", "field3"]
+        cmd = HMGetCommand()
         result = cmd.execute(ctx)
 
         assert result == ["value1", None, "value3"]
 
     def test_hmget_nonexistent_key(self, ctx):
-        cmd = HMGetCommand(["hmget", "nonexistent", "field1", "field2"])
+        ctx.cmdtokens = ["hmget", "nonexistent", "field1", "field2"]
+        cmd = HMGetCommand()
         result = cmd.execute(ctx)
 
         assert result == [None, None]
@@ -449,7 +499,8 @@ class TestHMGetCommand:
     def test_hmget_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HMGetCommand(["hmget", "string1", "field1"])
+        ctx.cmdtokens = ["hmget", "string1", "field1"]
+        cmd = HMGetCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -458,7 +509,8 @@ class TestHValsCommand:
     def test_hvals_existing_hash(self, ctx):
         ctx.db.set("hash1", {"field1": "value1", "field2": "value2"})
 
-        cmd = HValsCommand(["hvals", "hash1"])
+        ctx.cmdtokens = ["hvals", "hash1"]
+        cmd = HValsCommand()
         result = cmd.execute(ctx)
 
         assert set(result) == {"value1", "value2"}
@@ -466,13 +518,15 @@ class TestHValsCommand:
     def test_hvals_empty_hash(self, ctx):
         ctx.db.set("hash1", {})
 
-        cmd = HValsCommand(["hvals", "hash1"])
+        ctx.cmdtokens = ["hvals", "hash1"]
+        cmd = HValsCommand()
         result = cmd.execute(ctx)
 
         assert result == []
 
     def test_hvals_nonexistent_key(self, ctx):
-        cmd = HValsCommand(["hvals", "nonexistent"])
+        ctx.cmdtokens = ["hvals", "nonexistent"]
+        cmd = HValsCommand()
         result = cmd.execute(ctx)
 
         assert result == []
@@ -480,7 +534,8 @@ class TestHValsCommand:
     def test_hvals_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HValsCommand(["hvals", "string1"])
+        ctx.cmdtokens = ["hvals", "string1"]
+        cmd = HValsCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -489,7 +544,8 @@ class TestHStrLenCommand:
     def test_hstrlen_existing_field(self, ctx):
         ctx.db.set("hash1", {"field1": "hello", "field2": "world!"})
 
-        cmd = HStrLenCommand(["hstrlen", "hash1", "field1"])
+        ctx.cmdtokens = ["hstrlen", "hash1", "field1"]
+        cmd = HStrLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 5
@@ -497,13 +553,15 @@ class TestHStrLenCommand:
     def test_hstrlen_nonexistent_field(self, ctx):
         ctx.db.set("hash1", {"field1": "hello"})
 
-        cmd = HStrLenCommand(["hstrlen", "hash1", "nonexistent"])
+        ctx.cmdtokens = ["hstrlen", "hash1", "nonexistent"]
+        cmd = HStrLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
 
     def test_hstrlen_nonexistent_key(self, ctx):
-        cmd = HStrLenCommand(["hstrlen", "nonexistent", "field1"])
+        ctx.cmdtokens = ["hstrlen", "nonexistent", "field1"]
+        cmd = HStrLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 0
@@ -511,7 +569,8 @@ class TestHStrLenCommand:
     def test_hstrlen_numeric_value(self, ctx):
         ctx.db.set("hash1", {"field1": "12345"})
 
-        cmd = HStrLenCommand(["hstrlen", "hash1", "field1"])
+        ctx.cmdtokens = ["hstrlen", "hash1", "field1"]
+        cmd = HStrLenCommand()
         result = cmd.execute(ctx)
 
         assert result == 5
@@ -519,7 +578,8 @@ class TestHStrLenCommand:
     def test_hstrlen_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HStrLenCommand(["hstrlen", "string1", "field1"])
+        ctx.cmdtokens = ["hstrlen", "string1", "field1"]
+        cmd = HStrLenCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -536,7 +596,8 @@ class TestHScanCommand:
         })
 
         # First scan with count 2
-        cmd = HScanCommand(["hscan", "hash1", "0", "count", "2"])
+        ctx.cmdtokens = ["hscan", "hash1", "0", "count", "2"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         assert cursor != 0  # Should not be complete
@@ -545,14 +606,16 @@ class TestHScanCommand:
         assert len(first_batch) == 2
 
         # Second scan with returned cursor
-        cmd = HScanCommand(["hscan", "hash1", str(cursor), "count", "2"])
+        ctx.cmdtokens = ["hscan", "hash1", str(cursor), "count", "2"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         second_batch = dict(zip(items[::2], items[1::2]))
         assert len(second_batch) == 2
 
         # Final scan
-        cmd = HScanCommand(["hscan", "hash1", str(cursor), "count", "2"])
+        ctx.cmdtokens = ["hscan", "hash1", str(cursor), "count", "2"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         assert cursor == 0  # Indicates completion
@@ -572,14 +635,16 @@ class TestHScanCommand:
             "test2": "value4"
         })
 
-        cmd = HScanCommand(["hscan", "hash1", "0", "match", "field*", "count", "1"])
+        ctx.cmdtokens = ["hscan", "hash1", "0", "match", "field*", "count", "1"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         first_batch = dict(zip(items[::2], items[1::2]))
         assert all(k.startswith("field") for k in first_batch.keys())
 
         # Get remaining items
-        cmd = HScanCommand(["hscan", "hash1", str(cursor), "match", "field*", "count", "1"])
+        ctx.cmdtokens = ["hscan", "hash1", str(cursor), "match", "field*", "count", "1"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         second_batch = dict(zip(items[::2], items[1::2]))
@@ -593,14 +658,16 @@ class TestHScanCommand:
     def test_hscan_empty_hash(self, ctx):
         ctx.db.set("hash1", {})
 
-        cmd = HScanCommand(["hscan", "hash1", "0"])
+        ctx.cmdtokens = ["hscan", "hash1", "0"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         assert cursor == 0
         assert items == []
 
     def test_hscan_nonexistent_key(self, ctx):
-        cmd = HScanCommand(["hscan", "nonexistent", "0"])
+        ctx.cmdtokens = ["hscan", "nonexistent", "0"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         assert cursor == 0
@@ -609,7 +676,8 @@ class TestHScanCommand:
     def test_hscan_invalid_type(self, ctx):
         ctx.db.set("string1", "not_a_hash")
 
-        cmd = HScanCommand(["hscan", "string1", "0"])
+        ctx.cmdtokens = ["hscan", "string1", "0"]
+        cmd = HScanCommand()
         with pytest.raises(TypeError, match="value is not a hash"):
             cmd.execute(ctx)
 
@@ -619,7 +687,8 @@ class TestHScanCommand:
         ctx.db.set("hash1", test_data)
 
         # Request more items than exist
-        cmd = HScanCommand(["hscan", "hash1", "0", "count", "20"])
+        ctx.cmdtokens = ["hscan", "hash1", "0", "count", "20"]
+        cmd = HScanCommand()
         cursor, items = cmd.execute(ctx)
 
         assert cursor == 0  # Should complete in one iteration
@@ -632,11 +701,13 @@ class TestHScanCommand:
         ctx.db.set("hash1", test_data)
 
         # First scan
-        cmd = HScanCommand(["hscan", "hash1", "0", "count", "2"])
+        ctx.cmdtokens = ["hscan", "hash1", "0", "count", "2"]
+        cmd = HScanCommand()
         cursor1, items1 = cmd.execute(ctx)
 
         # Use invalid cursor
-        cmd = HScanCommand(["hscan", "hash1", "999", "count", "2"])
+        ctx.cmdtokens = ["hscan", "hash1", "999", "count", "2"]
+        cmd = HScanCommand()
         cursor2, items2 = cmd.execute(ctx)
 
         # Should restart from beginning

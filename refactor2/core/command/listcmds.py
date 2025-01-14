@@ -4,10 +4,9 @@ from refactor2.core.command.base import CommandContext, ReadCommand, WriteComman
 class LIndexCommand(ReadCommand):
     name = 'lindex'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.index: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -19,6 +18,8 @@ class LIndexCommand(ReadCommand):
             raise ValueError('index must be an integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -42,12 +43,11 @@ class LIndexCommand(ReadCommand):
 class LInsertCommand(WriteCommand):
     name = 'linsert'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.before: bool
         self.pivot: str
         self.element: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 5:
@@ -63,6 +63,8 @@ class LInsertCommand(WriteCommand):
         self.element = tokens[4]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -88,9 +90,8 @@ class LInsertCommand(WriteCommand):
 class LLenCommand(ReadCommand):
     name = 'llen'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -98,6 +99,8 @@ class LLenCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -112,10 +115,9 @@ class LLenCommand(ReadCommand):
 class LPopCommand(WriteCommand):
     name = 'lpop'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -132,6 +134,8 @@ class LPopCommand(WriteCommand):
                 raise ValueError('count must be a positive integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -163,10 +167,9 @@ class LPopCommand(WriteCommand):
 class LPushCommand(WriteCommand):
     name = 'lpush'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.elements: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -175,6 +178,8 @@ class LPushCommand(WriteCommand):
         self.elements = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = []
@@ -195,6 +200,8 @@ class LPushXCommand(LPushCommand):
     name = 'lpushx'
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         if not ctx.db.exists(self.key):
             return 0
 
@@ -204,11 +211,10 @@ class LPushXCommand(LPushCommand):
 class LRangeCommand(ReadCommand):
     name = 'lrange'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.start: int
         self.stop: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -221,6 +227,8 @@ class LRangeCommand(ReadCommand):
             raise ValueError('start and stop must be integers')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -247,11 +255,10 @@ class LRangeCommand(ReadCommand):
 class LRemCommand(WriteCommand):
     name = 'lrem'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int
         self.element: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -264,6 +271,8 @@ class LRemCommand(WriteCommand):
         self.element = tokens[3]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -307,11 +316,10 @@ class LRemCommand(WriteCommand):
 class LSetCommand(WriteCommand):
     name = 'lset'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.index: int
         self.element: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -324,6 +332,8 @@ class LSetCommand(WriteCommand):
         self.element = tokens[3]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             raise ValueError("no such key")
@@ -349,11 +359,10 @@ class LSetCommand(WriteCommand):
 class LTrimCommand(WriteCommand):
     name = 'ltrim'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.start: int
         self.stop: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -366,6 +375,8 @@ class LTrimCommand(WriteCommand):
             raise ValueError('start and stop must be integers')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return "OK"
@@ -400,10 +411,9 @@ class LTrimCommand(WriteCommand):
 class RPopCommand(WriteCommand):
     name = 'rpop'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -420,6 +430,8 @@ class RPopCommand(WriteCommand):
                 raise ValueError('count must be a positive integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -452,10 +464,9 @@ class RPopCommand(WriteCommand):
 class RPushCommand(WriteCommand):
     name = 'rpush'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.elements: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -464,6 +475,8 @@ class RPushCommand(WriteCommand):
         self.elements = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = []
@@ -483,6 +496,8 @@ class RPushXCommand(RPushCommand):
     name = 'rpushx'
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         if not ctx.db.exists(self.key):
             return 0
 
@@ -492,12 +507,11 @@ class RPushXCommand(RPushCommand):
 class SortCommand(WriteCommand):
     name = 'sort'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.desc: bool
         self.alpha: bool
         self.store_key: str | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -523,6 +537,8 @@ class SortCommand(WriteCommand):
                 raise ValueError(f'Invalid argument: {tokens[i]}')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []

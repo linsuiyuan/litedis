@@ -6,10 +6,9 @@ from refactor2.core.command.base import CommandContext, ReadCommand, WriteComman
 class SAddCommand(WriteCommand):
     name = 'sadd'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.members: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -18,6 +17,8 @@ class SAddCommand(WriteCommand):
         self.members = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             value = set()
@@ -40,9 +41,8 @@ class SAddCommand(WriteCommand):
 class SCardCommand(ReadCommand):
     name = 'scard'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -50,6 +50,8 @@ class SCardCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -64,9 +66,8 @@ class SCardCommand(ReadCommand):
 class SDiffCommand(ReadCommand):
     name = 'sdiff'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.keys: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -74,6 +75,8 @@ class SDiffCommand(ReadCommand):
         self.keys = tokens[1:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
 
@@ -100,9 +103,8 @@ class SInterCommand(ReadCommand):
     """Intersect multiple sets"""
     name = 'sinter'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.keys: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -110,6 +112,8 @@ class SInterCommand(ReadCommand):
         self.keys = tokens[1:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
         # Process each key
@@ -135,11 +139,10 @@ class SInterCommand(ReadCommand):
 class SInterCardCommand(ReadCommand):
     name = 'sintercard'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.numkeys: int
         self.keys: list[str]
         self.limit: int | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -171,6 +174,8 @@ class SInterCardCommand(ReadCommand):
                 raise ValueError('limit must be non-negative')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
 
@@ -202,10 +207,9 @@ class SInterCardCommand(ReadCommand):
 class SIsMemberCommand(ReadCommand):
     name = 'sismember'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.member: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -214,6 +218,8 @@ class SIsMemberCommand(ReadCommand):
         self.member = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -228,9 +234,8 @@ class SIsMemberCommand(ReadCommand):
 class SMembersCommand(ReadCommand):
     name = 'smembers'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -238,6 +243,8 @@ class SMembersCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -252,10 +259,9 @@ class SMembersCommand(ReadCommand):
 class SMIsMemberCommand(ReadCommand):
     name = 'smismember'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.members: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -264,6 +270,8 @@ class SMIsMemberCommand(ReadCommand):
         self.members = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return [0] * len(self.members)
@@ -278,11 +286,10 @@ class SMIsMemberCommand(ReadCommand):
 class SMoveCommand(WriteCommand):
     name = 'smove'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.source: str
         self.destination: str
         self.member: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -292,6 +299,8 @@ class SMoveCommand(WriteCommand):
         self.member = tokens[3]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         # Check source set
@@ -331,10 +340,9 @@ class SMoveCommand(WriteCommand):
 class SPopCommand(WriteCommand):
     name = 'spop'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -351,6 +359,8 @@ class SPopCommand(WriteCommand):
                 raise ValueError('count must be positive')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None if self.count is None else []
@@ -383,10 +393,9 @@ class SPopCommand(WriteCommand):
 class SRandMemberCommand(ReadCommand):
     name = 'srandmember'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -401,6 +410,8 @@ class SRandMemberCommand(ReadCommand):
                 raise ValueError('count must be an integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None if self.count is None else []
@@ -429,10 +440,9 @@ class SRandMemberCommand(ReadCommand):
 class SRemCommand(WriteCommand):
     name = 'srem'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.members: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -441,6 +451,8 @@ class SRemCommand(WriteCommand):
         self.members = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -466,9 +478,8 @@ class SRemCommand(WriteCommand):
 class SUnionCommand(ReadCommand):
     name = 'sunion'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.keys: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -476,6 +487,8 @@ class SUnionCommand(ReadCommand):
         self.keys = tokens[1:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = set()
 

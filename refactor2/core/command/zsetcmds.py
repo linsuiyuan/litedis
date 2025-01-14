@@ -7,10 +7,9 @@ from refactor2.core.command.sortedset import SortedSet
 class ZAddCommand(WriteCommand):
     name = 'zadd'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.score_members: list[tuple[float, str]]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -33,6 +32,8 @@ class ZAddCommand(WriteCommand):
             i += 2
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             zset = SortedSet()
@@ -55,9 +56,8 @@ class ZAddCommand(WriteCommand):
 class ZCardCommand(ReadCommand):
     name = 'zcard'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -65,6 +65,8 @@ class ZCardCommand(ReadCommand):
         self.key = tokens[1]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -79,11 +81,10 @@ class ZCardCommand(ReadCommand):
 class ZCountCommand(ReadCommand):
     name = 'zcount'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.min: float
         self.max: float
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -96,6 +97,8 @@ class ZCountCommand(ReadCommand):
             raise ValueError('min and max must be valid float numbers')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -110,11 +113,10 @@ class ZCountCommand(ReadCommand):
 class ZDiffCommand(ReadCommand):
     name = 'zdiff'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.numkeys: int
         self.keys: list[str]
         self.withscores: bool = False  # 添加 withscores 属性
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -138,6 +140,8 @@ class ZDiffCommand(ReadCommand):
             self.withscores = True
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
 
@@ -169,11 +173,10 @@ class ZDiffCommand(ReadCommand):
 class ZIncrByCommand(WriteCommand):
     name = 'zincrby'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.increment: float
         self.member: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -186,6 +189,8 @@ class ZIncrByCommand(WriteCommand):
         self.member = tokens[3]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             zset = SortedSet()
@@ -203,11 +208,10 @@ class ZIncrByCommand(WriteCommand):
 class ZInterCommand(ReadCommand):
     name = 'zinter'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.numkeys: int
         self.keys: list[str]
         self.withscores: bool = False
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -230,6 +234,8 @@ class ZInterCommand(ReadCommand):
             self.withscores = True
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
 
@@ -262,11 +268,10 @@ class ZInterCardCommand(ReadCommand):
     """Return the number of elements in the intersection of multiple sorted sets"""
     name = 'zintercard'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.numkeys: int
         self.keys: list[str]
         self.limit: int | None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -299,6 +304,8 @@ class ZInterCardCommand(ReadCommand):
                 raise ValueError('invalid argument')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
 
@@ -330,10 +337,9 @@ class ZPopMaxCommand(WriteCommand):
     """Remove and return members with the highest scores in a sorted set"""
     name = 'zpopmax'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -350,6 +356,8 @@ class ZPopMaxCommand(WriteCommand):
                 raise ValueError('count must be positive')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -379,10 +387,9 @@ class ZPopMinCommand(WriteCommand):
     """Remove and return members with the lowest scores in a sorted set"""
     name = 'zpopmin'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -399,6 +406,8 @@ class ZPopMinCommand(WriteCommand):
                 raise ValueError('count must be positive')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -427,11 +436,10 @@ class ZPopMinCommand(WriteCommand):
 class ZRandMemberCommand(ReadCommand):
     name = 'zrandmember'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.count: int | None
         self.withscores: bool
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 2:
@@ -453,6 +461,8 @@ class ZRandMemberCommand(ReadCommand):
                     raise ValueError('count must be an integer')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None if self.count is None else []
@@ -484,12 +494,11 @@ class ZMPopCommand(WriteCommand):
     """Remove and return members from one or more sorted sets"""
     name = 'zmpop'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.numkeys: int
         self.keys: list[str]
         self.where: str  # MIN or MAX
         self.count: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -523,6 +532,8 @@ class ZMPopCommand(WriteCommand):
                     raise ValueError('count must be positive')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
 
         # Find first non-empty sorted set
@@ -560,13 +571,12 @@ class ZRangeCommand(ReadCommand):
     """Return a range of members in a sorted set"""
     name = 'zrange'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.start: int
         self.stop: int
         self.withscores: bool
         self.rev: bool
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -593,6 +603,8 @@ class ZRangeCommand(ReadCommand):
             i += 1
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -613,14 +625,13 @@ class _ZRangeByScoreCommand(ReadCommand):
     """Return a range of members in a sorted set by score"""
     name = '_zrangebyscore'
 
-    def __init__(self, command_tokens: list[str], desc):
+    def __init__(self, desc):
         self.desc = desc
         self.key: str
         self.min: float
         self.max: float
         self.withscores: bool = False
         self.limit: tuple | None = None
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -653,6 +664,8 @@ class _ZRangeByScoreCommand(ReadCommand):
                 i = i + 3
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return []
@@ -678,27 +691,26 @@ class ZRangeByScoreCommand(_ZRangeByScoreCommand):
     """Return a range of members in a sorted set by score"""
     name = 'zrangebyscore'
 
-    def __init__(self, command_tokens: list[str]):
-        super().__init__(command_tokens, desc=False)
+    def __init__(self):
+        super().__init__(desc=False)
 
 
 class ZRevRangeByScoreCommand(_ZRangeByScoreCommand):
     """Return a range of members in a sorted set by score, with scores ordered from high to low"""
     name = 'zrevrangebyscore'
 
-    def __init__(self, command_tokens: list[str]):
-        super().__init__(command_tokens, desc=True)
+    def __init__(self):
+        super().__init__(desc=True)
 
 
 class _ZRankCommand(ReadCommand):
     name = '_zrank'
 
-    def __init__(self, command_tokens: list[str], desc):
+    def __init__(self, desc):
         self.desc = desc
         self.key: str
         self.member: str
         self.withscores: bool = False  # 添加 withscores 属性
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -711,6 +723,8 @@ class _ZRankCommand(ReadCommand):
             self.withscores = True
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -733,17 +747,16 @@ class ZRankCommand(_ZRankCommand):
     """Determine the index of a member in a sorted set"""
     name = 'zrank'
 
-    def __init__(self, command_tokens: list[str]):
-        super().__init__(command_tokens, desc=False)
+    def __init__(self):
+        super().__init__(desc=False)
 
 
 class ZRemCommand(WriteCommand):
     name = 'zrem'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.members: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -752,6 +765,8 @@ class ZRemCommand(WriteCommand):
         self.members = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -778,11 +793,10 @@ class ZRemRangeByScoreCommand(WriteCommand):
     """Remove all members in a sorted set within the given scores"""
     name = 'zremrangebyscore'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.min: float
         self.max: float
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 4:
@@ -795,6 +809,8 @@ class ZRemRangeByScoreCommand(WriteCommand):
             raise ValueError('min and max must be valid float numbers')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return 0
@@ -823,20 +839,19 @@ class ZRevRankCommand(_ZRankCommand):
     """Determine the index of a member in a sorted set, with scores ordered from high to low"""
     name = 'zrevrank'
 
-    def __init__(self, command_tokens: list[str]):
-        super().__init__(command_tokens, desc=True)
+    def __init__(self):
+        super().__init__(desc=True)
 
 
 class ZScanCommand(ReadCommand):
     """Incrementally iterate sorted set elements and associated scores"""
     name = 'zscan'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.cursor: int
         self.pattern: str | None
         self.count: int
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -870,6 +885,8 @@ class ZScanCommand(ReadCommand):
                 raise ValueError(f'Invalid argument: {tokens[i]}')
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return [0, []]
@@ -950,10 +967,9 @@ class ZScoreCommand(ReadCommand):
     """Get the score associated with the given member"""
     name = 'zscore'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.member: str
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -962,6 +978,8 @@ class ZScoreCommand(ReadCommand):
         self.member = tokens[2]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         if not db.exists(self.key):
             return None
@@ -977,11 +995,10 @@ class ZUnionCommand(ReadCommand):
     """Return the union of multiple sorted sets"""
     name = 'zunion'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.numkeys: int
         self.keys: list[str]
         self.withscores: bool
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -1005,6 +1022,8 @@ class ZUnionCommand(ReadCommand):
                 self.withscores = True
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+
         db = ctx.db
         result = None
 
@@ -1034,10 +1053,9 @@ class ZMScoreCommand(ReadCommand):
     """Get the score associated with multiple members"""
     name = 'zmscore'
 
-    def __init__(self, command_tokens: list[str]):
+    def __init__(self):
         self.key: str
         self.members: list[str]
-        self._parse(command_tokens)
 
     def _parse(self, tokens: list[str]):
         if len(tokens) < 3:
@@ -1046,6 +1064,8 @@ class ZMScoreCommand(ReadCommand):
         self.members = tokens[2:]
 
     def execute(self, ctx: CommandContext):
+        self._parse(ctx.cmdtokens)
+        
         db = ctx.db
         if not db.exists(self.key):
             return [None] * len(self.members)

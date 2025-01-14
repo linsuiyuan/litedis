@@ -6,9 +6,9 @@ from refactor2.typing import ReadWriteType
 
 class CommandContext:
 
-    def __init__(self, db: LitedisDB, attrs: dict = None):
+    def __init__(self, db: LitedisDB, cmdtokens: list[str]):
         self.db = db
-        self.attrs = {} if attrs is None else attrs
+        self.cmdtokens = cmdtokens
 
 
 class Command(ABC):

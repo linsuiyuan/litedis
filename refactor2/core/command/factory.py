@@ -28,9 +28,9 @@ _parsers.update(_import_class(zsetcmds.__name__))
 class CommandFactory:
 
     @staticmethod
-    def create(command_tokens: list[str]) -> Command:
-        name = command_tokens[0].lower()
+    def create(command_name: str) -> Command:
+        name = command_name
         if name not in _parsers:
-            raise ValueError(f"unknown command tokens: {command_tokens}")
+            raise ValueError(f"unknown command name: {command_name}")
 
-        return _parsers[name](command_tokens)
+        return _parsers[name]()

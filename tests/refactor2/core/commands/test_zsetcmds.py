@@ -36,12 +36,13 @@ def db():
 
 @pytest.fixture
 def ctx(db):
-    return CommandContext(db)
+    return CommandContext(db, [])
 
 
 class TestZAddCommand:
     def test_zadd_new_key(self, ctx):
-        cmd = ZAddCommand(['zadd', 'myset', '1.5', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.5', 'member1', '2.0', 'member2']
+        cmd = ZAddCommand()
         result = cmd.execute(ctx)
 
         assert result == 2
@@ -51,11 +52,13 @@ class TestZAddCommand:
 
     def test_zadd_existing_members(self, ctx):
         # First add
-        cmd1 = ZAddCommand(['zadd', 'myset', '1.5', 'member1'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.5', 'member1']
+        cmd1 = ZAddCommand()
         cmd1.execute(ctx)
 
         # Update existing member
-        cmd2 = ZAddCommand(['zadd', 'myset', '2.0', 'member1', '3.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '2.0', 'member1', '3.0', 'member2']
+        cmd2 = ZAddCommand()
         result = cmd2.execute(ctx)
 
         assert result == 1  # Only member2 is new
@@ -64,82 +67,100 @@ class TestZAddCommand:
 
     def test_zadd_invalid_score(self, ctx):
         with pytest.raises(ValueError, match='invalid score'):
-            ZAddCommand(['zadd', 'myset', 'notanumber', 'member1'])
+            ctx.cmdtokens = ['zadd', 'myset', 'notanumber', 'member1']
+            ZAddCommand().execute(ctx)
 
     def test_zadd_wrong_args(self, ctx):
         with pytest.raises(ValueError, match='zadd command requires key, score and member'):
-            ZAddCommand(['zadd', 'myset'])
+            ctx.cmdtokens = ['zadd', 'myset']
+            ZAddCommand().execute(ctx)
 
         with pytest.raises(ValueError, match='score and member must come in pairs'):
-            ZAddCommand(['zadd', 'myset', '1.5', 'member1', '2.0'])
+            ctx.cmdtokens = ['zadd', 'myset', '1.5', 'member1', '2.0']
+            ZAddCommand().execute(ctx)
 
 
 class TestZCardCommand:
     def test_zcard_empty_key(self, ctx):
-        cmd = ZCardCommand(['zcard', 'myset'])
+        ctx.cmdtokens = ['zcard', 'myset']
+        cmd = ZCardCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_zcard_with_members(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZCardCommand(['zcard', 'myset'])
+        ctx.cmdtokens = ['zcard', 'myset']
+        cmd = ZCardCommand()
         result = cmd.execute(ctx)
-        assert result == 2
+        assert result == 3
 
     def test_zcard_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZCardCommand(['zcard', 'myset'])
+        ctx.cmdtokens = ['zcard', 'myset']
+        cmd = ZCardCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zcard_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zcard']
         with pytest.raises(ValueError, match='zcard command requires key'):
-            ZCardCommand(['zcard'])
+            ZCardCommand().execute(ctx)
 
 
 class TestZCountCommand:
     def test_zcount_empty_key(self, ctx):
-        cmd = ZCountCommand(['zcount', 'myset', '0', '10'])
+        ctx.cmdtokens = ['zcount', 'myset', '0', '10']
+        cmd = ZCountCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_zcount_with_members(self, ctx):
         # Add members with different scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZCountCommand(['zcount', 'myset', '1.5', '3.0'])
+        ctx.cmdtokens = ['zcount', 'myset', '1.5', '3.0']
+        cmd = ZCountCommand()
         result = cmd.execute(ctx)
         assert result == 2  # member2 and member3
 
     def test_zcount_invalid_range(self, ctx):
+        ctx.cmdtokens = ['zcount', 'myset', 'notanumber', '10']
+        cmd = ZCountCommand()
         with pytest.raises(ValueError, match='min and max must be valid float numbers'):
-            ZCountCommand(['zcount', 'myset', 'notanumber', '10'])
+            cmd.execute(ctx)
 
     def test_zcount_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zcount', 'myset']
         with pytest.raises(ValueError, match='zcount command requires key, min and max'):
-            ZCountCommand(['zcount', 'myset'])
+            ZCountCommand().execute(ctx)
 
 
 class TestZDiffCommand:
     def test_zdiff_empty_keys(self, ctx):
-        cmd = ZDiffCommand(['zdiff', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zdiff', '2', 'set1', 'set2']
+        cmd = ZDiffCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zdiff_with_members(self, ctx):
         # Add members to first set
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
 
         # Add members to second set
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '4.0', 'member4'])
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '4.0', 'member4']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZDiffCommand(['zdiff', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zdiff', '2', 'set1', 'set2']
+        cmd = ZDiffCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert 'member1' in result
@@ -147,27 +168,33 @@ class TestZDiffCommand:
 
     def test_zdiff_wrong_type(self, ctx):
         ctx.db.set('set1', "string")  # Wrong type
-        cmd = ZDiffCommand(['zdiff', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zdiff', '2', 'set1', 'set2']
+        cmd = ZDiffCommand()
         with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zdiff_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zdiff']
         with pytest.raises(ValueError, match='zdiff command requires numkeys and at least one key'):
-            ZDiffCommand(['zdiff'])
+            ZDiffCommand().execute(ctx)
 
         with pytest.raises(ValueError, match='numkeys must be positive'):
-            ZDiffCommand(['zdiff', '-1', 'set1'])
+            ctx.cmdtokens = ['zdiff', '-1', 'set1']
+            ZDiffCommand().execute(ctx)
 
     def test_zdiff_with_scores(self, ctx):
         # Add members to first set
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
 
         # Add members to second set
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '4.0', 'member4'])
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '4.0', 'member4']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZDiffCommand(['zdiff', '2', 'set1', 'set2', 'WITHSCORES'])
+        ctx.cmdtokens = ['zdiff', '2', 'set1', 'set2', 'WITHSCORES']
+        cmd = ZDiffCommand()
         result = cmd.execute(ctx)
 
         # Convert result to dict for easier comparison
@@ -179,47 +206,57 @@ class TestZDiffCommand:
 
 class TestZIncrByCommand:
     def test_zincrby_new_member(self, ctx):
-        cmd = ZIncrByCommand(['zincrby', 'myset', '1.5', 'member1'])
+        ctx.cmdtokens = ['zincrby', 'myset', '1.5', 'member1']
+        cmd = ZIncrByCommand()
         result = cmd.execute(ctx)
         assert result == 1.5
         assert ctx.db.get('myset').score('member1') == 1.5
 
     def test_zincrby_existing_member(self, ctx):
         # First add member
-        zadd = ZAddCommand(['zadd', 'myset', '2.0', 'member1'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '2.0', 'member1']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
         # Increment score
-        cmd = ZIncrByCommand(['zincrby', 'myset', '1.5', 'member1'])
+        ctx.cmdtokens = ['zincrby', 'myset', '1.5', 'member1']
+        cmd = ZIncrByCommand()
         result = cmd.execute(ctx)
         assert result == 3.5
         assert ctx.db.get('myset').score('member1') == 3.5
 
     def test_zincrby_invalid_increment(self, ctx):
+        ctx.cmdtokens = ['zincrby', 'myset', 'notanumber', 'member1']
+        cmd = ZIncrByCommand()
         with pytest.raises(ValueError, match='increment must be a valid float number'):
-            ZIncrByCommand(['zincrby', 'myset', 'notanumber', 'member1'])
+            cmd.execute(ctx)
 
     def test_zincrby_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zincrby', 'myset']
         with pytest.raises(ValueError, match='zincrby command requires key, increment and member'):
-            ZIncrByCommand(['zincrby', 'myset'])
+            ZIncrByCommand().execute(ctx)
 
 
 class TestZInterCommand:
     def test_zinter_empty_keys(self, ctx):
-        cmd = ZInterCommand(['zinter', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zinter', '2', 'set1', 'set2']
+        cmd = ZInterCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zinter_with_members(self, ctx):
         # Add members to first set
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
 
         # Add members to second set
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4'])
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZInterCommand(['zinter', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zinter', '2', 'set1', 'set2']
+        cmd = ZInterCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert 'member2' in result
@@ -227,80 +264,108 @@ class TestZInterCommand:
 
     def test_zinter_with_withscores(self, ctx):
         # Add members to sets
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '3.0', 'member3'])
+
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '3.0', 'member3']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZInterCommand(['zinter', '2', 'set1', 'set2', 'WITHSCORES'])
+        ctx.cmdtokens = ['zinter', '2', 'set1', 'set2', 'WITHSCORES']
+        cmd = ZInterCommand()
         result = cmd.execute(ctx)
         assert result == ['member2', 2.0]
 
     def test_zinter_wrong_type(self, ctx):
         ctx.db.set('set1', "string")  # Wrong type
-        cmd = ZInterCommand(['zinter', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zinter', '2', 'set1', 'set2']
+        cmd = ZInterCommand()
         with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zinter_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zinter']
         with pytest.raises(ValueError, match='zinter command requires numkeys and at least one key'):
-            ZInterCommand(['zinter'])
+            ZInterCommand().execute(ctx)
 
+        ctx.cmdtokens = ['zinter', '-1', 'set1']
         with pytest.raises(ValueError, match='numkeys must be positive'):
-            ZInterCommand(['zinter', '-1', 'set1'])
+            ZInterCommand().execute(ctx)
 
 
 class TestZInterCardCommand:
     def test_zintercard_empty_keys(self, ctx):
-        cmd = ZInterCardCommand(['zintercard', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zintercard', '2', 'set1', 'set2']
+        cmd = ZInterCardCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_zintercard_with_members(self, ctx):
         # Add members to sets
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4'])
+
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZInterCardCommand(['zintercard', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zintercard', '2', 'set1', 'set2']
+        cmd = ZInterCardCommand()
         result = cmd.execute(ctx)
         assert result == 2  # member2 and member3
 
     def test_zintercard_with_limit(self, ctx):
         # Add members to sets
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4'])
+
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZInterCardCommand(['zintercard', '2', 'set1', 'set2', 'LIMIT', '1'])
+        ctx.cmdtokens = ['zintercard', '2', 'set1', 'set2', 'LIMIT', '1']
+        cmd = ZInterCardCommand()
         result = cmd.execute(ctx)
         assert result == 1
 
     def test_zintercard_wrong_type(self, ctx):
         ctx.db.set('set1', "string")  # Wrong type
-        cmd = ZInterCardCommand(['zintercard', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zintercard', '2', 'set1', 'set2']
+        cmd = ZInterCardCommand()
         with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
             cmd.execute(ctx)
 
+    def test_zintercard_invalid_numkeys(self, ctx):
+        ctx.cmdtokens = ['zintercard', '-1', 'set1']
+        cmd = ZInterCardCommand()
+        with pytest.raises(ValueError, match="numkeys must be positive"):
+            cmd.execute(ctx)
+
     def test_zintercard_invalid_limit(self, ctx):
-        with pytest.raises(ValueError, match='limit must be non-negative'):
-            ZInterCardCommand(['zintercard', '2', 'set1', 'set2', 'LIMIT', '-1'])
+        ctx.cmdtokens = ['zintercard', '1', 'set1', 'LIMIT', '-1']
+        cmd = ZInterCardCommand()
+        with pytest.raises(ValueError, match="limit must be non-negative"):
+            cmd.execute(ctx)
 
 
 class TestZPopMaxCommand:
     def test_zpopmax_empty_key(self, ctx):
-        cmd = ZPopMaxCommand(['zpopmax', 'myset'])
+        ctx.cmdtokens = ['zpopmax', 'myset']
+        cmd = ZPopMaxCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zpopmax_single_member(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZPopMaxCommand(['zpopmax', 'myset'])
+        ctx.cmdtokens = ['zpopmax', 'myset']
+        cmd = ZPopMaxCommand()
         result = cmd.execute(ctx)
         assert len(result) == 1
         assert result[0] == ('member3', 3.0)
@@ -310,10 +375,12 @@ class TestZPopMaxCommand:
 
     def test_zpopmax_multiple_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZPopMaxCommand(['zpopmax', 'myset', '2'])
+        ctx.cmdtokens = ['zpopmax', 'myset', '2']
+        cmd = ZPopMaxCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert result[0] == ('member3', 3.0)
@@ -326,23 +393,27 @@ class TestZPopMaxCommand:
 
     def test_zpopmax_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZPopMaxCommand(['zpopmax', 'myset'])
+        ctx.cmdtokens = ['zpopmax', 'myset']
+        cmd = ZPopMaxCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
 
 class TestZPopMinCommand:
     def test_zpopmin_empty_key(self, ctx):
-        cmd = ZPopMinCommand(['zpopmin', 'myset'])
+        ctx.cmdtokens = ['zpopmin', 'myset']
+        cmd = ZPopMinCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zpopmin_single_member(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZPopMinCommand(['zpopmin', 'myset'])
+        ctx.cmdtokens = ['zpopmin', 'myset']
+        cmd = ZPopMinCommand()
         result = cmd.execute(ctx)
         assert len(result) == 1
         assert result[0] == ('member1', 1.0)
@@ -352,10 +423,12 @@ class TestZPopMinCommand:
 
     def test_zpopmin_multiple_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZPopMinCommand(['zpopmin', 'myset', '2'])
+        ctx.cmdtokens = ['zpopmin', 'myset', '2']
+        cmd = ZPopMinCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert result[0] == ('member1', 1.0)
@@ -368,43 +441,51 @@ class TestZPopMinCommand:
 
     def test_zpopmin_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZPopMinCommand(['zpopmin', 'myset'])
+        ctx.cmdtokens = ['zpopmin', 'myset']
+        cmd = ZPopMinCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
 
 class TestZRandMemberCommand:
     def test_zrandmember_empty_key(self, ctx):
-        cmd = ZRandMemberCommand(['zrandmember', 'myset'])
+        ctx.cmdtokens = ['zrandmember', 'myset']
+        cmd = ZRandMemberCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zrandmember_single_member(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRandMemberCommand(['zrandmember', 'myset'])
+        ctx.cmdtokens = ['zrandmember', 'myset']
+        cmd = ZRandMemberCommand()
         result = cmd.execute(ctx)
         assert isinstance(result, str)
         assert result in ['member1', 'member2', 'member3']
 
     def test_zrandmember_multiple_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRandMemberCommand(['zrandmember', 'myset', '2'])
+        ctx.cmdtokens = ['zrandmember', 'myset', '2']
+        cmd = ZRandMemberCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2
         assert all(member in ['member1', 'member2', 'member3'] for member in result)
 
     def test_zrandmember_with_scores(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRandMemberCommand(['zrandmember', 'myset', '1', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrandmember', 'myset', '1', 'WITHSCORES']
+        cmd = ZRandMemberCommand()
         result = cmd.execute(ctx)
         assert len(result) == 2  # [member, score]
         assert result[0] in ['member1', 'member2']
@@ -412,272 +493,332 @@ class TestZRandMemberCommand:
 
     def test_zrandmember_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRandMemberCommand(['zrandmember', 'myset'])
+        ctx.cmdtokens = ['zrandmember', 'myset']
+        cmd = ZRandMemberCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zrandmember_invalid_count(self, ctx):
+        ctx.cmdtokens = ['zrandmember', 'myset', 'notanumber']
+        cmd = ZRandMemberCommand()
         with pytest.raises(ValueError, match='count must be an integer'):
-            ZRandMemberCommand(['zrandmember', 'myset', 'notanumber'])
+            cmd.execute(ctx)
 
 
 class TestZMPopCommand:
     def test_zmpop_empty_key(self, ctx):
-        cmd = ZMPopCommand(['zmpop', '1', 'myset', 'MIN'])
+        ctx.cmdtokens = ['zmpop', '1', 'myset', 'MIN']
+        cmd = ZMPopCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zmpop_single_key_min(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZMPopCommand(['zmpop', '1', 'myset', 'MIN'])
+        ctx.cmdtokens = ['zmpop', '1', 'myset', 'MIN']
+        cmd = ZMPopCommand()
         result = cmd.execute(ctx)
         assert result == ['myset', [('member1', 1.0)]]
 
     def test_zmpop_single_key_max(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZMPopCommand(['zmpop', '1', 'myset', 'MAX'])
+        ctx.cmdtokens = ['zmpop', '1', 'myset', 'MAX']
+        cmd = ZMPopCommand()
         result = cmd.execute(ctx)
         assert result == ['myset', [('member2', 2.0)]]
 
     def test_zmpop_multiple_keys(self, ctx):
         # Add members to different sets
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZMPopCommand(['zmpop', '2', 'set1', 'set2', 'MIN'])
+        ctx.cmdtokens = ['zmpop', '2', 'set1', 'set2', 'MIN']
+        cmd = ZMPopCommand()
         result = cmd.execute(ctx)
         assert result == ['set1', [('member1', 1.0)]]
 
     def test_zmpop_with_count(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZMPopCommand(['zmpop', '1', 'myset', 'MIN', 'COUNT', '2'])
+        ctx.cmdtokens = ['zmpop', '1', 'myset', 'MIN', 'COUNT', '2']
+        cmd = ZMPopCommand()
         result = cmd.execute(ctx)
         assert result == ['myset', [('member1', 1.0), ('member2', 2.0)]]
 
     def test_zmpop_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZMPopCommand(['zmpop', '1', 'myset', 'MIN'])
+        ctx.cmdtokens = ['zmpop', '1', 'myset', 'MIN']
+        cmd = ZMPopCommand()
         with pytest.raises(TypeError, match="value at myset is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zmpop_invalid_args(self, ctx):
+        ctx.cmdtokens = ['zmpop', '1', 'myset', 'INVALID']
+        cmd = ZMPopCommand()
         with pytest.raises(ValueError, match='WHERE must be either MIN or MAX'):
-            ZMPopCommand(['zmpop', '1', 'myset', 'INVALID'])
+            cmd.execute(ctx)
 
 
 class TestZRangeCommand:
     def test_zrange_empty_key(self, ctx):
-        cmd = ZRangeCommand(['zrange', 'myset', '0', '-1'])
+        ctx.cmdtokens = ['zrange', 'myset', '0', '-1']
+        cmd = ZRangeCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zrange_all_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeCommand(['zrange', 'myset', '0', '-1'])
+        ctx.cmdtokens = ['zrange', 'myset', '0', '-1']
+        cmd = ZRangeCommand()
         result = cmd.execute(ctx)
         assert result == ['member1', 'member2', 'member3']
 
     def test_zrange_with_scores(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeCommand(['zrange', 'myset', '0', '-1', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrange', 'myset', '0', '-1', 'WITHSCORES']
+        cmd = ZRangeCommand()
         result = cmd.execute(ctx)
         assert result == ['member1', 1.0, 'member2', 2.0]
 
     def test_zrange_with_limit(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeCommand(['zrange', 'myset', '1', '2'])
+        ctx.cmdtokens = ['zrange', 'myset', '1', '2']
+        cmd = ZRangeCommand()
         result = cmd.execute(ctx)
         assert result == ['member2', 'member3']
 
     def test_zrange_reverse(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeCommand(['zrange', 'myset', '0', '-1', 'REV'])
+        ctx.cmdtokens = ['zrange', 'myset', '0', '-1', 'REV']
+        cmd = ZRangeCommand()
         result = cmd.execute(ctx)
         assert result == ['member3', 'member2', 'member1']
 
     def test_zrange_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRangeCommand(['zrange', 'myset', '0', '-1'])
+        ctx.cmdtokens = ['zrange', 'myset', '0', '-1']
+        cmd = ZRangeCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
 
 class TestZRangeByScoreCommand:
     def test_zrangebyscore_empty_key(self, ctx):
-        cmd = ZRangeByScoreCommand(['zrangebyscore', 'myset', '-inf', '+inf'])
+        ctx.cmdtokens = ['zrangebyscore', 'myset', '-inf', '+inf']
+        cmd = ZRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zrangebyscore_with_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeByScoreCommand(['zrangebyscore', 'myset', '1.5', '3.0'])
+        ctx.cmdtokens = ['zrangebyscore', 'myset', '1.5', '3.0']
+        cmd = ZRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == ['member2', 'member3']
 
     def test_zrangebyscore_with_scores(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeByScoreCommand(['zrangebyscore', 'myset', '0', '3', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrangebyscore', 'myset', '0', '3', 'WITHSCORES']
+        cmd = ZRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == ['member1', 1.0, 'member2', 2.0]
 
     def test_zrangebyscore_with_limit(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRangeByScoreCommand(['zrangebyscore', 'myset', '0', '3', 'LIMIT', '1', '1'])
+        ctx.cmdtokens = ['zrangebyscore', 'myset', '0', '3', 'LIMIT', '1', '1']
+        cmd = ZRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == ['member2']
 
     def test_zrangebyscore_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRangeByScoreCommand(['zrangebyscore', 'myset', '0', '1'])
+        ctx.cmdtokens = ['zrangebyscore', 'myset', '0', '1']
+        cmd = ZRangeByScoreCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zrangebyscore_invalid_score(self, ctx):
+        ctx.cmdtokens = ['zrangebyscore', 'myset', 'notanumber', '1']
+        cmd = ZRangeByScoreCommand()
         with pytest.raises(ValueError, match='min and max must be valid float numbers'):
-            ZRangeByScoreCommand(['zrangebyscore', 'myset', 'notanumber', '1'])
+            cmd.execute(ctx)
 
 
 class TestZRevRangeByScoreCommand:
     def test_zrevrangebyscore_empty_key(self, ctx):
-        cmd = ZRevRangeByScoreCommand(['zrevrangebyscore', 'myset', '+inf', '-inf'])
+        ctx.cmdtokens = ['zrevrangebyscore', 'myset', '+inf', '-inf']
+        cmd = ZRevRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zrevrangebyscore_with_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRevRangeByScoreCommand(['zrevrangebyscore', 'myset', '3.0', '1.5'])
+        ctx.cmdtokens = ['zrevrangebyscore', 'myset', '3.0', '1.5']
+        cmd = ZRevRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == ['member3', 'member2']
 
     def test_zrevrangebyscore_with_scores(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRevRangeByScoreCommand(['zrevrangebyscore', 'myset', '3', '0', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrevrangebyscore', 'myset', '3', '0', 'WITHSCORES']
+        cmd = ZRevRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == ['member2', 2.0, 'member1', 1.0]
 
     def test_zrevrangebyscore_with_limit(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd = ZAddCommand()
         zadd.execute(ctx)
 
-        cmd = ZRevRangeByScoreCommand(['zrevrangebyscore', 'myset', '3', '0', 'LIMIT', '1', '1'])
+        ctx.cmdtokens = ['zrevrangebyscore', 'myset', '3', '0', 'LIMIT', '1', '1']
+        cmd = ZRevRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == ['member2']
 
     def test_zrevrangebyscore_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRevRangeByScoreCommand(['zrevrangebyscore', 'myset', '1', '0'])
+        ctx.cmdtokens = ['zrevrangebyscore', 'myset', '1', '0']
+        cmd = ZRevRangeByScoreCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zrevrangebyscore_invalid_score(self, ctx):
+        ctx.cmdtokens = ['zrevrangebyscore', 'myset', 'notanumber', '1']
+        cmd = ZRevRangeByScoreCommand()
         with pytest.raises(ValueError, match='min and max must be valid float numbers'):
-            ZRevRangeByScoreCommand(['zrevrangebyscore', 'myset', 'notanumber', '1'])
+            cmd.execute(ctx)
 
 
 class TestZRankCommand:
     def test_zrank_empty_key(self, ctx):
-        cmd = ZRankCommand(['zrank', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrank', 'myset', 'member1']
+        cmd = ZRankCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zrank_nonexistent_member(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRankCommand(['zrank', 'myset', 'nonexistent'])
+        ctx.cmdtokens = ['zrank', 'myset', 'nonexistent']
+        cmd = ZRankCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zrank_with_members(self, ctx):
         # Add members with different scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRankCommand(['zrank', 'myset', 'member2'])
+        ctx.cmdtokens = ['zrank', 'myset', 'member2']
+        cmd = ZRankCommand()
         result = cmd.execute(ctx)
         assert result == 1  # member2 is at index 1 (scores ordered ascending)
 
     def test_zrank_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRankCommand(['zrank', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrank', 'myset', 'member1']
+        cmd = ZRankCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zrank_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zrank']
         with pytest.raises(ValueError, match='zrank command requires key and member'):
-            ZRankCommand(['zrank'])
+            ZRankCommand().execute(ctx)
 
     def test_zrank_with_scores(self, ctx):
         # Add members with different scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRankCommand(['zrank', 'myset', 'member2', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrank', 'myset', 'member2', 'WITHSCORES']
+        cmd = ZRankCommand()
         result = cmd.execute(ctx)
         assert result == [1, 2.0]  # rank=1, score=2.0
 
     def test_zrank_nonexistent_member_with_scores(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRankCommand(['zrank', 'myset', 'nonexistent', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrank', 'myset', 'nonexistent', 'WITHSCORES']
+        cmd = ZRankCommand()
         result = cmd.execute(ctx)
         assert result is None
 
 
 class TestZRemCommand:
     def test_zrem_empty_key(self, ctx):
-        cmd = ZRemCommand(['zrem', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrem', 'myset', 'member1']
+        cmd = ZRemCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_zrem_single_member(self, ctx):
         # Add members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRemCommand(['zrem', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrem', 'myset', 'member1']
+        cmd = ZRemCommand()
         result = cmd.execute(ctx)
         assert result == 1
         assert ctx.db.get('myset').score('member1') is None
@@ -685,10 +826,12 @@ class TestZRemCommand:
 
     def test_zrem_multiple_members(self, ctx):
         # Add members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRemCommand(['zrem', 'myset', 'member1', 'member2', 'nonexistent'])
+        ctx.cmdtokens = ['zrem', 'myset', 'member1', 'member2', 'nonexistent']
+        cmd = ZRemCommand()
         result = cmd.execute(ctx)
         assert result == 2  # Only member1 and member2 were removed
 
@@ -698,38 +841,44 @@ class TestZRemCommand:
 
     def test_zrem_all_members(self, ctx):
         # Add members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRemCommand(['zrem', 'myset', 'member1', 'member2'])
+        ctx.cmdtokens = ['zrem', 'myset', 'member1', 'member2']
+        cmd = ZRemCommand()
         result = cmd.execute(ctx)
         assert result == 2
         assert not ctx.db.exists('myset')  # Key should be removed when empty
 
     def test_zrem_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRemCommand(['zrem', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrem', 'myset', 'member1']
+        cmd = ZRemCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zrem_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zrem', 'myset']
         with pytest.raises(ValueError, match='zrem command requires key and at least one member'):
-            ZRemCommand(['zrem', 'myset'])
+            ZRemCommand().execute(ctx)
 
 
 class TestZRemRangeByScoreCommand:
     def test_zremrangebyscore_empty_key(self, ctx):
-        cmd = ZRemRangeByScoreCommand(['zremrangebyscore', 'myset', '0', '10'])
+        ctx.cmdtokens = ['zremrangebyscore', 'myset', '0', '10']
+        cmd = ZRemRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == 0
 
     def test_zremrangebyscore_with_members(self, ctx):
         # Add members with different scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2',
-                            '3.0', 'member3', '4.0', 'member4'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3', '4.0', 'member4']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRemRangeByScoreCommand(['zremrangebyscore', 'myset', '2', '3'])
+        ctx.cmdtokens = ['zremrangebyscore', 'myset', '2', '3']
+        cmd = ZRemRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == 2  # member2 and member3 removed
 
@@ -740,90 +889,109 @@ class TestZRemRangeByScoreCommand:
 
     def test_zremrangebyscore_all_members(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRemRangeByScoreCommand(['zremrangebyscore', 'myset', '0', '3'])
+        ctx.cmdtokens = ['zremrangebyscore', 'myset', '0', '3']
+        cmd = ZRemRangeByScoreCommand()
         result = cmd.execute(ctx)
         assert result == 2
         assert not ctx.db.exists('myset')  # Key should be removed when empty
 
     def test_zremrangebyscore_invalid_range(self, ctx):
+        ctx.cmdtokens = ['zremrangebyscore', 'myset', 'notanumber', '10']
+        cmd = ZRemRangeByScoreCommand()
         with pytest.raises(ValueError, match='min and max must be valid float numbers'):
-            ZRemRangeByScoreCommand(['zremrangebyscore', 'myset', 'notanumber', '10'])
+            cmd.execute(ctx)
 
     def test_zremrangebyscore_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRemRangeByScoreCommand(['zremrangebyscore', 'myset', '0', '10'])
+        ctx.cmdtokens = ['zremrangebyscore', 'myset', '0', '10']
+        cmd = ZRemRangeByScoreCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
 
 class TestZRevRankCommand:
     def test_zrevrank_empty_key(self, ctx):
-        cmd = ZRevRankCommand(['zrevrank', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrevrank', 'myset', 'member1']
+        cmd = ZRevRankCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zrevrank_nonexistent_member(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRevRankCommand(['zrevrank', 'myset', 'nonexistent'])
+        ctx.cmdtokens = ['zrevrank', 'myset', 'nonexistent']
+        cmd = ZRevRankCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zrevrank_with_members(self, ctx):
         # Add members with different scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRevRankCommand(['zrevrank', 'myset', 'member2'])
+        ctx.cmdtokens = ['zrevrank', 'myset', 'member2']
+        cmd = ZRevRankCommand()
         result = cmd.execute(ctx)
         assert result == 1  # member2 is at index 1 from highest score
 
     def test_zrevrank_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZRevRankCommand(['zrevrank', 'myset', 'member1'])
+        ctx.cmdtokens = ['zrevrank', 'myset', 'member1']
+        cmd = ZRevRankCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zrevrank_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zrevrank']
         with pytest.raises(ValueError, match='zrevrank command requires key and member'):
-            ZRevRankCommand(['zrevrank'])
+            ZRevRankCommand().execute(ctx)
 
     def test_zrevrank_with_scores(self, ctx):
         # Add members with different scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRevRankCommand(['zrevrank', 'myset', 'member2', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrevrank', 'myset', 'member2', 'WITHSCORES']
+        cmd = ZRevRankCommand()
         result = cmd.execute(ctx)
         assert result == [1, 2.0]  # rank=1 (from highest), score=2.0
 
     def test_zrevrank_nonexistent_member_with_scores(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZRevRankCommand(['zrevrank', 'myset', 'nonexistent', 'WITHSCORES'])
+        ctx.cmdtokens = ['zrevrank', 'myset', 'nonexistent', 'WITHSCORES']
+        cmd = ZRevRankCommand()
         result = cmd.execute(ctx)
         assert result is None
 
 
 class TestZScanCommand:
     def test_zscan_empty_key(self, ctx):
-        cmd = ZScanCommand(['zscan', 'myset', '0'])
+        ctx.cmdtokens = ['zscan', 'myset', '0']
+        cmd = ZScanCommand()
         result = cmd.execute(ctx)
         assert result == [0, []]
 
     def test_zscan_basic_scan(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZScanCommand(['zscan', 'myset', '0'])
+        ctx.cmdtokens = ['zscan', 'myset', '0']
+        cmd = ZScanCommand()
         result = cmd.execute(ctx)
         assert result[0] == 0  # Cursor
         assert len(result[1]) == 6  # 3 members * 2 (member and score)
@@ -836,13 +1004,12 @@ class TestZScanCommand:
 
     def test_zscan_with_pattern(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset',
-                            '1.0', 'key1',
-                            '2.0', 'key2',
-                            '3.0', 'other3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'key1', '2.0', 'key2', '3.0', 'other3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZScanCommand(['zscan', 'myset', '0', 'MATCH', 'key*'])
+        ctx.cmdtokens = ['zscan', 'myset', '0', 'MATCH', 'key*']
+        cmd = ZScanCommand()
         result = cmd.execute(ctx)
 
         members_scores = result[1]
@@ -853,103 +1020,124 @@ class TestZScanCommand:
 
     def test_zscan_with_count(self, ctx):
         # Add members
-        zadd = ZAddCommand(['zadd', 'myset',
-                            '1.0', 'member1',
-                            '2.0', 'member2',
-                            '3.0', 'member3'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZScanCommand(['zscan', 'myset', '0', 'COUNT', '2'])
+        ctx.cmdtokens = ['zscan', 'myset', '0', 'COUNT', '2']
+        cmd = ZScanCommand()
         result = cmd.execute(ctx)
 
         assert len(result[1]) == 4  # 2 members * 2 (member and score)
 
     def test_zscan_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZScanCommand(['zscan', 'myset', '0'])
+        ctx.cmdtokens = ['zscan', 'myset', '0']
+        cmd = ZScanCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zscan_invalid_cursor(self, ctx):
+        ctx.cmdtokens = ['zscan', 'myset', '-1']
+        cmd = ZScanCommand()
         with pytest.raises(ValueError, match='cursor must be non-negative'):
-            ZScanCommand(['zscan', 'myset', '-1'])
+            cmd.execute(ctx)
 
     def test_zscan_invalid_count(self, ctx):
+        ctx.cmdtokens = ['zscan', 'myset', '0', 'COUNT', '-1']
+        cmd = ZScanCommand()
         with pytest.raises(ValueError, match='count must be a positive integer'):
-            ZScanCommand(['zscan', 'myset', '0', 'COUNT', '0'])
+            cmd.execute(ctx)
 
 
 class TestZScoreCommand:
     def test_zscore_empty_key(self, ctx):
-        cmd = ZScoreCommand(['zscore', 'myset', 'member1'])
+        ctx.cmdtokens = ['zscore', 'myset', 'member1']
+        cmd = ZScoreCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zscore_nonexistent_member(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZScoreCommand(['zscore', 'myset', 'nonexistent'])
+        ctx.cmdtokens = ['zscore', 'myset', 'nonexistent']
+        cmd = ZScoreCommand()
         result = cmd.execute(ctx)
         assert result is None
 
     def test_zscore_existing_member(self, ctx):
         # Add member with score
-        zadd = ZAddCommand(['zadd', 'myset', '1.5', 'member1'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.5', 'member1']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZScoreCommand(['zscore', 'myset', 'member1'])
+        ctx.cmdtokens = ['zscore', 'myset', 'member1']
+        cmd = ZScoreCommand()
         result = cmd.execute(ctx)
         assert result == 1.5
 
     def test_zscore_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZScoreCommand(['zscore', 'myset', 'member1'])
+        ctx.cmdtokens = ['zscore', 'myset', 'member1']
+        cmd = ZScoreCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zscore_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zscore']
         with pytest.raises(ValueError, match='zscore command requires key and member'):
-            ZScoreCommand(['zscore'])
+            ZScoreCommand().execute(ctx)
 
 
 class TestZUnionCommand:
     def test_zunion_empty_keys(self, ctx):
-        cmd = ZUnionCommand(['zunion', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zunion', '2', 'set1', 'set2']
+        cmd = ZUnionCommand()
         result = cmd.execute(ctx)
         assert result == []
 
     def test_zunion_single_nonempty_set(self, ctx):
         # Add members to first set
-        zadd = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2']
+        zadd1 = ZAddCommand()
+        zadd1.execute(ctx)
 
-        cmd = ZUnionCommand(['zunion', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zunion', '2', 'set1', 'set2']
+        cmd = ZUnionCommand()
         result = cmd.execute(ctx)
         assert result == ['member1', 'member2']
 
     def test_zunion_multiple_sets(self, ctx):
         # Add members to first set
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2', '3.0', 'member3']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
 
         # Add members to second set
-        zadd2 = ZAddCommand(['zadd', 'set2', '2.0', 'member2', '3.0', 'member3'])
+        ctx.cmdtokens = ['zadd', 'set2', '2.0', 'member2', '4.0', 'member4']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZUnionCommand(['zunion', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zunion', '2', 'set1', 'set2']
+        cmd = ZUnionCommand()
         result = cmd.execute(ctx)
-        assert set(result) == {'member1', 'member2', 'member3'}
+        assert set(result) == {'member1', 'member2', 'member3', 'member4'}
 
     def test_zunion_with_scores(self, ctx):
         # Add members to sets
-        zadd1 = ZAddCommand(['zadd', 'set1', '1.0', 'member1', '2.0', 'member2'])
+        ctx.cmdtokens = ['zadd', 'set1', '1.0', 'member1', '2.0', 'member2']
+        zadd1 = ZAddCommand()
         zadd1.execute(ctx)
-        zadd2 = ZAddCommand(['zadd', 'set2', '3.0', 'member2', '4.0', 'member3'])
+
+        ctx.cmdtokens = ['zadd', 'set2', '3.0', 'member2', '4.0', 'member3']
+        zadd2 = ZAddCommand()
         zadd2.execute(ctx)
 
-        cmd = ZUnionCommand(['zunion', '2', 'set1', 'set2', 'WITHSCORES'])
+        ctx.cmdtokens = ['zunion', '2', 'set1', 'set2', 'WITHSCORES']
+        cmd = ZUnionCommand()
         result = cmd.execute(ctx)
 
         # Convert result to dict for easier comparison
@@ -960,57 +1148,69 @@ class TestZUnionCommand:
 
     def test_zunion_wrong_type(self, ctx):
         ctx.db.set('set1', "string")  # Wrong type
-        cmd = ZUnionCommand(['zunion', '2', 'set1', 'set2'])
+        ctx.cmdtokens = ['zunion', '2', 'set1', 'set2']
+        cmd = ZUnionCommand()
         with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zunion_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zunion']
         with pytest.raises(ValueError, match='zunion command requires numkeys and at least one key'):
-            ZUnionCommand(['zunion'])
+            ZUnionCommand().execute(ctx)
 
+        ctx.cmdtokens = ['zunion', '0', 'set1']
         with pytest.raises(ValueError, match='numkeys must be positive'):
-            ZUnionCommand(['zunion', '0', 'set1'])
+            ZUnionCommand().execute(ctx)
 
 
 class TestZMScoreCommand:
     def test_zmscore_empty_key(self, ctx):
-        cmd = ZMScoreCommand(['zmscore', 'myset', 'member1', 'member2'])
+        ctx.cmdtokens = ['zmscore', 'myset', 'member1', 'member2']
+        cmd = ZMScoreCommand()
         result = cmd.execute(ctx)
         assert result == [None, None]
 
     def test_zmscore_single_member(self, ctx):
         # Add member with score
-        zadd = ZAddCommand(['zadd', 'myset', '1.5', 'member1'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.5', 'member1']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZMScoreCommand(['zmscore', 'myset', 'member1'])
+        ctx.cmdtokens = ['zmscore', 'myset', 'member1']
+        cmd = ZMScoreCommand()
         result = cmd.execute(ctx)
         assert result == [1.5]
 
     def test_zmscore_multiple_members(self, ctx):
         # Add members with scores
-        zadd = ZAddCommand(['zadd', 'myset', '1.5', 'member1', '2.5', 'member2'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.5', 'member1', '2.5', 'member2']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZMScoreCommand(['zmscore', 'myset', 'member1', 'member2', 'nonexistent'])
+        ctx.cmdtokens = ['zmscore', 'myset', 'member1', 'member2', 'nonexistent']
+        cmd = ZMScoreCommand()
         result = cmd.execute(ctx)
         assert result == [1.5, 2.5, None]
 
     def test_zmscore_wrong_type(self, ctx):
         ctx.db.set('myset', "string")  # Wrong type
-        cmd = ZMScoreCommand(['zmscore', 'myset', 'member1'])
+        ctx.cmdtokens = ['zmscore', 'myset', 'member1']
+        cmd = ZMScoreCommand()
         with pytest.raises(TypeError, match="value is not a sorted set"):
             cmd.execute(ctx)
 
     def test_zmscore_wrong_args(self, ctx):
+        ctx.cmdtokens = ['zmscore']
         with pytest.raises(ValueError, match='zmscore command requires key and at least one member'):
-            ZMScoreCommand(['zmscore'])
+            ZMScoreCommand().execute(ctx)
 
     def test_zmscore_all_nonexistent(self, ctx):
         # Add some members first
-        zadd = ZAddCommand(['zadd', 'myset', '1.0', 'member1'])
-        zadd.execute(ctx)
+        ctx.cmdtokens = ['zadd', 'myset', '1.0', 'member1']
+        zadd_cmd = ZAddCommand()
+        zadd_cmd.execute(ctx)
 
-        cmd = ZMScoreCommand(['zmscore', 'myset', 'nonexistent1', 'nonexistent2'])
+        ctx.cmdtokens = ['zmscore', 'myset', 'nonexistent1', 'nonexistent2']
+        cmd = ZMScoreCommand()
         result = cmd.execute(ctx)
         assert result == [None, None]

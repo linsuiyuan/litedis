@@ -59,8 +59,8 @@ class DBCommandConverter:
                 db = LitedisDB(dbname)
                 dbs[dbname] = db
 
-            ctx = CommandContext(db)
-            command = CommandFactory.create(cmdtokens)
+            ctx = CommandContext(db, cmdtokens)
+            command = CommandFactory.create(cmdtokens[0])
             command.execute(ctx)
 
         return dbs
