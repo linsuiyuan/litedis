@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='litedis',
-    version='3.0.0',
+    version='3.0.1',
     author='Linsuiyuan',
     author_email='linsuiyuan@icloud.com',
     description='Litedis 是一个类似 Redis 的轻量级的、本地的、开箱即用的 NoSQL 数据库',
@@ -15,7 +15,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     install_requires=[
         "sortedcontainers"
     ],
