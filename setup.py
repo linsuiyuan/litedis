@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='litedis',
-    version='2.2.3',
+    version='3.0.0',
     author='Linsuiyuan',
     author_email='linsuiyuan@icloud.com',
-    description='Litedis 是一个轻量级的 模仿Redis 的本地实现，它实现了和 Redis 类似的功能',
+    description='Litedis 是一个类似 Redis 的轻量级的、本地的、开箱即用的 NoSQL 数据库',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/linsuiyuan/litedis',
@@ -16,5 +16,7 @@ setup(
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.8',
-    install_requires=[],
+    install_requires=[
+        "sortedcontainers"
+    ],
 )
