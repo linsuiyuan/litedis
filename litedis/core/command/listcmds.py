@@ -5,6 +5,7 @@ from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
 class LIndexCommand(ReadCommand):
     name = 'lindex'
+    __slots__ = ('key', 'index')
 
     def __init__(self):
         self.key: str
@@ -44,6 +45,7 @@ class LIndexCommand(ReadCommand):
 
 class LInsertCommand(WriteCommand):
     name = 'linsert'
+    __slots__ = ('key', 'before', 'pivot', 'element')
 
     def __init__(self):
         self.key: str
@@ -91,6 +93,7 @@ class LInsertCommand(WriteCommand):
 
 class LLenCommand(ReadCommand):
     name = 'llen'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -116,6 +119,7 @@ class LLenCommand(ReadCommand):
 
 class LPopCommand(WriteCommand):
     name = 'lpop'
+    __slots__ = ('key', 'count')
 
     def __init__(self):
         self.key: str
@@ -168,6 +172,7 @@ class LPopCommand(WriteCommand):
 
 class LPushCommand(WriteCommand):
     name = 'lpush'
+    __slots__ = ('key', 'elements')
 
     def __init__(self):
         self.key: str
@@ -200,6 +205,7 @@ class LPushCommand(WriteCommand):
 
 class LPushXCommand(LPushCommand):
     name = 'lpushx'
+    __slots__ = ()
 
     def execute(self, ctx: CommandContext):
         self._parse(ctx.cmdtokens)
@@ -212,6 +218,7 @@ class LPushXCommand(LPushCommand):
 
 class LRangeCommand(ReadCommand):
     name = 'lrange'
+    __slots__ = ('key', 'start', 'stop')
 
     def __init__(self):
         self.key: str
@@ -256,6 +263,7 @@ class LRangeCommand(ReadCommand):
 
 class LRemCommand(WriteCommand):
     name = 'lrem'
+    __slots__ = ('key', 'count', 'element')
 
     def __init__(self):
         self.key: str
@@ -317,6 +325,7 @@ class LRemCommand(WriteCommand):
 
 class LSetCommand(WriteCommand):
     name = 'lset'
+    __slots__ = ('key', 'index', 'element')
 
     def __init__(self):
         self.key: str
@@ -360,6 +369,7 @@ class LSetCommand(WriteCommand):
 
 class LTrimCommand(WriteCommand):
     name = 'ltrim'
+    __slots__ = ('key', 'start', 'stop')
 
     def __init__(self):
         self.key: str
@@ -412,6 +422,7 @@ class LTrimCommand(WriteCommand):
 
 class RPopCommand(WriteCommand):
     name = 'rpop'
+    __slots__ = ('key', 'count')
 
     def __init__(self):
         self.key: str
@@ -465,6 +476,7 @@ class RPopCommand(WriteCommand):
 
 class RPushCommand(WriteCommand):
     name = 'rpush'
+    __slots__ = ('key', 'elements')
 
     def __init__(self):
         self.key: str
@@ -496,6 +508,7 @@ class RPushCommand(WriteCommand):
 
 class RPushXCommand(RPushCommand):
     name = 'rpushx'
+    __slots__ = ()
 
     def execute(self, ctx: CommandContext):
         self._parse(ctx.cmdtokens)
@@ -508,6 +521,7 @@ class RPushXCommand(RPushCommand):
 
 class SortCommand(WriteCommand):
     name = 'sort'
+    __slots__ = ('key', 'desc', 'alpha', 'store_key')
 
     def __init__(self):
         self.key: str

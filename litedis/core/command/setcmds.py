@@ -6,6 +6,7 @@ from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
 class SAddCommand(WriteCommand):
     name = 'sadd'
+    __slots__ = ('key', 'members')
 
     def __init__(self):
         self.key: str
@@ -41,6 +42,7 @@ class SAddCommand(WriteCommand):
 
 class SCardCommand(ReadCommand):
     name = 'scard'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -66,6 +68,7 @@ class SCardCommand(ReadCommand):
 
 class SDiffCommand(ReadCommand):
     name = 'sdiff'
+    __slots__ = ('keys',)
 
     def __init__(self):
         self.keys: List[str]
@@ -103,6 +106,7 @@ class SDiffCommand(ReadCommand):
 class SInterCommand(ReadCommand):
     """Intersect multiple sets"""
     name = 'sinter'
+    __slots__ = ('keys',)
 
     def __init__(self):
         self.keys: List[str]
@@ -139,6 +143,7 @@ class SInterCommand(ReadCommand):
 
 class SInterCardCommand(ReadCommand):
     name = 'sintercard'
+    __slots__ = ('numkeys', 'keys', 'limit')
 
     def __init__(self):
         self.numkeys: int
@@ -207,6 +212,7 @@ class SInterCardCommand(ReadCommand):
 
 class SIsMemberCommand(ReadCommand):
     name = 'sismember'
+    __slots__ = ('key', 'member')
 
     def __init__(self):
         self.key: str
@@ -234,6 +240,7 @@ class SIsMemberCommand(ReadCommand):
 
 class SMembersCommand(ReadCommand):
     name = 'smembers'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -259,6 +266,7 @@ class SMembersCommand(ReadCommand):
 
 class SMIsMemberCommand(ReadCommand):
     name = 'smismember'
+    __slots__ = ('key', 'members')
 
     def __init__(self):
         self.key: str
@@ -286,6 +294,7 @@ class SMIsMemberCommand(ReadCommand):
 
 class SMoveCommand(WriteCommand):
     name = 'smove'
+    __slots__ = ('source', 'destination', 'member')
 
     def __init__(self):
         self.source: str
@@ -340,6 +349,7 @@ class SMoveCommand(WriteCommand):
 
 class SPopCommand(WriteCommand):
     name = 'spop'
+    __slots__ = ('key', 'count')
 
     def __init__(self):
         self.key: str
@@ -393,6 +403,7 @@ class SPopCommand(WriteCommand):
 
 class SRandMemberCommand(ReadCommand):
     name = 'srandmember'
+    __slots__ = ('key', 'count')
 
     def __init__(self):
         self.key: str
@@ -440,6 +451,7 @@ class SRandMemberCommand(ReadCommand):
 
 class SRemCommand(WriteCommand):
     name = 'srem'
+    __slots__ = ('key', 'members')
 
     def __init__(self):
         self.key: str
@@ -478,6 +490,7 @@ class SRemCommand(WriteCommand):
 
 class SUnionCommand(ReadCommand):
     name = 'sunion'
+    __slots__ = ('keys',)
 
     def __init__(self):
         self.keys: List[str]

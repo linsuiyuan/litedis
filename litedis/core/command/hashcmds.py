@@ -5,6 +5,7 @@ from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
 class HDelCommand(WriteCommand):
     name = 'hdel'
+    __slots__ = ('key', 'fields')
 
     def __init__(self):
         self.key: str
@@ -43,6 +44,7 @@ class HDelCommand(WriteCommand):
 
 class HExistsCommand(ReadCommand):
     name = 'hexists'
+    __slots__ = ('key', 'field')
 
     def __init__(self):
         self.key: str
@@ -70,6 +72,7 @@ class HExistsCommand(ReadCommand):
 
 class HGetCommand(ReadCommand):
     name = 'hget'
+    __slots__ = ('key', 'field')
 
     def __init__(self):
         self.key: str
@@ -97,6 +100,7 @@ class HGetCommand(ReadCommand):
 
 class HGetAllCommand(ReadCommand):
     name = 'hgetall'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -126,8 +130,9 @@ class HGetAllCommand(ReadCommand):
 
 class HIncrByCommand(WriteCommand):
     name = 'hincrby'
+    __slots__ = ('key', 'field', 'increment')
 
-    def __init__(self,):
+    def __init__(self):
         self.key: str
         self.field: str
         self.increment: int
@@ -169,6 +174,7 @@ class HIncrByCommand(WriteCommand):
 
 class HIncrByFloatCommand(WriteCommand):
     name = 'hincrbyfloat'
+    __slots__ = ('key', 'field', 'increment')
 
     def __init__(self):
         self.key: str
@@ -217,6 +223,7 @@ class HIncrByFloatCommand(WriteCommand):
 
 class HKeysCommand(ReadCommand):
     name = 'hkeys'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -242,6 +249,7 @@ class HKeysCommand(ReadCommand):
 
 class HLenCommand(ReadCommand):
     name = 'hlen'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -267,6 +275,7 @@ class HLenCommand(ReadCommand):
 
 class HSetCommand(WriteCommand):
     name = 'hset'
+    __slots__ = ('key', 'pairs')
 
     def __init__(self):
         self.key: str
@@ -304,6 +313,7 @@ class HSetCommand(WriteCommand):
 
 class HSetNXCommand(WriteCommand):
     name = 'hsetnx'
+    __slots__ = ('key', 'field', 'value')
 
     def __init__(self):
         self.key: str
@@ -340,6 +350,7 @@ class HSetNXCommand(WriteCommand):
 class HMGetCommand(ReadCommand):
     """Get the values of all the given hash fields"""
     name = 'hmget'
+    __slots__ = ('key', 'fields')
 
     def __init__(self):
         self.key: str
@@ -368,6 +379,7 @@ class HMGetCommand(ReadCommand):
 
 class HValsCommand(ReadCommand):
     name = 'hvals'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -393,6 +405,7 @@ class HValsCommand(ReadCommand):
 
 class HStrLenCommand(ReadCommand):
     name = 'hstrlen'
+    __slots__ = ('key', 'field')
 
     def __init__(self):
         self.key: str
@@ -424,6 +437,7 @@ class HStrLenCommand(ReadCommand):
 
 class HScanCommand(ReadCommand):
     name = 'hscan'
+    __slots__ = ('key', 'cursor', 'pattern', 'count')
 
     def __init__(self):
         self.key: str

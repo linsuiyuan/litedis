@@ -8,6 +8,7 @@ from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
 class SetCommand(WriteCommand):
     name = 'set'
+    __slots__ = ('key', 'value', 'ex', 'px', 'exat', 'pxat', 'nx', 'xx', 'keepttl', 'get')
 
     def __init__(self):
         self.key: str
@@ -122,6 +123,7 @@ class SetCommand(WriteCommand):
 
 class GetCommand(ReadCommand):
     name = 'get'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -146,6 +148,7 @@ class GetCommand(ReadCommand):
 
 class AppendCommand(WriteCommand):
     name = 'append'
+    __slots__ = ('key', 'value')
 
     def __init__(self):
         self.key: str
@@ -176,6 +179,7 @@ class AppendCommand(WriteCommand):
 
 class DecrbyCommand(WriteCommand):
     name = 'decrby'
+    __slots__ = ('key', 'decrement')
 
     def __init__(self):
         self.key: str
@@ -212,6 +216,7 @@ class DecrbyCommand(WriteCommand):
 
 class DeleteCommand(WriteCommand):
     name = 'del'
+    __slots__ = ('keys',)
 
     def __init__(self):
         self.keys: List[str]
@@ -232,6 +237,7 @@ class DeleteCommand(WriteCommand):
 
 class ExistsCommand(ReadCommand):
     name = 'exists'
+    __slots__ = ('keys',)
 
     def __init__(self):
         self.keys: List[str]
@@ -253,6 +259,7 @@ class ExistsCommand(ReadCommand):
 
 class CopyCommand(WriteCommand):
     name = 'copy'
+    __slots__ = ('source', 'destination', 'replace')
 
     def __init__(self):
         self.source: str
@@ -293,6 +300,7 @@ class CopyCommand(WriteCommand):
 
 class ExpireCommand(WriteCommand):
     name = 'expire'
+    __slots__ = ('key', 'seconds', 'nx', 'xx', 'gt', 'lt')
 
     def __init__(self):
         self.key: str
@@ -366,6 +374,7 @@ class ExpireCommand(WriteCommand):
 
 class ExpireatCommand(WriteCommand):
     name = 'expireat'
+    __slots__ = ('key', 'timestamp', 'nx', 'xx', 'gt', 'lt')
 
     def __init__(self):
         self.key: str
@@ -437,6 +446,7 @@ class ExpireatCommand(WriteCommand):
 
 class ExpireTimeCommand(ReadCommand):
     name = 'expiretime'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -462,6 +472,7 @@ class ExpireTimeCommand(ReadCommand):
 
 class IncrbyCommand(WriteCommand):
     name = 'incrby'
+    __slots__ = ('key', 'increment')
 
     def __init__(self):
         self.key: str
@@ -498,6 +509,7 @@ class IncrbyCommand(WriteCommand):
 
 class IncrbyfloatCommand(WriteCommand):
     name = 'incrbyfloat'
+    __slots__ = ('key', 'increment')
 
     def __init__(self):
         self.key: str
@@ -538,6 +550,7 @@ class IncrbyfloatCommand(WriteCommand):
 
 class KeysCommand(ReadCommand):
     name = 'keys'
+    __slots__ = ('pattern',)
 
     def __init__(self):
         self.pattern: str
@@ -622,6 +635,7 @@ class KeysCommand(ReadCommand):
 
 class MGetCommand(ReadCommand):
     name = 'mget'
+    __slots__ = ('keys',)
 
     def __init__(self):
         self.keys: List[str]
@@ -640,6 +654,7 @@ class MGetCommand(ReadCommand):
 
 class MSetCommand(WriteCommand):
     name = 'mset'
+    __slots__ = ('pairs',)
 
     def __init__(self):
         self.pairs: List[Tuple[str, str]]
@@ -664,6 +679,7 @@ class MSetCommand(WriteCommand):
 
 class MSetnxCommand(WriteCommand):
     name = 'msetnx'
+    __slots__ = ('pairs',)
 
     def __init__(self):
         self.pairs: List[Tuple[str, str]]
@@ -695,6 +711,7 @@ class MSetnxCommand(WriteCommand):
 
 class PersistCommand(WriteCommand):
     name = 'persist'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -722,6 +739,7 @@ class PersistCommand(WriteCommand):
 
 class RandomKeyCommand(ReadCommand):
     name = 'randomkey'
+    __slots__ = ()
 
     def _parse(self, tokens: List[str]):
         if len(tokens) > 1:
@@ -738,6 +756,7 @@ class RandomKeyCommand(ReadCommand):
 
 class RenameCommand(WriteCommand):
     name = 'rename'
+    __slots__ = ('source', 'destination')
 
     def __init__(self):
         self.source: str
@@ -776,6 +795,7 @@ class RenameCommand(WriteCommand):
 
 class RenamenxCommand(RenameCommand):
     name = 'renamenx'
+    __slots__ = ()
 
     def execute(self, ctx: CommandContext):
         self._parse(ctx.cmdtokens)
@@ -790,6 +810,7 @@ class RenamenxCommand(RenameCommand):
 
 class StrlenCommand(ReadCommand):
     name = 'strlen'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -815,6 +836,7 @@ class StrlenCommand(ReadCommand):
 
 class SubstrCommand(ReadCommand):
     name = 'substr'
+    __slots__ = ('key', 'start', 'end')
 
     def __init__(self):
         self.key: str
@@ -859,6 +881,7 @@ class SubstrCommand(ReadCommand):
 
 class TTLCommand(ReadCommand):
     name = 'ttl'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -888,6 +911,7 @@ class TTLCommand(ReadCommand):
 
 class PTTLCommand(ReadCommand):
     name = 'pttl'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -916,6 +940,7 @@ class PTTLCommand(ReadCommand):
 
 class TypeCommand(ReadCommand):
     name = 'type'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str

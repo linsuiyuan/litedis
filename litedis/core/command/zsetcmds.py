@@ -7,6 +7,7 @@ from litedis.core.command.sortedset import SortedSet
 
 class ZAddCommand(WriteCommand):
     name = 'zadd'
+    __slots__ = ('key', 'score_members')
 
     def __init__(self):
         self.key: str
@@ -56,6 +57,7 @@ class ZAddCommand(WriteCommand):
 
 class ZCardCommand(ReadCommand):
     name = 'zcard'
+    __slots__ = ('key',)
 
     def __init__(self):
         self.key: str
@@ -81,6 +83,7 @@ class ZCardCommand(ReadCommand):
 
 class ZCountCommand(ReadCommand):
     name = 'zcount'
+    __slots__ = ('key', 'min', 'max')
 
     def __init__(self):
         self.key: str
@@ -113,6 +116,7 @@ class ZCountCommand(ReadCommand):
 
 class ZDiffCommand(ReadCommand):
     name = 'zdiff'
+    __slots__ = ('numkeys', 'keys', 'withscores')
 
     def __init__(self):
         self.numkeys: int
@@ -173,6 +177,7 @@ class ZDiffCommand(ReadCommand):
 
 class ZIncrByCommand(WriteCommand):
     name = 'zincrby'
+    __slots__ = ('key', 'increment', 'member')
 
     def __init__(self):
         self.key: str
@@ -208,6 +213,7 @@ class ZIncrByCommand(WriteCommand):
 
 class ZInterCommand(ReadCommand):
     name = 'zinter'
+    __slots__ = ('numkeys', 'keys', 'withscores')
 
     def __init__(self):
         self.numkeys: int
@@ -268,6 +274,7 @@ class ZInterCommand(ReadCommand):
 class ZInterCardCommand(ReadCommand):
     """Return the number of elements in the intersection of multiple sorted sets"""
     name = 'zintercard'
+    __slots__ = ('numkeys', 'keys', 'limit')
 
     def __init__(self):
         self.numkeys: int
@@ -337,6 +344,7 @@ class ZInterCardCommand(ReadCommand):
 class ZPopMaxCommand(WriteCommand):
     """Remove and return members with the highest scores in a sorted set"""
     name = 'zpopmax'
+    __slots__ = ('key', 'count')
 
     def __init__(self):
         self.key: str
@@ -387,6 +395,7 @@ class ZPopMaxCommand(WriteCommand):
 class ZPopMinCommand(WriteCommand):
     """Remove and return members with the lowest scores in a sorted set"""
     name = 'zpopmin'
+    __slots__ = ('key', 'count')
 
     def __init__(self):
         self.key: str
@@ -436,6 +445,7 @@ class ZPopMinCommand(WriteCommand):
 
 class ZRandMemberCommand(ReadCommand):
     name = 'zrandmember'
+    __slots__ = ('key', 'count', 'withscores')
 
     def __init__(self):
         self.key: str
@@ -494,6 +504,7 @@ class ZRandMemberCommand(ReadCommand):
 class ZMPopCommand(WriteCommand):
     """Remove and return members from one or more sorted sets"""
     name = 'zmpop'
+    __slots__ = ('numkeys', 'keys', 'where', 'count')
 
     def __init__(self):
         self.numkeys: int
@@ -571,6 +582,7 @@ class ZMPopCommand(WriteCommand):
 class ZRangeCommand(ReadCommand):
     """Return a range of members in a sorted set"""
     name = 'zrange'
+    __slots__ = ('key', 'start', 'stop', 'withscores', 'rev')
 
     def __init__(self):
         self.key: str
@@ -625,6 +637,7 @@ class ZRangeCommand(ReadCommand):
 class _ZRangeByScoreCommand(ReadCommand):
     """Return a range of members in a sorted set by score"""
     name = '_zrangebyscore'
+    __slots__ = ('desc', 'key', 'min', 'max', 'withscores', 'limit')
 
     def __init__(self, desc):
         self.desc = desc
@@ -706,6 +719,7 @@ class ZRevRangeByScoreCommand(_ZRangeByScoreCommand):
 
 class _ZRankCommand(ReadCommand):
     name = '_zrank'
+    __slots__ = ('desc', 'key', 'member', 'withscores')
 
     def __init__(self, desc):
         self.desc = desc
@@ -754,6 +768,7 @@ class ZRankCommand(_ZRankCommand):
 
 class ZRemCommand(WriteCommand):
     name = 'zrem'
+    __slots__ = ('key', 'members')
 
     def __init__(self):
         self.key: str
@@ -793,6 +808,7 @@ class ZRemCommand(WriteCommand):
 class ZRemRangeByScoreCommand(WriteCommand):
     """Remove all members in a sorted set within the given scores"""
     name = 'zremrangebyscore'
+    __slots__ = ('key', 'min', 'max')
 
     def __init__(self):
         self.key: str
@@ -847,6 +863,7 @@ class ZRevRankCommand(_ZRankCommand):
 class ZScanCommand(ReadCommand):
     """Incrementally iterate sorted set elements and associated scores"""
     name = 'zscan'
+    __slots__ = ('key', 'cursor', 'pattern', 'count')
 
     def __init__(self):
         self.key: str
@@ -967,6 +984,7 @@ class ZScanCommand(ReadCommand):
 class ZScoreCommand(ReadCommand):
     """Get the score associated with the given member"""
     name = 'zscore'
+    __slots__ = ('key', 'member')
 
     def __init__(self):
         self.key: str
@@ -995,6 +1013,7 @@ class ZScoreCommand(ReadCommand):
 class ZUnionCommand(ReadCommand):
     """Return the union of multiple sorted sets"""
     name = 'zunion'
+    __slots__ = ('numkeys', 'keys', 'withscores')
 
     def __init__(self):
         self.numkeys: int
@@ -1053,6 +1072,7 @@ class ZUnionCommand(ReadCommand):
 class ZMScoreCommand(ReadCommand):
     """Get the score associated with multiple members"""
     name = 'zmscore'
+    __slots__ = ('key', 'members')
 
     def __init__(self):
         self.key: str
