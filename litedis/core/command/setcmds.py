@@ -1,4 +1,5 @@
 import random
+from typing import List, Optional
 
 from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
@@ -8,9 +9,9 @@ class SAddCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.members: list[str]
+        self.members: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('sadd command requires key and at least one member')
         self.key = tokens[1]
@@ -44,7 +45,7 @@ class SCardCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('scard command requires key')
         self.key = tokens[1]
@@ -67,9 +68,9 @@ class SDiffCommand(ReadCommand):
     name = 'sdiff'
 
     def __init__(self):
-        self.keys: list[str]
+        self.keys: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('sdiff command requires at least one key')
         self.keys = tokens[1:]
@@ -104,9 +105,9 @@ class SInterCommand(ReadCommand):
     name = 'sinter'
 
     def __init__(self):
-        self.keys: list[str]
+        self.keys: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('sinter command requires at least one key')
         self.keys = tokens[1:]
@@ -141,10 +142,10 @@ class SInterCardCommand(ReadCommand):
 
     def __init__(self):
         self.numkeys: int
-        self.keys: list[str]
-        self.limit: int | None
+        self.keys: List[str]
+        self.limit: Optional[int]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('sintercard command requires numkeys and at least one key')
 
@@ -211,7 +212,7 @@ class SIsMemberCommand(ReadCommand):
         self.key: str
         self.member: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('sismember command requires key and member')
         self.key = tokens[1]
@@ -237,7 +238,7 @@ class SMembersCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('smembers command requires key')
         self.key = tokens[1]
@@ -261,9 +262,9 @@ class SMIsMemberCommand(ReadCommand):
 
     def __init__(self):
         self.key: str
-        self.members: list[str]
+        self.members: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('smismember command requires key and at least one member')
         self.key = tokens[1]
@@ -291,7 +292,7 @@ class SMoveCommand(WriteCommand):
         self.destination: str
         self.member: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('smove command requires source, destination and member')
         self.source = tokens[1]
@@ -342,9 +343,9 @@ class SPopCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.count: int | None
+        self.count: Optional[int]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('spop command requires key')
         self.key = tokens[1]
@@ -395,9 +396,9 @@ class SRandMemberCommand(ReadCommand):
 
     def __init__(self):
         self.key: str
-        self.count: int | None
+        self.count: Optional[int]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('srandmember command requires key')
         self.key = tokens[1]
@@ -442,9 +443,9 @@ class SRemCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.members: list[str]
+        self.members: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('srem command requires key and at least one member')
         self.key = tokens[1]
@@ -479,9 +480,9 @@ class SUnionCommand(ReadCommand):
     name = 'sunion'
 
     def __init__(self):
-        self.keys: list[str]
+        self.keys: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('sunion command requires at least one key')
         self.keys = tokens[1:]

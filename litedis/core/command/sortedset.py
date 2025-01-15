@@ -1,6 +1,6 @@
 import random
 from collections.abc import Mapping
-from typing import Iterable
+from typing import Iterable, Optional
 
 from sortedcontainers import SortedDict, SortedList
 
@@ -203,8 +203,8 @@ class SortedSet(Iterable):
     def range(self,
               start: int,
               end: int,
-              min_: float | None = None,
-              max_: float | None = None,
+              min_: float = None,
+              max_: float = None,
               desc: bool = False,
               ) -> list:
         """
@@ -239,7 +239,7 @@ class SortedSet(Iterable):
 
         return sorted_items[start:end]
 
-    def rank(self, member: str, desc=False) -> int | None:
+    def rank(self, member: str, desc=False) -> Optional[int]:
         """
         Get the rank of a member
         """

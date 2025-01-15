@@ -1,3 +1,5 @@
+from typing import List, Optional, Tuple
+
 from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
 
@@ -6,9 +8,9 @@ class HDelCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.fields: list[str]
+        self.fields: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('hdel command requires key and at least one field')
         self.key = tokens[1]
@@ -46,7 +48,7 @@ class HExistsCommand(ReadCommand):
         self.key: str
         self.field: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('hexists command requires key and field')
         self.key = tokens[1]
@@ -73,7 +75,7 @@ class HGetCommand(ReadCommand):
         self.key: str
         self.field: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('hget command requires key and field')
         self.key = tokens[1]
@@ -99,7 +101,7 @@ class HGetAllCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('hgetall command requires key')
         self.key = tokens[1]
@@ -130,7 +132,7 @@ class HIncrByCommand(WriteCommand):
         self.field: str
         self.increment: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('hincrby command requires key, field and increment')
         self.key = tokens[1]
@@ -173,7 +175,7 @@ class HIncrByFloatCommand(WriteCommand):
         self.field: str
         self.increment: float
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('hincrbyfloat command requires key, field and increment')
         self.key = tokens[1]
@@ -219,7 +221,7 @@ class HKeysCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('hkeys command requires key')
         self.key = tokens[1]
@@ -244,7 +246,7 @@ class HLenCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('hlen command requires key')
         self.key = tokens[1]
@@ -268,9 +270,9 @@ class HSetCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.pairs: list[tuple[str, str]]
+        self.pairs: List[Tuple[str, str]]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4 or len(tokens) % 2 != 0:
             raise ValueError('hset command requires key and field value pairs')
         self.key = tokens[1]
@@ -308,7 +310,7 @@ class HSetNXCommand(WriteCommand):
         self.field: str
         self.value: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('hsetnx command requires key, field and value')
         self.key = tokens[1]
@@ -341,9 +343,9 @@ class HMGetCommand(ReadCommand):
 
     def __init__(self):
         self.key: str
-        self.fields: list[str]
+        self.fields: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('hmget command requires key and at least one field')
         self.key = tokens[1]
@@ -370,7 +372,7 @@ class HValsCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('hvals command requires key')
         self.key = tokens[1]
@@ -396,7 +398,7 @@ class HStrLenCommand(ReadCommand):
         self.key: str
         self.field: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('hstrlen command requires key and field')
         self.key = tokens[1]
@@ -426,10 +428,10 @@ class HScanCommand(ReadCommand):
     def __init__(self):
         self.key: str
         self.cursor: int
-        self.pattern: str | None
+        self.pattern: Optional[str]
         self.count: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('hscan command requires key and cursor')
         self.key = tokens[1]

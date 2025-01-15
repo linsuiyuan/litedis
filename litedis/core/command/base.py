@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 from litedis.core.persistence import LitedisDB
 from litedis.typing import ReadWriteType
@@ -6,7 +7,7 @@ from litedis.typing import ReadWriteType
 
 class CommandContext:
 
-    def __init__(self, db: LitedisDB, cmdtokens: list[str]):
+    def __init__(self, db: LitedisDB, cmdtokens: List[str]):
         self.db = db
         self.cmdtokens = cmdtokens
 

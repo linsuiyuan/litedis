@@ -1,4 +1,4 @@
-from typing import Any, Protocol
+from typing import Any, Protocol, Tuple, Dict, List
 
 
 class ClientCommands(Protocol):
@@ -77,14 +77,14 @@ class BasicCommands(ClientCommands):
             self,
             key: str,
             value: str,
-            ex: int | None = None,
-            px: int | None = None,
+            ex: int = None,
+            px: int = None,
             nx: bool = False,
             xx: bool = False,
             keepttl: bool = False,
             get: bool = False,
-            exat: int | None = None,
-            pxat: int | None = None,
+            exat: int = None,
+            pxat: int = None,
     ) -> Any:
         pieces: list = [key, value]
         if ex is not None:
@@ -127,14 +127,14 @@ class BasicCommands(ClientCommands):
     def mget(self, *keys: str) -> Any:
         return self.execute("mget", *keys)
 
-    def mset(self, mapping: dict[str, str]) -> Any:
-        pieces: list[str] = []
+    def mset(self, mapping: Dict[str, str]) -> Any:
+        pieces: List[str] = []
         for key, value in mapping.items():
             pieces.extend([key, value])
         return self.execute("mset", *pieces)
 
-    def msetnx(self, mapping: dict[str, str]) -> Any:
-        pieces: list[str] = []
+    def msetnx(self, mapping: Dict[str, str]) -> Any:
+        pieces: List[str] = []
         for key, value in mapping.items():
             pieces.extend([key, value])
         return self.execute("msetnx", *pieces)
@@ -192,8 +192,8 @@ class HashCommands(ClientCommands):
     def hmget(self, key: str, *fields: str) -> Any:
         return self.execute("hmget", key, *fields)
 
-    def hset(self, key: str, mapping: dict[str, str]) -> Any:
-        pieces: list[str] = []
+    def hset(self, key: str, mapping: Dict[str, str]) -> Any:
+        pieces: List[str] = []
         for field, value in mapping.items():
             pieces.extend([field, value])
         return self.execute("hset", key, *pieces)
@@ -211,8 +211,8 @@ class HashCommands(ClientCommands):
             self,
             key: str,
             cursor: int = 0,
-            match: str | None = None,
-            count: int | None = None
+            match: str = None,
+            count: int = None
     ) -> Any:
         pieces = [key, str(cursor)]
         if match is not None:
@@ -233,7 +233,7 @@ class ListCommands(ClientCommands):
     def llen(self, key: str) -> Any:
         return self.execute("llen", key)
 
-    def lpop(self, key: str, count: int | None = None) -> Any:
+    def lpop(self, key: str, count: int = None) -> Any:
         pieces = [key]
         if count is not None:
             pieces.append(str(count))
@@ -257,7 +257,7 @@ class ListCommands(ClientCommands):
     def ltrim(self, key: str, start: int, stop: int) -> Any:
         return self.execute("ltrim", key, str(start), str(stop))
 
-    def rpop(self, key: str, count: int | None = None) -> Any:
+    def rpop(self, key: str, count: int = None) -> Any:
         pieces = [key]
         if count is not None:
             pieces.append(str(count))
@@ -274,7 +274,7 @@ class ListCommands(ClientCommands):
             key: str,
             desc: bool = False,
             alpha: bool = False,
-            store: str | None = None
+            store: str = None
     ) -> Any:
         pieces = [key]
         if desc:
@@ -306,7 +306,7 @@ class SetCommands(ClientCommands):
             self,
             numkeys: int,
             *keys: str,
-            limit: int | None = None
+            limit: int = None
     ) -> Any:
         pieces = [str(numkeys)]
         pieces.extend(keys)
@@ -329,13 +329,13 @@ class SetCommands(ClientCommands):
     def smove(self, source: str, destination: str, member: str) -> Any:
         return self.execute("smove", source, destination, member)
 
-    def spop(self, key: str, count: int | None = None) -> Any:
+    def spop(self, key: str, count: int = None) -> Any:
         pieces = [key]
         if count is not None:
             pieces.append(str(count))
         return self.execute("spop", *pieces)
 
-    def srandmember(self, key: str, count: int | None = None) -> Any:
+    def srandmember(self, key: str, count: int = None) -> Any:
         pieces = [key]
         if count is not None:
             pieces.append(str(count))
@@ -349,8 +349,8 @@ class SetCommands(ClientCommands):
 
 
 class ZSetCommands(ClientCommands):
-    def zadd(self, key: str, mapping: dict[str, float]) -> Any:
-        pieces: list[str] = []
+    def zadd(self, key: str, mapping: Dict[str, float]) -> Any:
+        pieces: List[str] = []
         for member, score in mapping.items():
             pieces.extend([str(score), member])
         return self.execute("zadd", key, *pieces)
@@ -378,7 +378,7 @@ class ZSetCommands(ClientCommands):
             pieces.append("WITHSCORES")
         return self.execute("zinter", *pieces)
 
-    def zintercard(self, *keys: str, limit: int | None = None) -> Any:
+    def zintercard(self, *keys: str, limit: int = None) -> Any:
         pieces = [str(len(keys))]
         pieces.extend(keys)
         if limit is not None:
@@ -388,13 +388,13 @@ class ZSetCommands(ClientCommands):
     def zinterstore(self, destination: str, *keys: str) -> Any:
         return self.execute("zinterstore", destination, str(len(keys)), *keys)
 
-    def zpopmax(self, key: str, count: int | None = None) -> Any:
+    def zpopmax(self, key: str, count: int = None) -> Any:
         pieces = [key]
         if count is not None:
             pieces.append(str(count))
         return self.execute("zpopmax", *pieces)
 
-    def zpopmin(self, key: str, count: int | None = None) -> Any:
+    def zpopmin(self, key: str, count: int = None) -> Any:
         pieces = [key]
         if count is not None:
             pieces.append(str(count))
@@ -403,7 +403,7 @@ class ZSetCommands(ClientCommands):
     def zrandmember(
             self,
             key: str,
-            count: int | None = None,
+            count: int = None,
             withscores: bool = False
     ) -> Any:
         pieces = [key]
@@ -418,7 +418,7 @@ class ZSetCommands(ClientCommands):
             *keys: str,
             min_=False,
             max_=False,
-            count: int | None = None
+            count: int = None
     ) -> Any:
         pieces = [str(len(keys))]
         pieces.extend(keys)
@@ -453,7 +453,7 @@ class ZSetCommands(ClientCommands):
             min_score: float,
             max_score: float,
             withscores: bool = False,
-            limit: tuple[int, int] | None = None
+            limit: Tuple[int, int] = None
     ) -> Any:
         pieces = [key, str(min_score), str(max_score)]
         if withscores:
@@ -468,7 +468,7 @@ class ZSetCommands(ClientCommands):
             max_score: float,
             min_score: float,
             withscores: bool = False,
-            limit: tuple[int, int] | None = None
+            limit: Tuple[int, int] = None
     ) -> Any:
         pieces = [key, str(max_score), str(min_score)]
         if withscores:
@@ -499,8 +499,8 @@ class ZSetCommands(ClientCommands):
             self,
             key: str,
             cursor: int = 0,
-            match: str | None = None,
-            count: int | None = None
+            match: str = None,
+            count: int = None
     ) -> Any:
         pieces = [key, str(cursor)]
         if match is not None:

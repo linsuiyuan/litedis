@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from litedis.client.commands import (
     BasicCommands,
@@ -22,7 +22,7 @@ class Litedis(
     def __init__(self,
                  dbname: str = "db",
                  persistence_on: bool = True,
-                 data_path: str | Path = "ldbdata"):
+                 data_path: Union[str, Path] = "ldbdata"):
         self.dbname = dbname
 
         dbmanager = DBManager(data_path, persistence_on=persistence_on)

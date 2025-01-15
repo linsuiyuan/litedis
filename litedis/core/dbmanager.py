@@ -2,6 +2,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from threading import Lock, Thread
+from typing import Union, Optional, Dict
 
 from litedis.core.command.base import CommandContext
 from litedis.core.command.factory import CommandFactory
@@ -13,12 +14,12 @@ from litedis.utils import SingletonMeta
 
 
 class DBManager(CommandProcessor, metaclass=SingletonMeta):
-    _dbs: dict[str, LitedisDB] = {}
+    _dbs: Dict[str, LitedisDB] = {}
     _dbs_lock = Lock()
     _db_locks = defaultdict(Lock)
 
     def __init__(self,
-                 data_path: str | Path = Path("ldbdata"),
+                 data_path: Union[str, Path] = Path("ldbdata"),
                  persistence_on=True,
                  aof_rewrite_cycle=666):
         self.persistence_on = persistence_on
@@ -30,7 +31,7 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
 
         self._aof_rewrite_cycle = aof_rewrite_cycle
 
-        self._aof: AOF | None = None
+        self._aof: Optional[AOF] = None
         self._aof_lock = Lock()
 
         self._load_aof_data()

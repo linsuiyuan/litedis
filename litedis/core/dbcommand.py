@@ -1,5 +1,5 @@
 import time
-from typing import Iterable
+from typing import Iterable, Dict
 
 from litedis.core.command.base import CommandContext
 from litedis.core.command.factory import CommandFactory
@@ -11,7 +11,7 @@ from litedis.typing import DBCommandPair
 class DBCommandConverter:
 
     @classmethod
-    def dbs_to_commands(cls, dbs: dict[str, LitedisDB]):
+    def dbs_to_commands(cls, dbs: Dict[str, LitedisDB]):
         for dbname, db in dbs.items():
             for key in db.keys():
                 cmdtokens = cls._convert_db_object_to_cmdtokens(key, db)
@@ -22,23 +22,23 @@ class DBCommandConverter:
         value = db.get(key)
         if value is None:
             raise KeyError(f"'{key}' doesn't exist")
-        match value:
-            case str():
-                pieces = ['set', key, value]
-            case dict():
-                pieces = ['hset', key]
-                for field, val in value.items():
-                    pieces.extend([field, str(val)])
-            case list():
-                pieces = ['rpush', key, *value]
-            case set():
-                pieces = ['sadd', key, *value]
-            case SortedSet():
-                pieces = ['zadd', key]
-                for member, score in value.items():
-                    pieces.extend([str(score), member])
-            case _:
-                raise TypeError(f"the value type the key({key}) is not supported")
+
+        if isinstance(value, str):
+            pieces = ['set', key, value]
+        elif isinstance(value, dict):
+            pieces = ['hset', key]
+            for field, val in value.items():
+                pieces.extend([field, str(val)])
+        elif isinstance(value, list):
+            pieces = ['rpush', key, *value]
+        elif isinstance(value, set):
+            pieces = ['sadd', key, *value]
+        elif isinstance(value, SortedSet):
+            pieces = ['zadd', key]
+            for member, score in value.items():
+                pieces.extend([str(score), member])
+        else:
+            raise TypeError(f"the value type the key({key}) is not supported")
 
         expiration = db.get_expiration(key)
         if expiration is not None:
@@ -49,7 +49,7 @@ class DBCommandConverter:
         return pieces
 
     @classmethod
-    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandPair]) -> dict[str, LitedisDB]:
+    def commands_to_dbs(cls, dbcmds: Iterable[DBCommandPair]) -> Dict[str, LitedisDB]:
         dbs = {}
         for dbcmd in dbcmds:
             dbname, cmdtokens = dbcmd

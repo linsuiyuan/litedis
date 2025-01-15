@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
 
@@ -8,7 +10,7 @@ class LIndexCommand(ReadCommand):
         self.key: str
         self.index: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('lindex command requires key and index')
         self.key = tokens[1]
@@ -49,7 +51,7 @@ class LInsertCommand(WriteCommand):
         self.pivot: str
         self.element: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 5:
             raise ValueError('linsert command requires key, BEFORE|AFTER, pivot and element')
         self.key = tokens[1]
@@ -93,7 +95,7 @@ class LLenCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('llen command requires key')
         self.key = tokens[1]
@@ -117,9 +119,9 @@ class LPopCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.count: int | None
+        self.count: Optional[int]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('lpop command requires key')
         self.key = tokens[1]
@@ -169,9 +171,9 @@ class LPushCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.elements: list[str]
+        self.elements: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError(f'{self.name} command requires key and at least one element')
         self.key = tokens[1]
@@ -216,7 +218,7 @@ class LRangeCommand(ReadCommand):
         self.start: int
         self.stop: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('lrange command requires key, start and stop')
         self.key = tokens[1]
@@ -260,7 +262,7 @@ class LRemCommand(WriteCommand):
         self.count: int
         self.element: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('lrem command requires key, count and element')
         self.key = tokens[1]
@@ -321,7 +323,7 @@ class LSetCommand(WriteCommand):
         self.index: int
         self.element: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('lset command requires key, index and element')
         self.key = tokens[1]
@@ -364,7 +366,7 @@ class LTrimCommand(WriteCommand):
         self.start: int
         self.stop: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('ltrim command requires key, start and stop')
         self.key = tokens[1]
@@ -413,9 +415,9 @@ class RPopCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.count: int | None
+        self.count: Optional[int]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('rpop command requires key')
         self.key = tokens[1]
@@ -466,9 +468,9 @@ class RPushCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.elements: list[str]
+        self.elements: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError(f'{self.name} command requires key and at least one element')
         self.key = tokens[1]
@@ -511,9 +513,9 @@ class SortCommand(WriteCommand):
         self.key: str
         self.desc: bool
         self.alpha: bool
-        self.store_key: str | None
+        self.store_key: Optional[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('sort command requires key')
         self.key = tokens[1]

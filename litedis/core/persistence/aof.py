@@ -1,20 +1,20 @@
 import os
 import tempfile
 from pathlib import Path
-from typing import TextIO, Iterable
+from typing import TextIO, Iterable, Union, Optional
 
 from litedis.typing import DBCommandPair
 
 
 class AOF:
 
-    def __init__(self, data_path: str | Path, filename="litedis.aof"):
+    def __init__(self, data_path: Union[str, Path], filename="litedis.aof"):
         self.data_path = data_path if isinstance(data_path, Path) else Path(data_path)
         self.data_path.mkdir(parents=True, exist_ok=True)
 
         self._filename = filename
         self._file_path = self.data_path / self._filename
-        self._file: TextIO | None = None
+        self._file: Optional[TextIO] = None
 
     def __del__(self):
         self.close_file()

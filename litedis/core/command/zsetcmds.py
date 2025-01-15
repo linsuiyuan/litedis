@@ -1,4 +1,5 @@
 import re
+from typing import List, Optional, Tuple
 
 from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 from litedis.core.command.sortedset import SortedSet
@@ -9,9 +10,9 @@ class ZAddCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.score_members: list[tuple[float, str]]
+        self.score_members: List[Tuple[float, str]]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('zadd command requires key, score and member')
         self.key = tokens[1]
@@ -59,7 +60,7 @@ class ZCardCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('zcard command requires key')
         self.key = tokens[1]
@@ -86,7 +87,7 @@ class ZCountCommand(ReadCommand):
         self.min: float
         self.max: float
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('zcount command requires key, min and max')
         self.key = tokens[1]
@@ -115,10 +116,10 @@ class ZDiffCommand(ReadCommand):
 
     def __init__(self):
         self.numkeys: int
-        self.keys: list[str]
+        self.keys: List[str]
         self.withscores: bool = False  # 添加 withscores 属性
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zdiff command requires numkeys and at least one key')
 
@@ -178,7 +179,7 @@ class ZIncrByCommand(WriteCommand):
         self.increment: float
         self.member: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('zincrby command requires key, increment and member')
         self.key = tokens[1]
@@ -210,10 +211,10 @@ class ZInterCommand(ReadCommand):
 
     def __init__(self):
         self.numkeys: int
-        self.keys: list[str]
+        self.keys: List[str]
         self.withscores: bool = False
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zinter command requires numkeys and at least one key')
 
@@ -270,10 +271,10 @@ class ZInterCardCommand(ReadCommand):
 
     def __init__(self):
         self.numkeys: int
-        self.keys: list[str]
-        self.limit: int | None
+        self.keys: List[str]
+        self.limit: Optional[int]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zintercard command requires numkeys and at least one key')
 
@@ -341,7 +342,7 @@ class ZPopMaxCommand(WriteCommand):
         self.key: str
         self.count: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('zpopmax command requires key')
         self.key = tokens[1]
@@ -391,7 +392,7 @@ class ZPopMinCommand(WriteCommand):
         self.key: str
         self.count: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('zpopmin command requires key')
         self.key = tokens[1]
@@ -438,10 +439,10 @@ class ZRandMemberCommand(ReadCommand):
 
     def __init__(self):
         self.key: str
-        self.count: int | None
+        self.count: Optional[int]
         self.withscores: bool
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('zrandmember command requires key')
         self.key = tokens[1]
@@ -496,11 +497,11 @@ class ZMPopCommand(WriteCommand):
 
     def __init__(self):
         self.numkeys: int
-        self.keys: list[str]
+        self.keys: List[str]
         self.where: str  # MIN or MAX
         self.count: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('zmpop command requires numkeys, keys and WHERE')
 
@@ -578,7 +579,7 @@ class ZRangeCommand(ReadCommand):
         self.withscores: bool
         self.rev: bool
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('zrange command requires key, start and stop')
         self.key = tokens[1]
@@ -631,9 +632,9 @@ class _ZRangeByScoreCommand(ReadCommand):
         self.min: float
         self.max: float
         self.withscores: bool = False
-        self.limit: tuple | None = None
+        self.limit: Optional[Tuple[int, int]] = None
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError(f'{self.name} command requires key, min and max')
         self.key = tokens[1]
@@ -712,7 +713,7 @@ class _ZRankCommand(ReadCommand):
         self.member: str
         self.withscores: bool = False  # 添加 withscores 属性
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError(f'{self.name} command requires key and member')
         self.key = tokens[1]
@@ -756,9 +757,9 @@ class ZRemCommand(WriteCommand):
 
     def __init__(self):
         self.key: str
-        self.members: list[str]
+        self.members: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zrem command requires key and at least one member')
         self.key = tokens[1]
@@ -798,7 +799,7 @@ class ZRemRangeByScoreCommand(WriteCommand):
         self.min: float
         self.max: float
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('zremrangebyscore command requires key, min and max')
         self.key = tokens[1]
@@ -850,10 +851,10 @@ class ZScanCommand(ReadCommand):
     def __init__(self):
         self.key: str
         self.cursor: int
-        self.pattern: str | None
+        self.pattern: Optional[str]
         self.count: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zscan command requires key and cursor')
         self.key = tokens[1]
@@ -954,7 +955,7 @@ class ZScanCommand(ReadCommand):
         pattern = pattern.replace(r'\?', '.')  # ?
 
         # handle [...] and [^...]
-        pattern = re.sub(r'\\\[(.*?)\\\]', r'[\1]', pattern)
+        pattern = re.sub(r'\\\[(.*?)\\\]', r'[\1]', pattern)  # noqa
 
         try:
             regex = re.compile(f'^{pattern}$')
@@ -971,7 +972,7 @@ class ZScoreCommand(ReadCommand):
         self.key: str
         self.member: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zscore command requires key and member')
         self.key = tokens[1]
@@ -997,10 +998,10 @@ class ZUnionCommand(ReadCommand):
 
     def __init__(self):
         self.numkeys: int
-        self.keys: list[str]
+        self.keys: List[str]
         self.withscores: bool
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zunion command requires numkeys and at least one key')
 
@@ -1055,9 +1056,9 @@ class ZMScoreCommand(ReadCommand):
 
     def __init__(self):
         self.key: str
-        self.members: list[str]
+        self.members: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('zmscore command requires key and at least one member')
         self.key = tokens[1]

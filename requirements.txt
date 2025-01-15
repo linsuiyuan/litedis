@@ -1,3 +1,4 @@
 pytest~=8.3.3
 invoke~=2.2.0
 sortedcontainers~=2.4.0
+twine~=6.0.1

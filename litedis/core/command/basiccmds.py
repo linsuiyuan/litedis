@@ -1,6 +1,7 @@
 import random
 import re
 import time
+from typing import Optional, List, Tuple
 
 from litedis.core.command.base import CommandContext, ReadCommand, WriteCommand
 
@@ -11,10 +12,10 @@ class SetCommand(WriteCommand):
     def __init__(self):
         self.key: str
         self.value: str
-        self.ex: int | None = None  # Expire time in seconds
-        self.px: int | None = None  # Expire time in milliseconds
-        self.exat: int | None = None  # Expire timestamp in seconds
-        self.pxat: int | None = None  # Expire timestamp in milliseconds
+        self.ex: Optional[int] = None  # Expire time in seconds
+        self.px: Optional[int] = None  # Expire time in milliseconds
+        self.exat: Optional[int] = None  # Expire timestamp in seconds
+        self.pxat: Optional[int] = None  # Expire timestamp in milliseconds
         # Existence options
         self.nx: bool = False  # Only set if key does not exist
         self.xx: bool = False  # Only set if key exists
@@ -22,7 +23,7 @@ class SetCommand(WriteCommand):
         self.keepttl: bool = False  # Retain the TTL associated with the key
         self.get: bool = False  # Return the old value stored at key
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('set command requires key and value')
 
@@ -125,7 +126,7 @@ class GetCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         """Parse command arguments"""
         if len(tokens) < 2:
             raise ValueError('get command requires key')
@@ -150,7 +151,7 @@ class AppendCommand(WriteCommand):
         self.key: str
         self.value: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('append command requires key and value')
         self.key = tokens[1]
@@ -180,7 +181,7 @@ class DecrbyCommand(WriteCommand):
         self.key: str
         self.decrement: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('decrby command requires key and decrement')
         self.key = tokens[1]
@@ -213,9 +214,9 @@ class DeleteCommand(WriteCommand):
     name = 'del'
 
     def __init__(self):
-        self.keys: list[str]
+        self.keys: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('del command requires at least one key')
         self.keys = tokens[1:]
@@ -233,9 +234,9 @@ class ExistsCommand(ReadCommand):
     name = 'exists'
 
     def __init__(self):
-        self.keys: list[str]
+        self.keys: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('exists command requires at least one key')
         self.keys = tokens[1:]
@@ -258,7 +259,7 @@ class CopyCommand(WriteCommand):
         self.destination: str
         self.replace: bool
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('copy command requires source and destination')
         self.source = tokens[1]
@@ -301,7 +302,7 @@ class ExpireCommand(WriteCommand):
         self.gt: bool = False
         self.lt: bool = False
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('expire command requires key and seconds')
         self.key = tokens[1]
@@ -374,7 +375,7 @@ class ExpireatCommand(WriteCommand):
         self.gt: bool = False
         self.lt: bool = False
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('expireat command requires key and timestamp')
         self.key = tokens[1]
@@ -440,7 +441,7 @@ class ExpireTimeCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('expiretime command requires key')
         self.key = tokens[1]
@@ -466,7 +467,7 @@ class IncrbyCommand(WriteCommand):
         self.key: str
         self.increment: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('incrby command requires key and increment')
         self.key = tokens[1]
@@ -502,7 +503,7 @@ class IncrbyfloatCommand(WriteCommand):
         self.key: str
         self.increment: float
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError('incrbyfloat command requires key and increment')
         self.key = tokens[1]
@@ -541,7 +542,7 @@ class KeysCommand(ReadCommand):
     def __init__(self):
         self.pattern: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('keys command requires pattern')
         self.pattern = tokens[1]
@@ -623,9 +624,9 @@ class MGetCommand(ReadCommand):
     name = 'mget'
 
     def __init__(self):
-        self.keys: list[str]
+        self.keys: List[str]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('mget command requires at least one key')
         self.keys = tokens[1:]
@@ -641,9 +642,9 @@ class MSetCommand(WriteCommand):
     name = 'mset'
 
     def __init__(self):
-        self.pairs: list[tuple[str, str]]
+        self.pairs: List[Tuple[str, str]]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3 or len(tokens) % 2 != 1:
             raise ValueError('mset command requires key value pairs')
 
@@ -665,9 +666,9 @@ class MSetnxCommand(WriteCommand):
     name = 'msetnx'
 
     def __init__(self):
-        self.pairs: list[tuple[str, str]]
+        self.pairs: List[Tuple[str, str]]
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3 or len(tokens) % 2 != 1:
             raise ValueError('msetnx command requires key value pairs')
 
@@ -698,7 +699,7 @@ class PersistCommand(WriteCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('persist command requires key')
         self.key = tokens[1]
@@ -722,7 +723,7 @@ class PersistCommand(WriteCommand):
 class RandomKeyCommand(ReadCommand):
     name = 'randomkey'
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) > 1:
             raise ValueError('randomkey command takes no arguments')
 
@@ -742,7 +743,7 @@ class RenameCommand(WriteCommand):
         self.source: str
         self.destination: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 3:
             raise ValueError(f'{self.name} command requires source and destination')
         self.source = tokens[1]
@@ -793,7 +794,7 @@ class StrlenCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('strlen command requires key')
         self.key = tokens[1]
@@ -820,7 +821,7 @@ class SubstrCommand(ReadCommand):
         self.start: int
         self.end: int
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 4:
             raise ValueError('substr command requires key, start and end')
         self.key = tokens[1]
@@ -862,7 +863,7 @@ class TTLCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('ttl command requires key')
         self.key = tokens[1]
@@ -891,7 +892,7 @@ class PTTLCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('pttl command requires key')
         self.key = tokens[1]
@@ -919,7 +920,7 @@ class TypeCommand(ReadCommand):
     def __init__(self):
         self.key: str
 
-    def _parse(self, tokens: list[str]):
+    def _parse(self, tokens: List[str]):
         if len(tokens) < 2:
             raise ValueError('type command requires key')
         self.key = tokens[1]

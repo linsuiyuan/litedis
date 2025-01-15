@@ -1,4 +1,5 @@
 import time
+from typing import Dict, Optional
 
 from litedis.core.command.sortedset import SortedSet
 from litedis.typing import LitedisObjectT
@@ -7,21 +8,21 @@ from litedis.typing import LitedisObjectT
 class LitedisDB:
     def __init__(self, name):
         self.name = name
-        self._data: dict[str, LitedisObjectT] = {}
-        self._expirations: dict[str, int] = {}
+        self._data: Dict[str, LitedisObjectT] = {}
+        self._expirations: Dict[str, int] = {}
 
     def set(self, key: str, value: LitedisObjectT):
         self._check_value_type(key, value)
         self._data[key] = value
 
     def _check_value_type(self, key: str, value: LitedisObjectT):
-        if not isinstance(value, LitedisObjectT):
+        if not type(value) in [str, list, dict, set, SortedSet]:
             raise TypeError(f"not supported type {type(value)}")
         if key in self._data:
             if type(self._data[key]) != type(value):
                 raise TypeError("type of value does not match the type in database")
 
-    def get(self, key: str) -> LitedisObjectT | None:
+    def get(self, key: str) -> Optional[LitedisObjectT]:
         if self._delete_expired(key):
             return None
         return self._data.get(key)

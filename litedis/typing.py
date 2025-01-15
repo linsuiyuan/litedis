@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import Protocol, NamedTuple
+from typing import Protocol, NamedTuple, Union, List
 
 from litedis.core.command.sortedset import SortedSet
 
-LitedisObjectT = dict | list | set | str | SortedSet
+LitedisObjectT = Union[dict, list, set, str, SortedSet]
 
 
 class ReadWriteType(Enum):
@@ -13,7 +13,7 @@ class ReadWriteType(Enum):
 
 class DBCommandPair(NamedTuple):
     dbname: str
-    cmdtokens: list[str]
+    cmdtokens: List[str]
 
 
 class CommandProcessor(Protocol):

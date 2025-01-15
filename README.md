@@ -29,7 +29,7 @@ pip install litedis
 
 - 支持的 Python 版本
 
-  从 litedis3.0 开始，只支持 Python3.10+
+  支持 Python3.8+
   
   
 
