@@ -46,9 +46,6 @@ class DBManager(CommandProcessor, metaclass=SingletonMeta):
         if not self._aof:
             return False
 
-        if not self._aof.exists_file():
-            return False
-
         if self._aof_rewrite_cycle <= 0:
             return False
 

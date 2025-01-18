@@ -1,4 +1,7 @@
+import time
+from collections import defaultdict
 from pathlib import Path
+from threading import Lock
 from unittest.mock import patch
 
 import pytest
@@ -16,7 +19,10 @@ def temp_dir(tmp_path_factory):
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    setattr(DBManager, '_instances', {})
+    DBManager._dbs = {}
+    DBManager._dbs_lock = Lock()
+    DBManager._db_locks = defaultdict(Lock)
+    DBManager._instances = {}
     yield
 
 
@@ -136,3 +142,30 @@ class TestDBManager:
         assert "test_db" == db.name
         assert db.get("key1") == "value1"
         assert db.get("key2") == "value2"
+
+    def test_rewrite_aof_commands(self, temp_dir):
+        manager = DBManager(persistence_on=True, data_path=temp_dir)
+        assert manager._rewrite_aof_commands() is True
+
+    def test_rewrite_aof_loop(self, temp_dir):
+
+        # Mock `time.sleep` to avoid actual delay
+        original_sleep = time.sleep
+        # sleep for 0.1 seconds at most
+        with patch('time.sleep', side_effect=lambda x: original_sleep(min(0.1, x))):
+            manager = DBManager(persistence_on=True, data_path=temp_dir)
+
+            cmds = [
+                DBCommandPair(dbname='test_db', cmdtokens=['set', 'key1', 'value1']),
+                DBCommandPair(dbname='test_db', cmdtokens=['set', 'key1', 'value'])
+            ]
+
+            for cmd in cmds:
+                manager.process_command(cmd)
+
+            assert list(manager._aof.load_commands()) == cmds
+
+            original_sleep(.15)
+            assert list(manager._aof.load_commands()) == [
+                DBCommandPair(dbname='test_db', cmdtokens=['set', 'key1', 'value'])
+            ]
