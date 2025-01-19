@@ -40,9 +40,7 @@ class ZAddCommand(WriteCommand):
         if not db.exists(self.key):
             zset = SortedSet()
         else:
-            zset = db.get(self.key)
-            if not isinstance(zset, SortedSet):
-                raise TypeError("value is not a sorted set")
+            zset = db.get_zset(self.key)
 
         # Add members
         added = 0
@@ -74,9 +72,7 @@ class ZCardCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         return len(value)
 
@@ -107,9 +103,7 @@ class ZCountCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         return value.count(self.min, self.max)
 
@@ -157,9 +151,7 @@ class ZDiffCommand(ReadCommand):
                     return []
                 continue
 
-            value = db.get(key)
-            if not isinstance(value, SortedSet):
-                raise TypeError(f"value at {key} is not a sorted set")
+            value = db.get_zset(key)
 
             if i == 0:  # First set
                 result = value
@@ -201,9 +193,7 @@ class ZIncrByCommand(WriteCommand):
         if not db.exists(self.key):
             zset = SortedSet()
         else:
-            zset = db.get(self.key)
-            if not isinstance(zset, SortedSet):
-                raise TypeError("value is not a sorted set")
+            zset = db.get_zset(self.key)
 
         new_score = zset.incr(self.member, self.increment)
 
@@ -250,9 +240,7 @@ class ZInterCommand(ReadCommand):
             if not db.exists(key):
                 return []  # If any key doesn't exist, result is empty
 
-            value = db.get(key)
-            if not isinstance(value, SortedSet):
-                raise TypeError(f"value at {key} is not a sorted set")
+            value = db.get_zset(key)
 
             if result is None:  # First set
                 result = value
@@ -321,9 +309,7 @@ class ZInterCardCommand(ReadCommand):
             if not db.exists(key):
                 return 0  # If any key doesn't exist, cardinality is 0
 
-            value = db.get(key)
-            if not isinstance(value, SortedSet):
-                raise TypeError(f"value at {key} is not a sorted set")
+            value = db.get_zset(key)
 
             if result is None:  # First set
                 result = value
@@ -371,9 +357,7 @@ class ZPopMaxCommand(WriteCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         if not value:
             return []
@@ -422,9 +406,7 @@ class ZPopMinCommand(WriteCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         if not value:
             return []
@@ -478,9 +460,7 @@ class ZRandMemberCommand(ReadCommand):
         if not db.exists(self.key):
             return None if self.count is None else []
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         if not value:
             return None if self.count is None else []
@@ -553,9 +533,7 @@ class ZMPopCommand(WriteCommand):
         target_set = None
         for key in self.keys:
             if db.exists(key):
-                value = db.get(key)
-                if not isinstance(value, SortedSet):
-                    raise TypeError(f"value at {key} is not a sorted set")
+                value = db.get_zset(key)
                 if value:
                     target_key = key
                     target_set = value
@@ -622,9 +600,7 @@ class ZRangeCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         result = value.range(self.start, self.stop, desc=self.rev)
 
@@ -684,9 +660,7 @@ class _ZRangeByScoreCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         # Use range with score limits
         result = value.range(0, -1, min_=self.min, max_=self.max, desc=self.desc)
@@ -744,9 +718,7 @@ class _ZRankCommand(ReadCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         rank = value.rank(self.member, desc=self.desc)
         if rank is None:
@@ -787,9 +759,7 @@ class ZRemCommand(WriteCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         removed = 0
         for member in self.members:
@@ -832,9 +802,7 @@ class ZRemRangeByScoreCommand(WriteCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         # Get members to remove
         to_remove = [member for member, score in value.items()
@@ -909,9 +877,7 @@ class ZScanCommand(ReadCommand):
         if not db.exists(self.key):
             return [0, []]
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         # Convert to list of member-score pairs
         items = list(value.items())
@@ -1003,9 +969,7 @@ class ZScoreCommand(ReadCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         return value.score(self.member)
 
@@ -1051,9 +1015,7 @@ class ZUnionCommand(ReadCommand):
             if not db.exists(key):
                 continue
 
-            value = db.get(key)
-            if not isinstance(value, SortedSet):
-                raise TypeError(f"value at {key} is not a sorted set")
+            value = db.get_zset(key)
 
             if result is None:
                 result = value
@@ -1091,8 +1053,6 @@ class ZMScoreCommand(ReadCommand):
         if not db.exists(self.key):
             return [None] * len(self.members)
 
-        value = db.get(self.key)
-        if not isinstance(value, SortedSet):
-            raise TypeError("value is not a sorted set")
+        value = db.get_zset(self.key)
 
         return [value.score(member) for member in self.members]

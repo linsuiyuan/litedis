@@ -27,6 +27,46 @@ class LitedisDB:
             return None
         return self._data.get(key)
 
+    def get_str(self, key: str) -> Optional[str]:
+        value = self.get(key)
+        if value is None:
+            return None
+        if type(value) != str:
+            raise TypeError("value is not string")
+        return value
+
+    def get_dict(self, key: str) -> Optional[dict]:
+        value = self.get(key)
+        if value is None:
+            return None
+        if type(value) != dict:
+            raise TypeError("value is not a hash")
+        return value
+
+    def get_list(self, key: str) -> Optional[list]:
+        value = self.get(key)
+        if value is None:
+            return None
+        if type(value) != list:
+            raise TypeError("value is not a list")
+        return value
+
+    def get_set(self, key: str) -> Optional[set]:
+        value = self.get(key)
+        if value is None:
+            return None
+        if type(value) != set:
+            raise TypeError("value is not a set")
+        return value
+
+    def get_zset(self, key: str) -> Optional[SortedSet]:
+        value = self.get(key)
+        if value is None:
+            return None
+        if type(value) != SortedSet:
+            raise TypeError("value is not a zset")
+        return value
+
     def _delete_expired(self, key: str):
         if key not in self._data:
             return False

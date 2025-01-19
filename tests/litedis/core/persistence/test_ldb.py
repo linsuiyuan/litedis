@@ -29,7 +29,7 @@ def test_set_type_checking(db):
 
     # Test unsupported type
     with pytest.raises(TypeError):
-        db.set("invalid", 42)
+        db.set("invalid", 42)  # noqa
 
 
 def test_get(db):
@@ -39,6 +39,51 @@ def test_get(db):
 
     # Test non-existent key
     assert db.get("nonexistent") is None
+
+
+def test_get_str(db):
+    db.set("str_key", "string")
+    assert db.get_str("str_key") == "string"
+
+    db.set("not str key", [])
+    with pytest.raises(TypeError):
+        db.get_str("not str key")
+
+
+def test_get_dict(db):
+    db.set("dict_key", {"a": 1, "b": 2})
+    assert db.get_dict("dict_key") == {"a": 1, "b": 2}
+
+    db.set("not dict key", [])
+    with pytest.raises(TypeError):
+        db.get_dict("not dict key")
+
+
+def test_get_list(db):
+    db.set("list_key", [1, 2, 3])
+    assert db.get_list("list_key") == [1, 2, 3]
+
+    db.set("not list key", {})
+    with pytest.raises(TypeError):
+        db.get_list("not list key")
+
+
+def test_get_set(db):
+    db.set("set_key", {1, 2, 3})
+    assert db.get_set("set_key") == {1, 2, 3}
+
+    db.set("not set key", [])
+    with pytest.raises(TypeError):
+        db.get_set("not set key")
+
+
+def test_get_zset(db):
+    db.set("zset_key", SortedSet({"member1": 1., "member2": 2.}))
+    assert type(db.get_zset("zset_key")) == SortedSet
+
+    db.set("not zset key", [])
+    with pytest.raises(TypeError):
+        db.get_zset("not zset key")
 
 
 def test_get_with_expiration(db):
@@ -91,6 +136,7 @@ def test_set_expiration(db):
     assert db.set_expiration("key1", 100) == 1
     assert db.set_expiration("nonexistent", 100) == 0
 
+
 def test_get_expiration(db):
     # Set key-value and expiration
     db.set("key1", "value1")
@@ -104,11 +150,13 @@ def test_get_expiration(db):
     db.set("key2", "value2")
     assert db.get_expiration("key2") == -1
 
+
 def test_exists_expiration(db):
     db.set("key1", "value1")
     db.set_expiration("key1", 100)
     assert db.exists_expiration("key1") is True
     assert db.exists_expiration("nonexistent") is False
+
 
 def test_delete_expiration(db):
     db.set("key1", "value1")
@@ -132,8 +180,3 @@ def test_get_type(db):
         assert db.get_type(key) == expected_type
 
     assert db.get_type("nonexistent") == "none"
-
-    # Test unsupported type error
-    with pytest.raises(TypeError):
-        db._data["invalid"] = 42  # Directly insert invalid type
-        db.get_type("invalid")

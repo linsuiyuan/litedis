@@ -25,9 +25,7 @@ class SAddCommand(WriteCommand):
         if not db.exists(self.key):
             value = set()
         else:
-            value = db.get(self.key)
-            if not isinstance(value, set):
-                raise TypeError("value is not a set")
+            value = db.get_set(self.key)
 
         # Count new members added
         added = 0
@@ -59,9 +57,7 @@ class SCardCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         return len(value)
 
@@ -91,9 +87,7 @@ class SDiffCommand(ReadCommand):
                     return []
                 continue  # Skip non-existent keys after first
 
-            value = db.get(key)
-            if not isinstance(value, set):
-                raise TypeError(f"value at {key} is not a set")
+            value = db.get_set(key)
 
             if i == 0:  # First set
                 result = value.copy()
@@ -126,9 +120,7 @@ class SInterCommand(ReadCommand):
             if not db.exists(key):
                 return []  # If any key doesn't exist, result is empty
 
-            value = db.get(key)
-            if not isinstance(value, set):
-                raise TypeError(f"value at {key} is not a set")
+            value = db.get_set(key)
 
             if result is None:  # First set
                 result = value.copy()
@@ -190,9 +182,7 @@ class SInterCardCommand(ReadCommand):
             if not db.exists(key):
                 return 0  # If any key doesn't exist, cardinality is 0
 
-            value = db.get(key)
-            if not isinstance(value, set):
-                raise TypeError(f"value at {key} is not a set")
+            value = db.get_set(key)
 
             if result is None:  # First set
                 result = value.copy()
@@ -231,9 +221,7 @@ class SIsMemberCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         return 1 if self.member in value else 0
 
@@ -257,9 +245,7 @@ class SMembersCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         return list(value)
 
@@ -285,9 +271,7 @@ class SMIsMemberCommand(ReadCommand):
         if not db.exists(self.key):
             return [0] * len(self.members)
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         return [1 if member in value else 0 for member in self.members]
 
@@ -317,9 +301,10 @@ class SMoveCommand(WriteCommand):
         if not db.exists(self.source):
             return 0
 
-        source_set = db.get(self.source)
-        if not isinstance(source_set, set):
-            raise TypeError("source value is not a set")
+        try:
+            source_set = db.get_set(self.source)
+        except TypeError:
+            raise TypeError('source value is not a set')
 
         # Check if member exists in source
         if self.member not in source_set:
@@ -329,9 +314,10 @@ class SMoveCommand(WriteCommand):
         if not db.exists(self.destination):
             dest_set = set()
         else:
-            dest_set = db.get(self.destination)
-            if not isinstance(dest_set, set):
-                raise TypeError("destination value is not a set")
+            try:
+                dest_set = db.get_set(self.destination)
+            except TypeError:
+                raise TypeError('destination value is not a set')
 
         # Move member
         source_set.remove(self.member)
@@ -376,9 +362,7 @@ class SPopCommand(WriteCommand):
         if not db.exists(self.key):
             return None if self.count is None else []
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         if not value:
             return None if self.count is None else []
@@ -428,9 +412,7 @@ class SRandMemberCommand(ReadCommand):
         if not db.exists(self.key):
             return None if self.count is None else []
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         if not value:
             return None if self.count is None else []
@@ -470,9 +452,7 @@ class SRemCommand(WriteCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, set):
-            raise TypeError("value is not a set")
+        value = db.get_set(self.key)
 
         removed = 0
         for member in self.members:
@@ -510,9 +490,7 @@ class SUnionCommand(ReadCommand):
             if not db.exists(key):
                 continue
 
-            value = db.get(key)
-            if not isinstance(value, set):
-                raise TypeError(f"value at {key} is not a set")
+            value = db.get_set(key)
 
             result |= value
 

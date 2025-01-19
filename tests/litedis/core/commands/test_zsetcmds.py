@@ -102,7 +102,7 @@ class TestZCardCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zcard', 'myset']
         cmd = ZCardCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zcard_wrong_args(self, ctx):
@@ -170,7 +170,7 @@ class TestZDiffCommand:
         ctx.db.set('set1', "string")  # Wrong type
         ctx.cmdtokens = ['zdiff', '2', 'set1', 'set2']
         cmd = ZDiffCommand()
-        with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zdiff_wrong_args(self, ctx):
@@ -281,7 +281,7 @@ class TestZInterCommand:
         ctx.db.set('set1', "string")  # Wrong type
         ctx.cmdtokens = ['zinter', '2', 'set1', 'set2']
         cmd = ZInterCommand()
-        with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zinter_wrong_args(self, ctx):
@@ -335,7 +335,7 @@ class TestZInterCardCommand:
         ctx.db.set('set1', "string")  # Wrong type
         ctx.cmdtokens = ['zintercard', '2', 'set1', 'set2']
         cmd = ZInterCardCommand()
-        with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zintercard_invalid_numkeys(self, ctx):
@@ -395,7 +395,7 @@ class TestZPopMaxCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zpopmax', 'myset']
         cmd = ZPopMaxCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
 
@@ -443,7 +443,7 @@ class TestZPopMinCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zpopmin', 'myset']
         cmd = ZPopMinCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
 
@@ -495,7 +495,7 @@ class TestZRandMemberCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrandmember', 'myset']
         cmd = ZRandMemberCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zrandmember_invalid_count(self, ctx):
@@ -563,7 +563,7 @@ class TestZMPopCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zmpop', '1', 'myset', 'MIN']
         cmd = ZMPopCommand()
-        with pytest.raises(TypeError, match="value at myset is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zmpop_invalid_args(self, ctx):
@@ -628,7 +628,7 @@ class TestZRangeCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrange', 'myset', '0', '-1']
         cmd = ZRangeCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
 
@@ -676,7 +676,7 @@ class TestZRangeByScoreCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrangebyscore', 'myset', '0', '1']
         cmd = ZRangeByScoreCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zrangebyscore_invalid_score(self, ctx):
@@ -730,7 +730,7 @@ class TestZRevRangeByScoreCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrevrangebyscore', 'myset', '1', '0']
         cmd = ZRevRangeByScoreCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zrevrangebyscore_invalid_score(self, ctx):
@@ -773,7 +773,7 @@ class TestZRankCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrank', 'myset', 'member1']
         cmd = ZRankCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zrank_wrong_args(self, ctx):
@@ -855,7 +855,7 @@ class TestZRemCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrem', 'myset', 'member1']
         cmd = ZRemCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zrem_wrong_args(self, ctx):
@@ -909,7 +909,7 @@ class TestZRemRangeByScoreCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zremrangebyscore', 'myset', '0', '10']
         cmd = ZRemRangeByScoreCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
 
@@ -946,7 +946,7 @@ class TestZRevRankCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zrevrank', 'myset', 'member1']
         cmd = ZRevRankCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zrevrank_wrong_args(self, ctx):
@@ -1034,7 +1034,7 @@ class TestZScanCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zscan', 'myset', '0']
         cmd = ZScanCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zscan_invalid_cursor(self, ctx):
@@ -1083,7 +1083,7 @@ class TestZScoreCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zscore', 'myset', 'member1']
         cmd = ZScoreCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zscore_wrong_args(self, ctx):
@@ -1150,7 +1150,7 @@ class TestZUnionCommand:
         ctx.db.set('set1', "string")  # Wrong type
         ctx.cmdtokens = ['zunion', '2', 'set1', 'set2']
         cmd = ZUnionCommand()
-        with pytest.raises(TypeError, match="value at set1 is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zunion_wrong_args(self, ctx):
@@ -1196,7 +1196,7 @@ class TestZMScoreCommand:
         ctx.db.set('myset', "string")  # Wrong type
         ctx.cmdtokens = ['zmscore', 'myset', 'member1']
         cmd = ZMScoreCommand()
-        with pytest.raises(TypeError, match="value is not a sorted set"):
+        with pytest.raises(TypeError, match="value is not a zset"):
             cmd.execute(ctx)
 
     def test_zmscore_wrong_args(self, ctx):

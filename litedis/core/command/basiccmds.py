@@ -96,9 +96,7 @@ class SetCommand(WriteCommand):
         old_value = None
         if self.get:
             if key_exists:
-                old_value = db.get(self.key)
-                if not isinstance(old_value, str):
-                    raise TypeError('value is not a string')
+                old_value = db.get_str(self.key)
 
         # Set the new value
         db.set(self.key, self.value)
@@ -168,9 +166,7 @@ class AppendCommand(WriteCommand):
             db.set(self.key, self.value)
             return len(self.value)
 
-        old_value = db.get(self.key)
-        if not isinstance(old_value, str):
-            raise TypeError("value is not a string")
+        old_value = db.get_str(self.key)
 
         new_value = old_value + self.value
         db.set(self.key, new_value)
@@ -201,9 +197,7 @@ class DecrbyCommand(WriteCommand):
         if not db.exists(self.key):
             value = 0
         else:
-            value = db.get(self.key)
-            if not isinstance(value, str):
-                raise TypeError("value is not a string")
+            value = db.get_str(self.key)
             try:
                 value = int(value)
             except ValueError:
@@ -494,9 +488,7 @@ class IncrbyCommand(WriteCommand):
         if not db.exists(self.key):
             value = 0
         else:
-            value = db.get(self.key)
-            if not isinstance(value, str):
-                raise TypeError("value is not a string")
+            value = db.get_str(self.key)
             try:
                 value = int(value)
             except ValueError:
@@ -531,9 +523,7 @@ class IncrbyfloatCommand(WriteCommand):
         if not db.exists(self.key):
             value = 0.0
         else:
-            value = db.get(self.key)
-            if not isinstance(value, str):
-                raise TypeError("value is not a string")
+            value = db.get_str(self.key)
             try:
                 value = float(value)
             except ValueError:
@@ -827,9 +817,7 @@ class StrlenCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, str):
-            raise TypeError("value is not a string")
+        value = db.get_str(self.key)
 
         return len(value)
 
@@ -860,9 +848,7 @@ class SubstrCommand(ReadCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, str):
-            raise TypeError("value is not a string")
+        value = db.get_str(self.key)
 
         # Handle negative indices
         start, end = self.start, self.end

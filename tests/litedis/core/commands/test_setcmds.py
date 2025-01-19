@@ -123,7 +123,7 @@ class TestSDiffCommand:
         ctx.db.set('str1', 'string')
         ctx.cmdtokens = ['sdiff', 'set1', 'str1']
         cmd = SDiffCommand()
-        with pytest.raises(TypeError, match="value at str1 is not a set"):
+        with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
     def test_sdiff_invalid_syntax(self, ctx):
@@ -170,7 +170,7 @@ class TestSInterCommand:
         ctx.db.set('str1', 'string')
         ctx.cmdtokens = ['sinter', 'set1', 'str1']
         cmd = SInterCommand()
-        with pytest.raises(TypeError, match="value at str1 is not a set"):
+        with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
     def test_sinter_invalid_syntax(self, ctx):
@@ -212,7 +212,7 @@ class TestSInterCardCommand:
         ctx.db.set('str1', 'string')
         ctx.cmdtokens = ['sintercard', '2', 'set1', 'str1']
         cmd = SInterCardCommand()
-        with pytest.raises(TypeError, match="value at str1 is not a set"):
+        with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
     def test_sintercard_invalid_numkeys(self, ctx):
@@ -587,7 +587,7 @@ class TestSUnionCommand:
         ctx.db.set('str1', 'string')
         ctx.cmdtokens = ['sunion', 'set1', 'str1']
         cmd = SUnionCommand()
-        with pytest.raises(TypeError, match="value at str1 is not a set"):
+        with pytest.raises(TypeError, match="value is not a set"):
             cmd.execute(ctx)
 
     def test_sunion_invalid_syntax(self, ctx):

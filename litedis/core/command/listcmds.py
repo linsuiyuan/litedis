@@ -27,9 +27,7 @@ class LIndexCommand(ReadCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         # Handle negative indices
         index = self.index
@@ -73,9 +71,7 @@ class LInsertCommand(WriteCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         # Find pivot
         try:
@@ -110,9 +106,7 @@ class LLenCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         return len(value)
 
@@ -146,9 +140,7 @@ class LPopCommand(WriteCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         if not value:
             return None
@@ -191,9 +183,7 @@ class LPushCommand(WriteCommand):
         if not db.exists(self.key):
             value = []
         else:
-            value = db.get(self.key)
-            if not isinstance(value, list):
-                raise TypeError("value is not a list")
+            value = db.get_list(self.key)
 
         # Prepend elements
         for element in self.elements:
@@ -242,9 +232,7 @@ class LRangeCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         # Handle negative indices
         start, stop = self.start, self.stop
@@ -287,9 +275,7 @@ class LRemCommand(WriteCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         removed = 0
         if self.count > 0:
@@ -349,9 +335,7 @@ class LSetCommand(WriteCommand):
         if not db.exists(self.key):
             raise ValueError("no such key")
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         # Handle negative indices
         index = self.index
@@ -393,9 +377,7 @@ class LTrimCommand(WriteCommand):
         if not db.exists(self.key):
             return "OK"
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         # Handle negative indices
         start, stop = self.start, self.stop
@@ -449,9 +431,7 @@ class RPopCommand(WriteCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         if not value:
             return None
@@ -495,9 +475,7 @@ class RPushCommand(WriteCommand):
         if not db.exists(self.key):
             value = []
         else:
-            value = db.get(self.key)
-            if not isinstance(value, list):
-                raise TypeError("value is not a list")
+            value = db.get_list(self.key)
 
         # Append elements
         value.extend(self.elements)
@@ -559,9 +537,7 @@ class SortCommand(WriteCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, list):
-            raise TypeError("value is not a list")
+        value = db.get_list(self.key)
 
         # Make a copy of the list
         sorted_list = value.copy()

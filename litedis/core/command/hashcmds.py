@@ -24,9 +24,7 @@ class HDelCommand(WriteCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         deleted_count = 0
         for field in self.fields:
@@ -63,9 +61,7 @@ class HExistsCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         return 1 if self.field in value else 0
 
@@ -91,9 +87,7 @@ class HGetCommand(ReadCommand):
         if not db.exists(self.key):
             return None
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         return value.get(self.field)
 
@@ -117,9 +111,7 @@ class HGetAllCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         # Return as flat list alternating between field and value
         result = []
@@ -154,9 +146,7 @@ class HIncrByCommand(WriteCommand):
         if not db.exists(self.key):
             value = {}
         else:
-            value = db.get(self.key)
-            if not isinstance(value, dict):
-                raise TypeError("value is not a hash")
+            value = db.get_dict(self.key)
 
         # Get current field value or initialize to 0
         try:
@@ -198,9 +188,7 @@ class HIncrByFloatCommand(WriteCommand):
         if not db.exists(self.key):
             value = {}
         else:
-            value = db.get(self.key)
-            if not isinstance(value, dict):
-                raise TypeError("value is not a hash")
+            value = db.get_dict(self.key)
 
         # Get current field value or initialize to 0
         try:
@@ -240,9 +228,7 @@ class HKeysCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         return list(value.keys())
 
@@ -266,9 +252,7 @@ class HLenCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         return len(value)
 
@@ -297,9 +281,7 @@ class HSetCommand(WriteCommand):
         if not db.exists(self.key):
             value = {}
         else:
-            value = db.get(self.key)
-            if not isinstance(value, dict):
-                raise TypeError("value is not a hash")
+            value = db.get_dict(self.key)
 
         new_fields = 0
         for field, val in self.pairs:
@@ -334,9 +316,7 @@ class HSetNXCommand(WriteCommand):
         if not db.exists(self.key):
             value = {}
         else:
-            value = db.get(self.key)
-            if not isinstance(value, dict):
-                raise TypeError("value is not a hash")
+            value = db.get_dict(self.key)
 
             # If field already exists, return 0
             if self.field in value:
@@ -369,9 +349,7 @@ class HMGetCommand(ReadCommand):
         if not db.exists(self.key):
             return [None] * len(self.fields)
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         # Return None for non-existing fields
         return [value.get(field) for field in self.fields]
@@ -396,9 +374,7 @@ class HValsCommand(ReadCommand):
         if not db.exists(self.key):
             return []
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         return list(value.values())
 
@@ -424,9 +400,7 @@ class HStrLenCommand(ReadCommand):
         if not db.exists(self.key):
             return 0
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         field_value = value.get(self.field)
         if field_value is None:
@@ -479,9 +453,7 @@ class HScanCommand(ReadCommand):
         if not db.exists(self.key):
             return [0, []]
 
-        value = db.get(self.key)
-        if not isinstance(value, dict):
-            raise TypeError("value is not a hash")
+        value = db.get_dict(self.key)
 
         # Convert items to list and filter by pattern
         items = []
