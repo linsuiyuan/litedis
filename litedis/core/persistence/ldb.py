@@ -98,10 +98,6 @@ class LitedisDB:
         for key in self._data.keys():
             yield key
 
-    def values(self):
-        for value in self._data.values():
-            yield value
-
     def set_expiration(self, key: str, expiration: int) -> int:
         if key not in self._data:
             return 0

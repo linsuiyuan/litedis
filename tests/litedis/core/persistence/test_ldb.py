@@ -117,7 +117,7 @@ def test_delete(db):
     assert db.delete("nonexistent") == 0
 
 
-def test_keys_and_values(db):
+def test_keys(db):
     test_data = {
         "key1": "value1",
         "key2": ["list", "value"],
@@ -128,7 +128,6 @@ def test_keys_and_values(db):
         db.set(k, v)
 
     assert set(db.keys()) == set(test_data.keys())
-    assert list(db.values()) == list(test_data.values())
 
 
 def test_set_expiration(db):
