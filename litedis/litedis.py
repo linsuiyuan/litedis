@@ -22,10 +22,13 @@ class Litedis(
     def __init__(self,
                  dbname: str = "db",
                  persistence_on: bool = True,
-                 data_path: Union[str, Path] = "ldbdata"):
+                 data_path: Union[str, Path] = "ldbdata",
+                 aof_rewrite_cycle: int = 666):
         self.dbname = dbname
 
-        dbmanager = DBManager(data_path, persistence_on=persistence_on)
+        dbmanager = DBManager(data_path,
+                              persistence_on=persistence_on,
+                              aof_rewrite_cycle=aof_rewrite_cycle)
 
         self.executor: CommandProcessor = dbmanager
 

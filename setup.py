@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='litedis',
-    version='3.0.6',
+    version='3.0.7',
     author='Linsuiyuan',
     author_email='linsuiyuan@icloud.com',
     description='Litedis 是一个类似 Redis 的轻量级的、本地的、开箱即用的 NoSQL 数据库。Litedis is a lightweight, local, out-of-the-box NoSQL database similar to Redis.',
