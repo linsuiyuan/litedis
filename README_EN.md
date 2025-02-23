@@ -1,62 +1,62 @@
+Other Language Version：
 
-其他语言版本：
-
-- [English](README_EN.md)
-
+- [中文](README.md)
 
 # Litedis
 
-`Litedis` 是一个类似 Redis 的轻量级的本地的 NoSQL 数据库，使用 Python 实现，支持基本的数据结构和操作。
-和 Redis 最大的不同是，Litedis 开箱即用，无需另开服务器进程。
+
+Litedis is a lightweight, local NoSQL database similar to Redis, implemented in Python. 
+It supports basic data structures and operations. 
+The main difference from Redis is that Litedis is ready to use out of the box without requiring an additional server process.
 
 
-## 特性
+## Features
 
-- 实现了基础数据结构及相关操作：
+- Implemented basic data structures and related operations：
   - STING
   - LIST
   - HASH
   - SET
   - ZSET
-- 支持设置过期时间
-- 支持 AOF 持久化
+- Supports setting expiration times
+- Supports AOF persistence
 
 
-## 安装和支持版本
+## Installation and Supported Versions
 
-- 使用 pip 安装
+- Install using pip
 
 ```sh
 pip install litedis
 ```
 
-- 支持的 Python 版本
+- Supported Python versions
 
-  支持 Python3.8+
+  Supports Python 3.8+
   
 
-## 使用示例
+## Usage Examples
 
 
-### 持久化和数据库设置
+### Persistence and Database Settings
 
-- Litedis 是默认开启持久化的，可以通过参数进行相关设置。
-- Litedis 可以将数据存储到不同的数据库下，可以通过 dbname 参数设置
+- Litedis has persistence enabled by default and can be configured with parameters.
+- Litedis can store data in different databases, which can be set via the dbname parameter.
 
 ```python
 from litedis import Litedis
 
-# 关闭持久化
+# Disable persistence
 litedis = Litedis(persistence_on=False)
 
-# 设置持久化路径
+# Set persistence path
 litedis = Litedis(data_path="path")
 
-# 设置数据库名称
+# Set database name
 litedis = Litedis(dbname="litedis")
 ```
 
-### STRING 的使用
+### Using STRING
 
 
 ```python
@@ -75,13 +75,13 @@ litedis.delete("db")
 assert litedis.get("db") is None
 
 # expiration
-litedis.set("db", "litedis", px=100)  # 100毫秒后过期
+litedis.set("db", "litedis", px=100)  # expires in 100 milliseconds
 assert litedis.get("db") == "litedis"
 time.sleep(0.11)
 assert litedis.get("db") is None
 ```
 
-### LIST 的使用
+### Using LIST
 
 
 ```python
@@ -104,10 +104,10 @@ litedis.lpush("list", "a", "b")
 assert litedis.lpop("list") == "b"
 assert litedis.lpop("list") == "a"
 assert litedis.lrange("list", 0, -1) == []
-assert not litedis.exists("list")  # 当所有元素被弹出后，相应的 List键 会自动删除
+assert not litedis.exists("list")  # The List key is automatically deleted when all elements are popped
 ```
 
-### Hash 的使用
+### Using HASH
 
 
 ```python
@@ -125,7 +125,7 @@ assert litedis.hkeys("hash") == ["key1", "key2"]
 assert litedis.hvals("hash") == ["value1", "value2"]
 ```
 
-### SET 的使用
+### Using SET
 
 
 ```python
@@ -156,7 +156,7 @@ result = litedis.sdiff("set1", "set2")
 assert set(result) == {"a"}
 ```
 
-### ZSET 的使用
+### Using ZSET
 
 
 ```python
